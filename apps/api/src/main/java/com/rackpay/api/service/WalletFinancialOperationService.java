@@ -44,19 +44,13 @@ public class WalletFinancialOperationService {
 
         financialTransactions.markProcessing(transaction.getId());
 
-        try {
-            walletLedger.postWalletDebit(
-                walletId,
-                walletLedgerAccountId,
-                counterpartyAccountId,
-                amount
-            );
+        walletLedger.postWalletDebit(
+            walletId,
+            walletLedgerAccountId,
+            counterpartyAccountId,
+            amount
+        );
 
-            financialTransactions.markCompleted(transaction.getId());
-            return transaction;
-        } catch (RuntimeException ex) {
-            financialTransactions.markFailed(transaction.getId());
-            throw ex;
-        }
+        financialTransactions.markCompleted(transaction.getId());
     }
 }
