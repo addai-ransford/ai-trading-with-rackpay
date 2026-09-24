@@ -1,0 +1,3 @@
+export type RemittanceStatus="PENDING"|"PROCESSING"|"COMPLETED"|"FAILED"|"CANCELLED";
+export interface Recipient{readonly id:string;readonly userId:string;readonly countryCode:string;readonly phoneE164:string;readonly displayName:string;readonly verifiedAt:string;}
+export interface Remittance{readonly id:string;readonly walletId:string;readonly corridorId:string;readonly recipientId:string;readonly sourceAmountMinor:bigint;readonly sourceCurrency:string;readonly destinationAmountMinor:bigint;readonly destinationCurrency:string;readonly feeMinor:bigint;readonly status:RemittanceStatus;readonly createdAt:string;}
