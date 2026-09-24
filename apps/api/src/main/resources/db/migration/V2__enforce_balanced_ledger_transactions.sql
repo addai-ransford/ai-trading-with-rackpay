@@ -1,3 +1,11 @@
+ALTER TABLE ledger_accounts
+    ADD CONSTRAINT uq_ledger_account_id_currency UNIQUE (id, currency_code);
+
+ALTER TABLE ledger_entries
+    ADD CONSTRAINT fk_ledger_entry_account_currency
+    FOREIGN KEY (ledger_account_id, currency_code)
+    REFERENCES ledger_accounts (id, currency_code);
+
 CREATE OR REPLACE FUNCTION validate_ledger_transaction()
 RETURNS TRIGGER
 LANGUAGE plpgsql
