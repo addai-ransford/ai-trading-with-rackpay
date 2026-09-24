@@ -25,21 +25,24 @@ public class WalletLedgerService {
     }
 
     @Transactional
-    public void postWalletTransfer(UUID walletId, UUID debitAccountId, UUID creditAccountId, Money amount) {
+    public void postWalletDebit(UUID walletId, UUID walletLedgerAccountId,
+                                UUID counterpartyAccountId, Money amount) {
         if (amount.isNegative() || amount.isZero()) {
             throw new IllegalArgumentException("transfer amount must be positive");
         }
 
         WalletEntity wallet = wallets.findByIdForUpdate(walletId)
             .orElseThrow(() -> new IllegalArgumentException("wallet not found"));
-        LedgerAccountEntity debitAccount = accounts.findById(debitAccountId)
-            .orElseThrow(() -> new IllegalArgumentException("debit ledger account not found"));
-        LedgerAccountEntity creditAccount = accounts.findById(creditAccountId)
-            .orElseThrow(() -> new IllegalArgumentException("credit ledger account not found"));
+
+        LedgerAccountEntity walletAccount = accounts.findById(walletLedgerAccountId)
+            .orElseThrow(() -> new IllegalArgumentException("wallet ledger account not found"));
+
+        LedgerAccountEntity counterpartyAccount = accounts.findById(counterpartyAccountId)
+            .orElseThrow(() -> new IllegalArgumentException("counterparty ledger account not found"));
 
         if (wallet.getCurrency() != amount.currency()
-            || debitAccount.getCurrency() != amount.currency()
-            || creditAccount.getCurrency() != amount.currency()) {
+            || walletAccount.getCurrency() != amount.currency()
+            || counterpartyAccount.getCurrency() != amount.currency()) {
             throw new IllegalArgumentException("currency mismatch");
         }
 
@@ -53,13 +56,16 @@ public class WalletLedgerService {
         LedgerTransactionEntity transaction =
             new LedgerTransactionEntity(UUID.randomUUID(), now);
 
+        // A wallet is an asset. Decreasing an asset is a CREDIT.
         transaction.addEntry(new LedgerEntryEntity(
-            UUID.randomUUID(), debitAccount, amount.amount(), amount.currency(),
-            EntryDirection.DEBIT, now
-        ));
-        transaction.addEntry(new LedgerEntryEntity(
-            UUID.randomUUID(), creditAccount, amount.amount(), amount.currency(),
+            UUID.randomUUID(), walletAccount, amount.amount(), amount.currency(),
             EntryDirection.CREDIT, now
+        ));
+
+        // The receiving/counterparty account receives the corresponding DEBIT.
+        transaction.addEntry(new LedgerEntryEntity(
+            UUID.randomUUID(), counterpartyAccount, amount.amount(), amount.currency(),
+            EntryDirection.DEBIT, now
         ));
 
         ledgerTransactions.save(transaction);
