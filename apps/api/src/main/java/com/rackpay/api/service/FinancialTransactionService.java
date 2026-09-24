@@ -5,6 +5,7 @@ import com.rackpay.api.domain.transaction.TransactionStatus;
 import com.rackpay.api.persistence.transaction.FinancialTransactionEntity;
 import com.rackpay.api.persistence.transaction.FinancialTransactionJpaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -18,7 +19,7 @@ public class FinancialTransactionService {
         this.transactions = transactions;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public FinancialTransactionEntity startOrGet(IdempotencyKey key, String requestHash) {
         validateRequestHash(requestHash);
 
