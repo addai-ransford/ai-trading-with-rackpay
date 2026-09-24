@@ -494,3 +494,59 @@ This layered approach is intentional: application validation provides clear busi
 ### Architectural invariant
 
 > **A financial operation is atomic: wallet state and ledger state move together. The wallet is the shared current-state projection; the ledger is the accounting record.**
+
+
+## Identity, Authentication, and User Provisioning
+
+RackPay uses Keycloak as the identity and authentication authority while keeping the RackPay user record and all financial state inside the RackPay database.
+
+The identity relationship is:
+
+```text
+Keycloak subject (sub)
+        ↓
+RackPay User UUID
+        ↓
+Primary Wallet UUID
+        ↓
+Wallet Ledger Account UUID
+```
+
+### Registration
+
+The initial registration flow is:
+
+1. The mobile/web client submits registration details to `POST /api/v1/auth/register`.
+2. The RackPay API creates the identity in Keycloak through a confidential server-side admin integration.
+3. The API creates the RackPay user record using the Keycloak subject.
+4. The API creates the user's primary wallet using the configured default currency.
+5. The API creates and links the wallet's ledger account.
+6. The API returns the RackPay user and wallet identifiers.
+
+Passwords are never stored in RackPay. The API must use TLS in every non-local environment and must never log the submitted password or Keycloak client secret.
+
+If local provisioning fails after Keycloak creation, the registration service attempts compensating deletion of the Keycloak identity. A production deployment must additionally provide reconciliation for orphaned identities.
+
+### Login
+
+Login is performed by Keycloak using OpenID Connect Authorization Code with PKCE. The mobile application should use the platform browser/authentication session rather than collecting Keycloak credentials in an embedded WebView.
+
+The RackPay API validates Keycloak access tokens as a JWT resource server and maps the token `sub` claim to the RackPay user. Financial operations use the RackPay UUID, not the Keycloak identifier, as their internal owner reference.
+
+### Administrative Keycloak Access
+
+The server-side Keycloak integration uses a confidential service-account client with only the realm-management permissions required for user provisioning. Client credentials remain server-side and are supplied through environment/secret configuration.
+
+The Keycloak Admin API is not used as the application login endpoint. It is an administrative provisioning interface only.
+
+### Automatic Wallet Provisioning
+
+A successful registration always creates the initial wallet and links it to a ledger account. The default wallet currency is configuration-driven:
+
+```yaml
+rackpay:
+  wallet:
+    default-currency: EUR
+```
+
+The wallet is the shared financial account used by both remittance and AI-assisted trading; neither feature owns a second independent cash balance.
