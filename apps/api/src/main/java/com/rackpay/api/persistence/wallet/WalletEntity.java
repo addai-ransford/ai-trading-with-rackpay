@@ -22,10 +22,13 @@ public class WalletEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "ledger_account_id", nullable = false)
+    private UUID ledgerAccountId;
+
     protected WalletEntity() {}
 
-    public WalletEntity(UUID id, UUID ownerId, Currency currency, BigDecimal balance, Instant createdAt) {
-        this.id = id; this.ownerId = ownerId; this.currency = currency; this.balance = balance; this.createdAt = createdAt;
+    public WalletEntity(UUID id, UUID ownerId, Currency currency, BigDecimal balance, Instant createdAt, UUID ledgerAccountId) {
+        this.id = id; this.ownerId = ownerId; this.currency = currency; this.balance = balance; this.createdAt = createdAt; this.ledgerAccountId = ledgerAccountId;
     }
 
     public UUID getId() { return id; }
@@ -34,4 +37,5 @@ public class WalletEntity {
     public BigDecimal getBalance() { return balance; }
     public void setBalance(BigDecimal balance) { this.balance = balance; }
     public Instant getCreatedAt() { return createdAt; }
+    public UUID getLedgerAccountId() { return ledgerAccountId; }
 }
