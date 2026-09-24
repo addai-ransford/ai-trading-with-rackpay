@@ -69,7 +69,7 @@ public class FinancialTransactionService {
     }
 
     private FinancialTransactionEntity getForUpdate(UUID transactionId) {
-        return transactions.findById(transactionId)
+        return transactions.findByIdForUpdate(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("financial transaction not found"));
     }
 
