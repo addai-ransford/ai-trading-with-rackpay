@@ -32,5 +32,6 @@ public class WalletEntity {
     public UUID getOwnerId() { return ownerId; }
     public Currency getCurrency() { return currency; }
     public BigDecimal getBalance() { return balance; }
+    public void setBalance(BigDecimal balance) { this.balance = balance; }
     public Instant getCreatedAt() { return createdAt; }
 }
