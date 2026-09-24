@@ -49,9 +49,6 @@ public record Money(BigDecimal amount, Currency currency) {
     }
 
     private static int currencyScale(Currency currency) {
-        return switch (currency) {
-            case JPY -> 0;
-            default -> 2;
-        };
+        return 2;
     }
 }
