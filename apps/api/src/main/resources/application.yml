@@ -1,4 +1,9 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${RACKPAY_KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/rackpay}
   application:
     name: rackpay-api
 
@@ -39,3 +44,14 @@ info:
   app:
     name: RackPay Financial Core
     version: 0.1.0
+
+
+rackpay:
+  keycloak:
+    admin:
+      base-url: ${RACKPAY_KEYCLOAK_BASE_URL:http://localhost:8081}
+      realm: ${RACKPAY_KEYCLOAK_REALM:rackpay}
+      client-id: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_ID:rackpay-admin}
+      client-secret: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  wallet:
+    default-currency: ${RACKPAY_WALLET_DEFAULT_CURRENCY:EUR}
