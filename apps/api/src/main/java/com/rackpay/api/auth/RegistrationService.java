@@ -62,13 +62,13 @@ public class RegistrationService {
         Instant now = Instant.now();
 
         try {
-            users.save(new UserEntity(
+            users.saveAndFlush(new UserEntity(
                 userId, keycloakSubject, email,
                 request.firstName().trim(), request.lastName().trim(),
                 request.phone(), UserStatus.ACTIVE, now
             ));
 
-            ledgerAccounts.save(new LedgerAccountEntity(
+            ledgerAccounts.saveAndFlush(new LedgerAccountEntity(
                 ledgerAccountId,
                 "Wallet " + walletId,
                 defaultCurrency,
@@ -76,7 +76,7 @@ public class RegistrationService {
                 now
             ));
 
-            wallets.save(new WalletEntity(
+            wallets.saveAndFlush(new WalletEntity(
                 walletId, userId, defaultCurrency, BigDecimal.ZERO, now, ledgerAccountId
             ));
 
