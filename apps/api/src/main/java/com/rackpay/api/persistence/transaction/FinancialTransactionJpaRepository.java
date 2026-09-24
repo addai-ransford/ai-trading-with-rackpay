@@ -10,6 +10,10 @@ import java.util.UUID;
 public interface FinancialTransactionJpaRepository extends JpaRepository<FinancialTransactionEntity, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from FinancialTransactionEntity t where t.id = :id")
+    Optional<FinancialTransactionEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from FinancialTransactionEntity t where t.idempotencyKey = :key")
     Optional<FinancialTransactionEntity> findByIdempotencyKeyForUpdate(@Param("key") String key);
 
