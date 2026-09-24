@@ -1,0 +1,2 @@
+export interface Country{readonly code:string;readonly name:string;readonly dialCode:string;readonly currency:string;readonly flag:string;readonly enabled:boolean;readonly sendEnabled:boolean;readonly receiveEnabled:boolean;}
+export interface RemittanceCorridor{readonly id:string;readonly sourceCountryCode:string;readonly destinationCountryCode:string;readonly enabled:boolean;readonly minAmountMinor:bigint;readonly maxAmountMinor:bigint;readonly sourceCurrency:string;readonly destinationCurrency:string;}
