@@ -27,6 +27,10 @@ public class WalletEntity {
 
     protected WalletEntity() {}
 
+    public WalletEntity(UUID id, UUID ownerId, Currency currency, BigDecimal balance, Instant createdAt) {
+        this(id, ownerId, currency, balance, createdAt, null);
+    }
+
     public WalletEntity(UUID id, UUID ownerId, Currency currency, BigDecimal balance, Instant createdAt, UUID ledgerAccountId) {
         this.id = id; this.ownerId = ownerId; this.currency = currency; this.balance = balance; this.createdAt = createdAt; this.ledgerAccountId = ledgerAccountId;
     }
