@@ -19,7 +19,7 @@ CREATE UNIQUE INDEX uq_payment_provider_config_active
 INSERT INTO payment_provider_configs
     (id, provider, enabled, active, environment)
 VALUES
-    (00000000-0000-0000-0000-000000000009, 'MOLLIE', TRUE, TRUE, 'sandbox'),
-    (00000000-0000-0000-0000-000000000011, 'STRIPE', TRUE, FALSE, 'sandbox'),
-    (gen_random_uuid(), 'ADYEN', FALSE, FALSE, 'sandbox'),
+    ('00000000-0000-0000-0000-000000000009', 'MOLLIE', TRUE, TRUE, 'sandbox'),
+    ('00000000-0000-0000-0000-000000000010', 'STRIPE', TRUE, FALSE, 'sandbox'),
+    ('00000000-0000-0000-0000-000000000011', 'ADYEN', FALSE, FALSE, 'sandbox'),
     (gen_random_uuid(), 'PAYPAL', FALSE, FALSE, 'sandbox');
