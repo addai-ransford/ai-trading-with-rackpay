@@ -3,45 +3,69 @@ package com.rackpay.api.domain.wallet;
 import com.rackpay.api.domain.money.Currency;
 import com.rackpay.api.domain.money.Money;
 
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public final class Wallet {
     private final WalletId id;
     private final UUID ownerId;
-    private final Currency currency;
-    private Money balance;
+    private final Map<Currency, Money> balances;
 
-    private Wallet(WalletId id, UUID ownerId, Currency currency) {
+    private Wallet(WalletId id, UUID ownerId) {
         this.id = Objects.requireNonNull(id);
         this.ownerId = Objects.requireNonNull(ownerId);
-        this.currency = Objects.requireNonNull(currency);
-        this.balance = Money.zero(currency);
+        this.balances = new EnumMap<>(Currency.class);
     }
 
-    public static Wallet open(UUID ownerId, Currency currency) {
-        return new Wallet(WalletId.newId(), ownerId, currency);
+    public static Wallet open(UUID ownerId) {
+        return new Wallet(WalletId.newId(), ownerId);
+    }
+
+    public void openCurrency(Currency currency) {
+        balances.putIfAbsent(
+            Objects.requireNonNull(currency),
+            Money.zero(currency)
+        );
     }
 
     public void credit(Money amount) {
-        requireCurrency(amount);
-        if (amount.isNegative() || amount.isZero()) throw new IllegalArgumentException("credit amount must be positive");
-        balance = balance.add(amount);
+        requireCurrencyBalance(amount);
+        if (amount.isNegative() || amount.isZero()) {
+            throw new IllegalArgumentException("credit amount must be positive");
+        }
+        balances.put(amount.currency(), balances.get(amount.currency()).add(amount));
     }
 
     public void debit(Money amount) {
-        requireCurrency(amount);
-        if (amount.isNegative() || amount.isZero()) throw new IllegalArgumentException("debit amount must be positive");
-        if (balance.amount().compareTo(amount.amount()) < 0) throw new IllegalStateException("insufficient wallet funds");
-        balance = balance.subtract(amount);
+        requireCurrencyBalance(amount);
+        if (amount.isNegative() || amount.isZero()) {
+            throw new IllegalArgumentException("debit amount must be positive");
+        }
+        Money balance = balances.get(amount.currency());
+        if (balance.amount().compareTo(amount.amount()) < 0) {
+            throw new IllegalStateException("insufficient wallet funds");
+        }
+        balances.put(amount.currency(), balance.subtract(amount));
     }
 
-    private void requireCurrency(Money amount) {
-        if (amount.currency() != currency) throw new IllegalArgumentException("wallet currency mismatch");
+    public Money balance(Currency currency) {
+        return balances.getOrDefault(
+            Objects.requireNonNull(currency),
+            Money.zero(currency)
+        );
+    }
+
+    private void requireCurrencyBalance(Money amount) {
+        Objects.requireNonNull(amount);
+        if (!balances.containsKey(amount.currency())) {
+            throw new IllegalStateException(
+                "wallet has no " + amount.currency() + " balance"
+            );
+        }
     }
 
     public WalletId id() { return id; }
     public UUID ownerId() { return ownerId; }
-    public Currency currency() { return currency; }
-    public Money balance() { return balance; }
+    public Map<Currency, Money> balances() {
+        return Collections.unmodifiableMap(balances);
+    }
 }
