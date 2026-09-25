@@ -19,7 +19,7 @@ import java.util.*;
 @Component
 public class StripePaymentProvider implements PaymentProvider {
     private final RestClient client; private final String secretKey; private final String webhookSecret; private final ObjectMapper mapper;
-    public StripePaymentProvider(RestClient.Builder builder,@Value("https://api.stripe.com/v1") String baseUrl,
+    public StripePaymentProvider(RestClient.Builder builder,@Value("${rackpay.payment.stripe.base-url:https://api.stripe.com/v1}") String baseUrl,
         @Value("$"+"{RACKPAY_STRIPE_SECRET_KEY:}") String secretKey,@Value("$"+"{RACKPAY_STRIPE_WEBHOOK_SECRET:}") String webhookSecret,ObjectMapper mapper){
         this.secretKey=secretKey;this.webhookSecret=webhookSecret;this.mapper=mapper;this.client=builder.baseUrl(baseUrl).build();
     }
