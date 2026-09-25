@@ -1,5 +1,6 @@
 package com.rackpay.api.config;
 
+import com.rackpay.api.security.PlatformAdminAuthorizationManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -16,13 +17,21 @@ import java.util.*;
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        PlatformAdminAuthorizationManager platformAdminAuthorizationManager
+    ) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/register", "/api/v1/health", "/api/v1/payments/webhooks/**", "/actuator/**").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers(
+                    "/api/v1/auth/register",
+                    "/api/v1/health",
+                    "/api/v1/payments/webhooks/**",
+                    "/actuator/**"
+                ).permitAll()
+                .requestMatchers("/api/v1/admin/**").access(platformAdminAuthorizationManager)
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
