@@ -11,7 +11,6 @@ public class PaymentProviderRegistry {
         for (PaymentProvider provider : providers) {
             if (map.put(provider.type(), provider) != null) throw new IllegalStateException("Duplicate payment provider: " + provider.type());
         }
-        providers = null;
         this.providers = Map.copyOf(map);
     }
     public PaymentProvider require(PaymentProviderType type) {
