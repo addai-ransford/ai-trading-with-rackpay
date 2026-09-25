@@ -16,7 +16,7 @@ public class MolliePaymentProvider implements PaymentProvider {
     private final String webhookSecret;
     private final ObjectMapper objectMapper;
 
-    public MolliePaymentProvider(RestClient.Builder builder,@Value("https://api.mollie.com/v2") String baseUrl,
+    public MolliePaymentProvider(RestClient.Builder builder,@Value("${rackpay.payment.mollie.base-url:https://api.mollie.com/v2}") String baseUrl,
                                  @Value("$"+"{RACKPAY_MOLLIE_API_KEY:}") String apiKey,
         @Value("$"+"{RACKPAY_MOLLIE_WEBHOOK_SECRET:}") String webhookSecret,ObjectMapper objectMapper){
         this.apiKey=apiKey;this.webhookSecret=webhookSecret;this.client=builder.baseUrl(baseUrl).build();this.objectMapper=objectMapper;
