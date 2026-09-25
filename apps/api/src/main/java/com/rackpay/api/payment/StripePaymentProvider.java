@@ -45,7 +45,7 @@ public class StripePaymentProvider implements PaymentProvider {
             String status=object.path("payment_status").asText();
             if(id.isBlank())throw new IllegalArgumentException("Stripe webhook has no checkout session id");
             String reference=object.path("metadata").path("reference").asText(null);
-            return new WebhookResult(eventId,id,map(type,status),type,reference);
+            return new WebhookResult(eventId,id,map(type,status),type,reference,object.path("amount_total").isNumber()?object.path("amount_total").decimalValue().movePointLeft(2):null,object.path("currency").asText(null)==null?null:Currency.valueOf(object.path("currency").asText().toUpperCase()));
         }catch(Exception e){throw new IllegalArgumentException("Invalid Stripe webhook payload",e);}
     }
     private PaymentStatus map(String status){return switch(status==null?"":status){case "paid"->PaymentStatus.PAID;case "unpaid"->PaymentStatus.PENDING;default->PaymentStatus.UNKNOWN;};}
