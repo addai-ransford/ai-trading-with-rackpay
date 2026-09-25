@@ -55,3 +55,9 @@ rackpay:
       client-secret: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_SECRET:}
   wallet:
     default-currency: ${RACKPAY_WALLET_DEFAULT_CURRENCY:EUR}
+  payment:
+    environment: ${RACKPAY_PAYMENT_ENVIRONMENT:sandbox}
+    mollie:
+      base-url: ${RACKPAY_MOLLIE_BASE_URL:https://api.mollie.com/v2}
+    stripe:
+      base-url: ${RACKPAY_STRIPE_BASE_URL:https://api.stripe.com/v1}
