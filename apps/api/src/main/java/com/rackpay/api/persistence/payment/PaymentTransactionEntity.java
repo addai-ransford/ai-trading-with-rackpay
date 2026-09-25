@@ -28,4 +28,6 @@ public class PaymentTransactionEntity {
     public UUID getId(){return id;} public UUID getUserId(){return userId;} public UUID getWalletId(){return walletId;} public PaymentProviderType getProvider(){return provider;}
     public String getProviderPaymentId(){return providerPaymentId;} public String getStatus(){return status;} public BigDecimal getAmount(){return amount;} public Currency getCurrency(){return currency;}
     public void attachProviderPayment(String id,String status,Instant now){this.providerPaymentId=id;this.status=status;this.updatedAt=now;}
+    public void markStatus(String status,Instant now){this.status=status;this.updatedAt=now;}
+    public void linkFinancialTransaction(UUID id,Instant now){this.financialTransactionId=id;this.updatedAt=now;}
 }
