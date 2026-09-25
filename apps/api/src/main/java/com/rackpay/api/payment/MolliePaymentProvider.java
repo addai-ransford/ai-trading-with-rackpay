@@ -39,12 +39,14 @@ public class MolliePaymentProvider implements PaymentProvider {
         Response payment=fetch(paymentId);
         String eventId="payment:"+paymentId+":"+payment.status();
         String reference=payment.metadata()==null?null:payment.metadata().reference();
-        return new WebhookResult(eventId,paymentId,map(payment.status()),"payment."+payment.status(),reference);
+        return new WebhookResult(eventId,paymentId,map(payment.status()),"payment."+payment.status(),reference,parseAmount(payment.amount()),payment.amount()==null?null:Currency.valueOf(payment.amount().currency()));
     }
     private Response fetch(String id){requireConfigured();Response r=client.get().uri("/payments/{id}",id).header("Authorization","Bearer "+apiKey).retrieve().body(Response.class);if(r==null)throw new IllegalStateException("Mollie payment not found");return r;}
     private void requireConfigured(){if(apiKey==null||apiKey.isBlank())throw new IllegalStateException("Mollie API key is not configured");}
     private PaymentStatus map(String s){if(s==null)return PaymentStatus.UNKNOWN;return switch(s){case "open"->PaymentStatus.CREATED;case "pending"->PaymentStatus.PENDING;case "authorized"->PaymentStatus.REQUIRES_ACTION;case "paid"->PaymentStatus.PAID;case "failed","expired"->PaymentStatus.FAILED;case "canceled"->PaymentStatus.CANCELLED;case "refunded","charged_back"->PaymentStatus.REFUNDED;default->PaymentStatus.UNKNOWN;};}
-    private record Response(String id,String status,Links links,Metadata metadata){}
+    private BigDecimal parseAmount(Amount a){return a==null||a.value()==null?null:new BigDecimal(a.value());}
+    private record Response(String id,String status,Links links,Metadata metadata,Amount amount){}
+    private record Amount(String currency,String value){}
     private record Links(Checkout checkout){}
     private record Checkout(String href){}
     private record Metadata(String reference){}
