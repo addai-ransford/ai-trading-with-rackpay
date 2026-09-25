@@ -11,6 +11,9 @@ public interface PaymentProviderConfigJpaRepository extends JpaRepository<Paymen
     Optional<PaymentProviderConfigEntity> findByActiveTrue();
     List<PaymentProviderConfigEntity> findAllByOrderByProviderAsc();
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from PaymentProviderConfigEntity p order by p.provider")
+    List<PaymentProviderConfigEntity> findAllForUpdate();
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PaymentProviderConfigEntity p where p.id = :id")
     Optional<PaymentProviderConfigEntity> findByIdForUpdate(@Param("id") UUID id);
 }
