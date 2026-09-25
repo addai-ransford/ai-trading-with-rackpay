@@ -24,7 +24,7 @@ public class PaymentProviderService {
     @Transactional public PaymentProviderConfigEntity activate(PaymentProviderType provider,String actor){
         if(!registry.supports(provider))throw new IllegalArgumentException("Payment provider is not installed: "+provider);
         Instant now=Instant.now();
-        for(PaymentProviderConfigEntity c:configs.findAll())c.deactivate(now,actor);
+        for(PaymentProviderConfigEntity c:configs.findAllForUpdate())c.deactivate(now,actor);
         PaymentProviderConfigEntity target=configs.findByProvider(provider).orElseThrow(()->new IllegalArgumentException("Payment provider configuration not found: "+provider));
         target.activate(now,actor);return configs.save(target);
     }
