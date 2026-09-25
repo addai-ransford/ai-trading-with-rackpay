@@ -1,8 +1,10 @@
 package com.rackpay.api.persistence.transaction;
 
+import com.rackpay.api.domain.money.Currency;
 import com.rackpay.api.domain.transaction.TransactionStatus;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,6 +25,22 @@ public class FinancialTransactionEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionStatus status;
+
+    @Column(name = "wallet_id")
+    private UUID walletId;
+
+    @Column(name = "operation_type", length = 20)
+    private OperationType operationType;
+
+    @Column(precision = 38, scale = 18)
+    private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency_code", length = 3)
+    private Currency currency;
+
+    @Column(name = "ledger_transaction_id")
+    private UUID ledgerTransactionId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -46,8 +64,32 @@ public class FinancialTransactionEntity {
     public String getIdempotencyKey() { return idempotencyKey; }
     public String getRequestHash() { return requestHash; }
     public TransactionStatus getStatus() { return status; }
+    public UUID getWalletId() { return walletId; }
+    public OperationType getOperationType() { return operationType; }
+    public BigDecimal getAmount() { return amount; }
+    public Currency getCurrency() { return currency; }
+    public UUID getLedgerTransactionId() { return ledgerTransactionId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public void attachWalletOperation(UUID walletId, OperationType operationType,
+                                      BigDecimal amount, Currency currency,
+                                      UUID ledgerTransactionId) {
+        if (this.walletId != null || this.operationType != null || this.amount != null
+            || this.currency != null || this.ledgerTransactionId != null) {
+            throw new IllegalStateException("financial transaction operation is already linked");
+        }
+        if (walletId == null || operationType == null || amount == null || amount.signum() <= 0
+            || currency == null || ledgerTransactionId == null) {
+            throw new IllegalArgumentException("wallet operation metadata is invalid");
+        }
+
+        this.walletId = walletId;
+        this.operationType = operationType;
+        this.amount = amount;
+        this.currency = currency;
+        this.ledgerTransactionId = ledgerTransactionId;
+    }
 
     public void markProcessing(Instant now) {
         requireStatus(TransactionStatus.PENDING);
@@ -75,5 +117,10 @@ public class FinancialTransactionEntity {
                 "expected status " + expected + " but was " + status
             );
         }
+    }
+
+    public enum OperationType {
+        CREDIT,
+        DEBIT
     }
 }
