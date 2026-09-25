@@ -9,6 +9,7 @@ import com.rackpay.api.persistence.wallet.WalletJpaRepository;
 import com.rackpay.api.service.WalletBalanceService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +49,7 @@ public class WalletController {
     @PostMapping("/balances")
     public WalletBalanceResponse openBalance(
         Authentication authentication,
-        @RequestBody OpenWalletBalanceRequest request
+        @Valid @RequestBody OpenWalletBalanceRequest request
     ) {
         WalletEntity wallet = requireWallet(authentication);
         WalletBalanceEntity balance = walletBalances.openBalance(
