@@ -13,11 +13,13 @@ import java.util.Map;
 public class MolliePaymentProvider implements PaymentProvider {
     private final RestClient client;
     private final String apiKey;
+    private final String webhookSecret;
     private final ObjectMapper objectMapper;
 
     public MolliePaymentProvider(RestClient.Builder builder,@Value("https://api.mollie.com/v2") String baseUrl,
-                                 @Value("$"+"{RACKPAY_MOLLIE_API_KEY:}") String apiKey,ObjectMapper objectMapper){
-        this.apiKey=apiKey;this.client=builder.baseUrl(baseUrl).build();this.objectMapper=objectMapper;
+                                 @Value("$"+"{RACKPAY_MOLLIE_API_KEY:}") String apiKey,
+        @Value("$"+"{RACKPAY_MOLLIE_WEBHOOK_SECRET:}") String webhookSecret,ObjectMapper objectMapper){
+        this.apiKey=apiKey;this.webhookSecret=webhookSecret;this.client=builder.baseUrl(baseUrl).build();this.objectMapper=objectMapper;
     }
     public PaymentProviderType type(){return PaymentProviderType.MOLLIE;}
     public PaymentSession createPayment(CreatePaymentCommand c){
@@ -33,13 +35,34 @@ public class MolliePaymentProvider implements PaymentProvider {
     public void refundPayment(String id,BigDecimal amount,Currency currency){throw new UnsupportedOperationException("Mollie refunds require payment transaction integration");}
     public WebhookResult handleWebhook(String payload,Map<String,String> headers){
         requireConfigured();
+        verifySignatureIfPresent(payload,headers.get("X-Mollie-Signature"));
         String paymentId;
-        try { paymentId=objectMapper.readTree(payload).asText(); } catch(Exception e){throw new IllegalArgumentException("Invalid Mollie webhook payload",e);}
+        try {
+            JsonNode node=objectMapper.readTree(payload);
+            paymentId=node.isObject() ? (node.path("entityId").isTextual()?node.path("entityId").asText():node.path("id").asText()) : node.asText();
+        } catch(Exception e) {
+            paymentId=parseClassicForm(payload);
+        }
         if(paymentId==null||paymentId.isBlank())throw new IllegalArgumentException("Mollie webhook did not contain a payment id");
         Response payment=fetch(paymentId);
         String eventId="payment:"+paymentId+":"+payment.status();
         String reference=payment.metadata()==null?null:payment.metadata().reference();
         return new WebhookResult(eventId,paymentId,map(payment.status()),"payment."+payment.status(),reference,parseAmount(payment.amount()),payment.amount()==null?null:Currency.valueOf(payment.amount().currency()));
+    }
+    private String parseClassicForm(String payload){
+        for(String part:payload.split("&")){String[] kv=part.split("=",2);if(kv.length==2&&"id".equals(java.net.URLDecoder.decode(kv[0],java.nio.charset.StandardCharsets.UTF_8)))return java.net.URLDecoder.decode(kv[1],java.nio.charset.StandardCharsets.UTF_8);}
+        throw new IllegalArgumentException("Mollie webhook did not contain a payment id");
+    }
+    private void verifySignatureIfPresent(String payload,String signature){
+        if(signature==null||signature.isBlank())return;
+        if(webhookSecret==null||webhookSecret.isBlank())throw new SecurityException("Mollie webhook secret is not configured");
+        try{
+            String value=signature.startsWith("sha256=")?signature.substring(7):signature;
+            javax.crypto.Mac mac=javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(new javax.crypto.spec.SecretKeySpec(webhookSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),"HmacSHA256"));
+            String expected=java.util.HexFormat.of().formatHex(mac.doFinal(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            if(!java.security.MessageDigest.isEqual(expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),value.getBytes(java.nio.charset.StandardCharsets.UTF_8)))throw new SecurityException("Invalid Mollie webhook signature");
+        }catch(SecurityException e){throw e;}catch(Exception e){throw new SecurityException("Unable to verify Mollie webhook signature",e);}
     }
     private Response fetch(String id){requireConfigured();Response r=client.get().uri("/payments/{id}",id).header("Authorization","Bearer "+apiKey).retrieve().body(Response.class);if(r==null)throw new IllegalStateException("Mollie payment not found");return r;}
     private void requireConfigured(){if(apiKey==null||apiKey.isBlank())throw new IllegalStateException("Mollie API key is not configured");}
