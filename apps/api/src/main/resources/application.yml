@@ -45,7 +45,6 @@ info:
     name: RackPay Financial Core
     version: 0.1.0
 
-
 rackpay:
   keycloak:
     admin:
@@ -53,6 +52,13 @@ rackpay:
       realm: ${RACKPAY_KEYCLOAK_REALM:rackpay}
       client-id: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_ID:rackpay-admin}
       client-secret: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  bootstrap-admin:
+    enabled: ${RACKPAY_BOOTSTRAP_ADMIN_ENABLED:false}
+    email: ${RACKPAY_BOOTSTRAP_ADMIN_EMAIL:}
+    first-name: ${RACKPAY_BOOTSTRAP_ADMIN_FIRST_NAME:}
+    last-name: ${RACKPAY_BOOTSTRAP_ADMIN_LAST_NAME:}
+    phone: ${RACKPAY_BOOTSTRAP_ADMIN_PHONE:}
+    password: ${RACKPAY_BOOTSTRAP_ADMIN_PASSWORD:}
   wallet:
     default-currency: ${RACKPAY_WALLET_DEFAULT_CURRENCY:EUR}
   payment:
