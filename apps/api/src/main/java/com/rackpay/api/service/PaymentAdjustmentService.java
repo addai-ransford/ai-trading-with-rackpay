@@ -6,6 +6,8 @@ import com.rackpay.api.payment.PaymentProviderType;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentEntity;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentJpaRepository;
 import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
+import com.rackpay.api.persistence.payment.PaymentTransactionJpaRepository;
+import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +23,13 @@ public class PaymentAdjustmentService {
     private final PaymentAdjustmentJpaRepository adjustments;
     private final WalletDebitService walletDebit;
     private final PaymentSettlementAccountService settlementAccounts;
+    private final PaymentTransactionJpaRepository payments;
 
     public PaymentAdjustmentService(
         PaymentAdjustmentJpaRepository adjustments,
         WalletDebitService walletDebit,
-        PaymentSettlementAccountService settlementAccounts
+        PaymentSettlementAccountService settlementAccounts,
+        PaymentTransactionJpaRepository payments
     ) {
         this.adjustments = adjustments;
         this.walletDebit = walletDebit;
@@ -132,10 +136,13 @@ public class PaymentAdjustmentService {
         );
 
         try {
+            PaymentTransactionEntity payment = payments.findById(adjustment.getPaymentTransactionId())
+                .orElseThrow(() -> new IllegalStateException("payment transaction not found"));
+
             var financial = walletDebit.debit(
                 new IdempotencyKey(key),
                 hash,
-                requireWalletId(adjustment),
+                payment.getWalletId(),
                 clearingAccount,
                 new Money(adjustment.getAmount(), adjustment.getCurrency())
             );
@@ -143,10 +150,6 @@ public class PaymentAdjustmentService {
         } catch (InsufficientWalletFundsException e) {
             adjustment.markPendingRecovery(Instant.now());
         }
-    }
-
-    private UUID requireWalletId(PaymentAdjustmentEntity adjustment) {
-        throw new UnsupportedOperationException("wallet recovery requires payment transaction lookup");
     }
 
     private String sha256(String value) {
