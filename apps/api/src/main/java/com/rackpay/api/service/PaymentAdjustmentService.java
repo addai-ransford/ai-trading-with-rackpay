@@ -94,7 +94,7 @@ public class PaymentAdjustmentService {
 
             adjustment.complete(financial.getId(), Instant.now());
         } catch (IllegalStateException e) {
-            if (!"insufficient wallet funds".equals(e.getMessage())) {
+            if (!(e instanceof InsufficientWalletFundsException)) {
                 throw e;
             }
             adjustment.markPendingRecovery(Instant.now());
