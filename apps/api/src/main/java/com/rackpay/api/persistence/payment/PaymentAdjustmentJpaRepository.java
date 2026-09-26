@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PaymentAdjustmentJpaRepository extends JpaRepository<PaymentAdjustmentEntity, UUID> {
+    java.util.List<PaymentAdjustmentEntity> findAllByStatus(PaymentAdjustmentEntity.Status status);
+
     Optional<PaymentAdjustmentEntity> findByPaymentTransactionIdAndAdjustmentType(
         UUID paymentTransactionId,
         PaymentAdjustmentEntity.Type adjustmentType
