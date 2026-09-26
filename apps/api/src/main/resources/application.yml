@@ -68,3 +68,11 @@ rackpay:
       base-url: ${RACKPAY_MOLLIE_BASE_URL:https://api.mollie.com/v2}
     stripe:
       base-url: ${RACKPAY_STRIPE_BASE_URL:https://api.stripe.com/v1}
+
+
+  payout:
+    flutterwave:
+      base-url: ${RACKPAY_FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
+      secret-key: ${RACKPAY_FLUTTERWAVE_SECRET_KEY:}
+    paystack:
+      secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
