@@ -10,7 +10,7 @@ import com.rackpay.api.persistence.payment.PaymentProviderEventEntity;
 import com.rackpay.api.persistence.payment.PaymentProviderEventJpaRepository;
 import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
 import com.rackpay.api.persistence.payment.PaymentTransactionJpaRepository;
-import com.rackpay.api.persistence.wallet.WalletBalanceService;
+import com.rackpay.api.service.WalletBalanceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
