@@ -5,7 +5,11 @@ import com.rackpay.api.domain.transaction.IdempotencyKey;
 import com.rackpay.api.payment.PaymentProvider;
 import com.rackpay.api.payment.PaymentProviderRegistry;
 import com.rackpay.api.payment.PaymentProviderType;
-import com.rackpay.api.persistence.payment.*;
+import com.rackpay.api.persistence.payment.PaymentAdjustmentEntity;
+import com.rackpay.api.persistence.payment.PaymentProviderEventEntity;
+import com.rackpay.api.persistence.payment.PaymentProviderEventJpaRepository;
+import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
+import com.rackpay.api.persistence.payment.PaymentTransactionJpaRepository;
 import com.rackpay.api.persistence.wallet.WalletBalanceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +27,7 @@ public class PaymentWebhookService {
     private final WalletBalanceService balances;
     private final WalletCreditService walletCredit;
     private final PaymentSettlementAccountService settlementAccounts;
+    private final PaymentAdjustmentService adjustments;
 
     public PaymentWebhookService(
         PaymentProviderRegistry registry,
@@ -30,7 +35,8 @@ public class PaymentWebhookService {
         PaymentTransactionJpaRepository payments,
         WalletBalanceService balances,
         WalletCreditService walletCredit,
-        PaymentSettlementAccountService settlementAccounts
+        PaymentSettlementAccountService settlementAccounts,
+        PaymentAdjustmentService adjustments
     ) {
         this.registry = registry;
         this.events = events;
@@ -38,6 +44,7 @@ public class PaymentWebhookService {
         this.balances = balances;
         this.walletCredit = walletCredit;
         this.settlementAccounts = settlementAccounts;
+        this.adjustments = adjustments;
     }
 
     @Transactional
@@ -47,6 +54,9 @@ public class PaymentWebhookService {
 
         if (result.eventId() == null || result.eventId().isBlank()) {
             throw new IllegalArgumentException("Provider webhook has no event id");
+        }
+        if (result.providerPaymentId() == null || result.providerPaymentId().isBlank()) {
+            throw new IllegalArgumentException("Provider webhook has no payment id");
         }
 
         String lockKey = providerType.name() + ":" + result.eventId();
@@ -69,8 +79,7 @@ public class PaymentWebhookService {
             );
 
         PaymentProviderEventEntity event = events.findByProviderAndEventId(
-                providerType,
-                result.eventId()
+                providerType, result.eventId()
             ).orElseGet(() -> events.save(new PaymentProviderEventEntity(
                 java.util.UUID.randomUUID(),
                 providerType,
@@ -80,53 +89,106 @@ public class PaymentWebhookService {
                 Instant.now()
             )));
 
-        if (result.status() == PaymentProvider.PaymentStatus.PAID) {
-            if (result.amount() == null || result.currency() == null) {
-                throw new IllegalStateException(
-                    "Provider webhook did not contain a verified amount and currency"
+        switch (result.status()) {
+            case PAID -> handlePaid(payment, result);
+            case REFUNDED -> {
+                BigDecimalAmount verified = verifiedAdjustmentAmount(payment, result);
+                adjustments.reverseWalletCredit(
+                    payment,
+                    PaymentAdjustmentEntity.Type.REFUND,
+                    result.eventId(),
+                    verified.value()
                 );
+                payment.markStatus("REFUNDED", Instant.now());
             }
-
-            if (payment.getAmount().compareTo(result.amount()) != 0 ||
-                payment.getCurrency() != result.currency()) {
-                throw new SecurityException(
-                    "Provider payment amount or currency does not match RackPay transaction"
+            case CHARGED_BACK -> {
+                BigDecimalAmount verified = verifiedAdjustmentAmount(payment, result);
+                adjustments.reverseWalletCredit(
+                    payment,
+                    PaymentAdjustmentEntity.Type.CHARGEBACK,
+                    result.eventId(),
+                    verified.value()
                 );
+                payment.markStatus("CHARGEBACK", Instant.now());
             }
-
-            balances.openBalance(payment.getWalletId(), payment.getCurrency());
-            java.util.UUID clearingAccount =
-                settlementAccounts.requireAccount(providerType, payment.getCurrency());
-
-            String key = "payment-credit:" +
-                providerType.name() + ":" + payment.getProviderPaymentId();
-
-            String hash = sha256(
-                providerType.name() + "|" +
-                payment.getProviderPaymentId() + "|" +
-                payment.getAmount().toPlainString() + "|" +
-                payment.getCurrency().name() + "|PAID"
-            );
-
-            var financial = walletCredit.credit(
-                new IdempotencyKey(key),
-                hash,
-                payment.getWalletId(),
-                clearingAccount,
-                new Money(payment.getAmount(), payment.getCurrency())
-            );
-
-            payment.markStatus("PAID", Instant.now());
-            payment.linkFinancialTransaction(financial.getId(), Instant.now());
-        } else if (result.status() == PaymentProvider.PaymentStatus.FAILED) {
-            payment.markStatus("FAILED", Instant.now());
-        } else if (result.status() == PaymentProvider.PaymentStatus.CANCELLED) {
-            payment.markStatus("CANCELLED", Instant.now());
-        } else {
-            payment.markStatus(result.status().name(), Instant.now());
+            case FAILED -> payment.markStatus("FAILED", Instant.now());
+            case CANCELLED -> payment.markStatus("CANCELLED", Instant.now());
+            default -> payment.markStatus(result.status().name(), Instant.now());
         }
 
         event.markProcessed(Instant.now());
+    }
+
+    private void handlePaid(
+        PaymentTransactionEntity payment,
+        PaymentProvider.WebhookResult result
+    ) {
+        if (result.amount() == null || result.currency() == null) {
+            throw new IllegalStateException(
+                "Provider webhook did not contain a verified amount and currency"
+            );
+        }
+
+        if (payment.getAmount().compareTo(result.amount()) != 0 ||
+            payment.getCurrency() != result.currency()) {
+            throw new SecurityException(
+                "Provider payment amount or currency does not match RackPay transaction"
+            );
+        }
+
+        balances.openBalance(payment.getWalletId(), payment.getCurrency());
+        java.util.UUID clearingAccount =
+            settlementAccounts.requireAccount(providerType(payment), payment.getCurrency());
+
+        String key = "payment-credit:" +
+            payment.getProvider().name() + ":" + payment.getProviderPaymentId();
+
+        String hash = sha256(
+            payment.getProvider().name() + "|" +
+            payment.getProviderPaymentId() + "|" +
+            payment.getAmount().toPlainString() + "|" +
+            payment.getCurrency().name() + "|PAID"
+        );
+
+        var financial = walletCredit.credit(
+            new IdempotencyKey(key),
+            hash,
+            payment.getWalletId(),
+            clearingAccount,
+            new Money(payment.getAmount(), payment.getCurrency())
+        );
+
+        payment.markStatus("PAID", Instant.now());
+        payment.linkFinancialTransaction(financial.getId(), Instant.now());
+    }
+
+    private BigDecimalAmount verifiedAdjustmentAmount(
+        PaymentTransactionEntity payment,
+        PaymentProvider.WebhookResult result
+    ) {
+        if (result.amount() == null || result.currency() == null) {
+            throw new IllegalStateException(
+                "Provider adjustment webhook did not contain a verified amount and currency"
+            );
+        }
+
+        if (payment.getCurrency() != result.currency()) {
+            throw new SecurityException(
+                "Provider adjustment currency does not match RackPay transaction"
+            );
+        }
+
+        if (result.amount().compareTo(payment.getAmount()) > 0) {
+            throw new SecurityException(
+                "Provider adjustment exceeds RackPay transaction amount"
+            );
+        }
+
+        return new BigDecimalAmount(result.amount());
+    }
+
+    private PaymentProviderType providerType(PaymentTransactionEntity payment) {
+        return payment.getProvider();
     }
 
     private String sha256(String value) {
@@ -139,4 +201,6 @@ public class PaymentWebhookService {
             throw new IllegalStateException("Unable to hash provider event", e);
         }
     }
+
+    private record BigDecimalAmount(java.math.BigDecimal value) {}
 }
