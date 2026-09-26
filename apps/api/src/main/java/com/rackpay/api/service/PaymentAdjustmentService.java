@@ -2,12 +2,10 @@ package com.rackpay.api.service;
 
 import com.rackpay.api.domain.money.Money;
 import com.rackpay.api.domain.transaction.IdempotencyKey;
-import com.rackpay.api.payment.PaymentProviderType;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentEntity;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentJpaRepository;
 import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
 import com.rackpay.api.persistence.payment.PaymentTransactionJpaRepository;
-import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +32,7 @@ public class PaymentAdjustmentService {
         this.adjustments = adjustments;
         this.walletDebit = walletDebit;
         this.settlementAccounts = settlementAccounts;
+        this.payments = payments;
     }
 
     @Transactional
