@@ -22,4 +22,30 @@ class MoneyTest {
 
         assertThrows(IllegalArgumentException.class, () -> eur.add(usd));
     }
+
+    @Test
+    void usesZeroMinorUnitsForXofAndUgx() {
+        assertEquals(0, Currency.XOF.minorUnits());
+        assertEquals(0, Currency.UGX.minorUnits());
+        assertEquals(2, Currency.EUR.minorUnits());
+    }
+
+    @Test
+    void roundsMultiplicationToCurrencyMinorUnit() {
+        var eur = new Money(new BigDecimal("10.00"), Currency.EUR)
+            .multiply(new BigDecimal("0.333"));
+
+        var xof = new Money(new BigDecimal("10"), Currency.XOF)
+            .multiply(new BigDecimal("0.333"));
+
+        assertEquals(0, eur.amount().compareTo(new BigDecimal("3.33")));
+        assertEquals(0, xof.amount().compareTo(new BigDecimal("3")));
+    }
+
+    @Test
+    void roundedNormalizesExistingAmountToCurrencyMinorUnit() {
+        var money = new Money(new BigDecimal("10.126"), Currency.EUR).rounded();
+
+        assertEquals(0, money.amount().compareTo(new BigDecimal("10.13")));
+    }
 }
