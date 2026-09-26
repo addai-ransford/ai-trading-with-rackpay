@@ -1,6 +1,5 @@
 package com.rackpay.api.security;
 
-import com.rackpay.api.persistence.admin.PlatformAdminEntity;
 import com.rackpay.api.persistence.admin.PlatformAdminJpaRepository;
 import com.rackpay.api.persistence.user.UserEntity;
 import com.rackpay.api.persistence.user.UserJpaRepository;
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -39,7 +39,7 @@ class PlatformAdminAuthorizationManagerTest {
 
         AuthorizationDecision decision = manager.check(
             () -> authentication,
-            new RequestAuthorizationContext("/api/v1/admin/admins")
+            context("/api/v1/admin/admins")
         );
 
         assertTrue(decision.isGranted());
@@ -68,7 +68,7 @@ class PlatformAdminAuthorizationManagerTest {
 
         AuthorizationDecision decision = manager.check(
             () -> authentication,
-            new RequestAuthorizationContext("/api/v1/admin/payment-providers")
+            context("/api/v1/admin/payment-providers")
         );
 
         assertFalse(decision.isGranted());
@@ -92,7 +92,7 @@ class PlatformAdminAuthorizationManagerTest {
 
         AuthorizationDecision decision = manager.check(
             () -> authentication,
-            new RequestAuthorizationContext("/api/v1/admin/admins")
+            context("/api/v1/admin/admins")
         );
 
         assertFalse(decision.isGranted());
@@ -114,7 +114,7 @@ class PlatformAdminAuthorizationManagerTest {
 
         AuthorizationDecision decision = manager.check(
             () -> authentication,
-            new RequestAuthorizationContext("/api/v1/admin/admins")
+            context("/api/v1/admin/admins")
         );
 
         assertFalse(decision.isGranted());
@@ -138,11 +138,16 @@ class PlatformAdminAuthorizationManagerTest {
 
         AuthorizationDecision decision = manager.check(
             () -> authentication,
-            new RequestAuthorizationContext("/api/v1/admin/payment-providers")
+            context("/api/v1/admin/payment-providers")
         );
 
         assertTrue(decision.isGranted());
         verify(admins).existsByUserId(userId);
+    }
+
+    private static RequestAuthorizationContext context(String path) {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
+        return new RequestAuthorizationContext(request);
     }
 
     private static UserEntity user(UUID id, String subject) {
