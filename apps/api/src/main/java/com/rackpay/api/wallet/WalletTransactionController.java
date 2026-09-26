@@ -1,6 +1,6 @@
 package com.rackpay.api.wallet;
 
-import com.rackpay.api.auth.CurrentUserService;
+import com.rackpay.api.persistence.user.CurrentUserService;
 import com.rackpay.api.persistence.transaction.FinancialTransactionJpaRepository;
 import com.rackpay.api.persistence.wallet.WalletEntity;
 import com.rackpay.api.persistence.wallet.WalletJpaRepository;
