@@ -6,6 +6,7 @@ import com.rackpay.api.payment.PaymentProviderType;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentEntity;
 import com.rackpay.api.persistence.payment.PaymentAdjustmentJpaRepository;
 import com.rackpay.api.persistence.payment.PaymentTransactionEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,8 +62,7 @@ public class PaymentAdjustmentService {
                 Instant.now()
             )));
 
-        if (adjustment.getStatus() == PaymentAdjustmentEntity.Status.COMPLETED ||
-            adjustment.getStatus() == PaymentAdjustmentEntity.Status.PENDING_RECOVERY) {
+        if (adjustment.getStatus() == PaymentAdjustmentEntity.Status.COMPLETED) {
             return;
         }
 
@@ -99,6 +99,54 @@ public class PaymentAdjustmentService {
             }
             adjustment.markPendingRecovery(Instant.now());
         }
+    }
+
+    @Scheduled(fixedDelayString = "${rackpay.payment.adjustment-recovery-delay-ms:300000}")
+    @Transactional
+    public void recoverPendingAdjustments() {
+        for (PaymentAdjustmentEntity pending : adjustments.findAllByStatus(
+            PaymentAdjustmentEntity.Status.PENDING_RECOVERY
+        )) {
+            recoverPendingAdjustment(pending.getId());
+        }
+    }
+
+    @Transactional
+    public void recoverPendingAdjustment(UUID adjustmentId) {
+        PaymentAdjustmentEntity adjustment = adjustments.findById(adjustmentId)
+            .orElseThrow(() -> new IllegalArgumentException("payment adjustment not found"));
+
+        if (adjustment.getStatus() != PaymentAdjustmentEntity.Status.PENDING_RECOVERY) {
+            return;
+        }
+
+        UUID clearingAccount = settlementAccounts.requireAccount(
+            adjustment.getProvider(), adjustment.getCurrency()
+        );
+        String key = "payment-adjustment:" +
+            adjustment.getProvider().name() + ":" +
+            adjustment.getProviderPaymentId() + ":" +
+            adjustment.getAdjustmentType().name();
+        String hash = sha256(
+            key + "|" + adjustment.getAmount().toPlainString() + "|" + adjustment.getCurrency().name()
+        );
+
+        try {
+            var financial = walletDebit.debit(
+                new IdempotencyKey(key),
+                hash,
+                requireWalletId(adjustment),
+                clearingAccount,
+                new Money(adjustment.getAmount(), adjustment.getCurrency())
+            );
+            adjustment.complete(financial.getId(), Instant.now());
+        } catch (InsufficientWalletFundsException e) {
+            adjustment.markPendingRecovery(Instant.now());
+        }
+    }
+
+    private UUID requireWalletId(PaymentAdjustmentEntity adjustment) {
+        throw new UnsupportedOperationException("wallet recovery requires payment transaction lookup");
     }
 
     private String sha256(String value) {
