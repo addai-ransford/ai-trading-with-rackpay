@@ -191,7 +191,8 @@ public class MolliePaymentProvider implements PaymentProvider {
             case "paid" -> PaymentStatus.PAID;
             case "failed", "expired" -> PaymentStatus.FAILED;
             case "canceled" -> PaymentStatus.CANCELLED;
-            case "refunded", "charged_back" -> PaymentStatus.REFUNDED;
+            case "refunded" -> PaymentStatus.REFUNDED;
+            case "charged_back" -> PaymentStatus.CHARGED_BACK;
             default -> PaymentStatus.UNKNOWN;
         };
     }
