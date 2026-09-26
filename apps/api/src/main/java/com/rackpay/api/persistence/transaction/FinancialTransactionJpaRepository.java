@@ -1,14 +1,16 @@
 package com.rackpay.api.persistence.transaction;
 
-import com.rackpay.api.domain.transaction.TransactionStatus;
-import jakarta.persistence.LockModeType;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
-
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 public interface FinancialTransactionJpaRepository extends JpaRepository<FinancialTransactionEntity, UUID> {
 
