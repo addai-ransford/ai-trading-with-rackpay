@@ -1,12 +1,19 @@
 package com.rackpay.api.persistence.transaction;
 
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.domain.transaction.TransactionStatus;
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import com.rackpay.api.domain.money.Currency;
+import com.rackpay.api.domain.transaction.TransactionStatus;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "financial_transactions",
@@ -29,6 +36,7 @@ public class FinancialTransactionEntity {
     @Column(name = "wallet_id")
     private UUID walletId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "operation_type", length = 20)
     private OperationType operationType;
 
