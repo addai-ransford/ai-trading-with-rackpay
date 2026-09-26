@@ -54,17 +54,18 @@ done
 
 echo "PostgreSQL is ready."
 echo ""
-echo "Starting RackPay API..."
-echo ""
 
-cd "$API_DIR"
+# Stop any running Gradle daemons to clear stale processes
+echo "Stopping any background Gradle processes..."
+gradle --stop >/dev/null 2>&1 || true
 
-if [[ ! -x "./gradlew" ]]; then
-  chmod +x ./gradlew
-fi
-
+# Export environment variables from .env
 set -a
 source "$ENV_FILE"
 set +a
 
-exec ./gradlew bootRun
+echo "Starting RackPay API..."
+echo ""
+
+# Execute bootRun as the main process
+exec gradle -p "$API_DIR" bootRun --no-daemon
