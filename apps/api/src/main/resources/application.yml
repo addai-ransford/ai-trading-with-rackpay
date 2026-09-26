@@ -62,6 +62,7 @@ rackpay:
   wallet:
     default-currency: ${RACKPAY_WALLET_DEFAULT_CURRENCY:EUR}
   payment:
+    adjustment-recovery-delay-ms: ${RACKPAY_PAYMENT_ADJUSTMENT_RECOVERY_DELAY_MS:300000}
     environment: ${RACKPAY_PAYMENT_ENVIRONMENT:sandbox}
     mollie:
       base-url: ${RACKPAY_MOLLIE_BASE_URL:https://api.mollie.com/v2}
