@@ -16,7 +16,7 @@ public interface PaymentProvider {
                                 String description, String returnUrl, String webhookUrl,
                                 String customerEmail) {}
     record PaymentSession(String providerPaymentId, String checkoutUrl) {}
-    enum PaymentStatus { CREATED, PENDING, REQUIRES_ACTION, PAID, FAILED, CANCELLED, REFUNDED, UNKNOWN }
+    enum PaymentStatus { CREATED, PENDING, REQUIRES_ACTION, PAID, FAILED, CANCELLED, REFUNDED, CHARGED_BACK, UNKNOWN }
     record WebhookResult(
         String eventId,
         String providerPaymentId,
