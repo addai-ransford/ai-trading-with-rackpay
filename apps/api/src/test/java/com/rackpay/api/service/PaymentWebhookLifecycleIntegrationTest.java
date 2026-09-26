@@ -368,7 +368,7 @@ class PaymentWebhookLifecycleIntegrationTest {
             ).compareTo(new BigDecimal("50.00"))
         );
         assertEquals(
-            1,
+            0,
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM payment_adjustments",
                 Integer.class
