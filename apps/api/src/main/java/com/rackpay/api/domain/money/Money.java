@@ -15,7 +15,8 @@ public record Money(BigDecimal amount, Currency currency) {
     }
 
     public static Money zero(Currency currency) {
-        return new Money(BigDecimal.ZERO.setScale(currencyScale(currency)), currency);
+        Objects.requireNonNull(currency, "currency must not be null");
+        return new Money(BigDecimal.ZERO.setScale(currency.minorUnits()), currency);
     }
 
     public Money add(Money other) {
@@ -30,7 +31,15 @@ public record Money(BigDecimal amount, Currency currency) {
 
     public Money multiply(BigDecimal multiplier) {
         Objects.requireNonNull(multiplier, "multiplier must not be null");
-        return new Money(amount.multiply(multiplier).setScale(18, RoundingMode.HALF_EVEN).stripTrailingZeros(), currency);
+        return new Money(
+            amount.multiply(multiplier)
+                .setScale(currency.minorUnits(), RoundingMode.HALF_EVEN),
+            currency
+        );
+    }
+
+    public Money rounded() {
+        return new Money(amount.setScale(currency.minorUnits(), RoundingMode.HALF_EVEN), currency);
     }
 
     public boolean isNegative() {
@@ -46,9 +55,5 @@ public record Money(BigDecimal amount, Currency currency) {
         if (currency != other.currency) {
             throw new IllegalArgumentException("Currency mismatch: " + currency + " vs " + other.currency);
         }
-    }
-
-    private static int currencyScale(Currency currency) {
-        return 2;
     }
 }
