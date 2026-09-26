@@ -62,7 +62,7 @@ public class WalletLedgerService {
             balance.setBalance(balance.getBalance().add(amount.amount()));
         } else {
             if (balance.getBalance().compareTo(amount.amount()) < 0) {
-                throw new IllegalStateException("insufficient wallet funds");
+                throw new InsufficientWalletFundsException();
             }
             balance.setBalance(balance.getBalance().subtract(amount.amount()));
         }
