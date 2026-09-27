@@ -72,6 +72,7 @@ rackpay:
     quote-lifetime: PT2M
     fx-rates: {}
   payout:
+    default-provider: ${RACKPAY_PAYOUT_DEFAULT_PROVIDER:FLUTTERWAVE}
     flutterwave:
       base-url: ${RACKPAY_FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
       secret-key: ${RACKPAY_FLUTTERWAVE_SECRET_KEY:}
