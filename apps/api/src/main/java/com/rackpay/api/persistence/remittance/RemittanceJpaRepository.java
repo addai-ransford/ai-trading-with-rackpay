@@ -21,4 +21,6 @@ public interface RemittanceJpaRepository extends JpaRepository<RemittanceEntity,
     );
 
     Optional<RemittanceEntity> findByUserIdAndId(UUID userId, UUID id);
+
+    java.util.List<RemittanceEntity> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
 }
