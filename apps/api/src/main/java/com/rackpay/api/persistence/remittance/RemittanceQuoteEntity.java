@@ -18,6 +18,8 @@ public class RemittanceQuoteEntity {
  @Enumerated(EnumType.STRING) @Column(name="fee_currency_code",nullable=false,length=3) private Currency feeCurrency;
  @Column(name="fx_rate",nullable=false,precision=38,scale=18) private BigDecimal fxRate;
  @Column(name="expires_at",nullable=false) private Instant expiresAt;
+ @Column(name="remittance_id") private UUID remittanceId;
+ @Column(name="consumed_at") private Instant consumedAt;
  @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt;
  protected RemittanceQuoteEntity(){}
  public RemittanceQuoteEntity(UUID id,UUID userId,UUID corridorId,UUID recipientId,BigDecimal sourceAmount,Currency sourceCurrency,BigDecimal destinationAmount,Currency destinationCurrency,BigDecimal feeAmount,Currency feeCurrency,BigDecimal fxRate,Instant expiresAt,Instant createdAt){
@@ -25,5 +27,6 @@ public class RemittanceQuoteEntity {
  }
  public UUID getId(){return id;} public UUID getUserId(){return userId;} public UUID getCorridorId(){return corridorId;} public UUID getRecipientId(){return recipientId;}
  public BigDecimal getSourceAmount(){return sourceAmount;} public Currency getSourceCurrency(){return sourceCurrency;} public BigDecimal getDestinationAmount(){return destinationAmount;} public Currency getDestinationCurrency(){return destinationCurrency;}
- public BigDecimal getFeeAmount(){return feeAmount;} public Currency getFeeCurrency(){return feeCurrency;} public BigDecimal getFxRate(){return fxRate;} public Instant getExpiresAt(){return expiresAt;} public Instant getCreatedAt(){return createdAt;}
+ public BigDecimal getFeeAmount(){return feeAmount;} public Currency getFeeCurrency(){return feeCurrency;} public BigDecimal getFxRate(){return fxRate;} public Instant getExpiresAt(){return expiresAt;} public Instant getCreatedAt(){return createdAt;} public UUID getRemittanceId(){return remittanceId;} public Instant getConsumedAt(){return consumedAt;}
+ public void consume(UUID remittanceId, Instant consumedAt){ if(this.remittanceId!=null||this.consumedAt!=null) throw new IllegalStateException("quote has already been consumed"); this.remittanceId=remittanceId; this.consumedAt=consumedAt; }
 }
