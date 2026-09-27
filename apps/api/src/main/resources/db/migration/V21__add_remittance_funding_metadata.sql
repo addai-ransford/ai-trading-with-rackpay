@@ -1,5 +1,6 @@
 ALTER TABLE remittances
     ADD COLUMN request_hash VARCHAR(64),
+    ADD COLUMN payout_reference VARCHAR(255),
     ADD COLUMN funding_financial_transaction_id UUID,
     ADD COLUMN clearing_account_id UUID;
 
@@ -16,6 +17,10 @@ ALTER TABLE remittances
 ALTER TABLE remittances
     ADD CONSTRAINT chk_remittance_request_hash
         CHECK (request_hash IS NULL OR request_hash ~ '^[0-9a-fA-F]{64}$');
+
+CREATE UNIQUE INDEX uq_remittances_payout_reference
+    ON remittances(payout_reference)
+    WHERE payout_reference IS NOT NULL;
 
 CREATE INDEX idx_remittances_funding_transaction
     ON remittances(funding_financial_transaction_id);
