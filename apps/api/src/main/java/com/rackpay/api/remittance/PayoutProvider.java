@@ -6,9 +6,15 @@ import java.math.BigDecimal;
 public interface PayoutProvider {
     PayoutProviderType type();
     boolean supportsRecipientVerification(String countryCode, Currency currency, PayoutMethod payoutMethod);
+
+    default boolean supportsPayout(CreatePayoutCommand command) {
+        return true;
+    }
+
     RecipientVerification verifyRecipient(VerifyRecipientCommand command);
     PayoutResult createPayout(CreatePayoutCommand command);
     PayoutStatus getPayout(String providerTransferId);
+
     default PayoutResult findPayoutByReference(String reference) { return null; }
 
     record VerifyRecipientCommand(String countryCode, Currency currency, PayoutMethod payoutMethod, String networkCode, String normalizedPhoneNumber) {}
