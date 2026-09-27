@@ -29,6 +29,13 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     public PayoutProviderType type() { return PayoutProviderType.FLUTTERWAVE; }
 
     @Override
+    public boolean supportsPayout(CreatePayoutCommand command) {
+        return !secretKey.isBlank()
+            && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
+            && command.currency() != null;
+    }
+
+    @Override
     public boolean supportsRecipientVerification(String countryCode, Currency currency, PayoutMethod payoutMethod) {
         return "GH".equalsIgnoreCase(countryCode)
             && currency == Currency.GHS
