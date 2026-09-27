@@ -12,6 +12,8 @@ import com.rackpay.api.service.WalletCreditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +30,7 @@ public class RemittancePayoutService {
     private final WalletCreditService walletCredit;
     private final RemittanceClearingAccountService clearingAccounts;
     private final PayoutProviderType defaultProvider;
+    private final TransactionTemplate transactionTemplate;
 
     public RemittancePayoutService(
         RemittanceJpaRepository remittances,
@@ -45,17 +48,19 @@ public class RemittancePayoutService {
         this.walletCredit = walletCredit;
         this.clearingAccounts = clearingAccounts;
         this.defaultProvider = defaultProvider;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public PayoutResponse execute(UUID remittanceId) {
-        PreparedPayout payout = prepare(remittanceId);
+        PreparedPayout payout = transactionTemplate.execute(status -> prepareInternal(remittanceId));
+        if (payout == null) throw new IllegalStateException("Unable to prepare remittance payout");
         PayoutProvider provider = providers.require(defaultProvider);
 
         PayoutProvider.PayoutResult result = null;
         try {
             if (payout.providerTransferId() != null) {
                 PayoutProvider.PayoutStatus status = provider.getPayout(payout.providerTransferId());
-                return applyProviderStatus(payout.remittanceId(), status, payout.providerTransferId());
+                return transactionTemplate.execute(statusTx -> applyProviderStatusInternal(payout.remittanceId(), status, payout.providerTransferId()));
             }
 
             result = provider.findPayoutByReference(payout.payoutReference());
@@ -85,14 +90,12 @@ public class RemittancePayoutService {
 
             if (status == PayoutProvider.PayoutStatus.FAILED
                 || status == PayoutProvider.PayoutStatus.CANCELLED) {
-                return failAndRelease(payout.remittanceId(), result.providerTransferId(), status);
+                return transactionTemplate.execute(statusTx -> failAndReleaseInternal(payout.remittanceId(), result.providerTransferId(), status));
             }
 
-            return recordProviderStatus(
-                payout.remittanceId(),
-                result.providerTransferId(),
-                status
-            );
+            return transactionTemplate.execute(statusTx -> recordProviderStatusInternal(
+                payout.remittanceId(), result.providerTransferId(), status
+            ));
         } catch (RuntimeException ex) {
             // Keep the funds reserved for technical/provider errors. The deterministic
             // payout reference allows the next retry/reconciliation attempt to discover
@@ -106,18 +109,14 @@ public class RemittancePayoutService {
         }
     }
 
-    @Transactional
-    protected PreparedPayout prepare(UUID remittanceId) {
+        protected PreparedPayout prepareInternal(UUID remittanceId) {
         RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
             .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
 
-        if (remittance.getStatus() == RemittanceEntity.Status.COMPLETED) {
-            return snapshot(remittance);
-        }
-
-        if (remittance.getStatus() == RemittanceEntity.Status.FAILED
+        if (remittance.getStatus() == RemittanceEntity.Status.COMPLETED
+            || remittance.getStatus() == RemittanceEntity.Status.FAILED
             || remittance.getStatus() == RemittanceEntity.Status.CANCELLED) {
-            return snapshot(remittance);
+            return toPreparedSnapshot(remittance);
         }
 
         RemittanceRecipientEntity recipient = recipients.findById(remittance.getRecipientId())
@@ -148,8 +147,7 @@ public class RemittancePayoutService {
         );
     }
 
-    @Transactional
-    protected PayoutResponse recordProviderStatus(
+        protected PayoutResponse recordProviderStatusInternal(
         UUID remittanceId,
         String providerTransferId,
         PayoutProvider.PayoutStatus status
@@ -163,22 +161,20 @@ public class RemittancePayoutService {
         return new PayoutResponse(remittanceId, mapped, providerTransferId, status.name());
     }
 
-    @Transactional
-    protected PayoutResponse applyProviderStatus(
+        protected PayoutResponse applyProviderStatusInternal(
         UUID remittanceId,
         PayoutProvider.PayoutStatus status,
         String providerTransferId
     ) {
         if (status == PayoutProvider.PayoutStatus.FAILED
             || status == PayoutProvider.PayoutStatus.CANCELLED) {
-            return failAndRelease(remittanceId, providerTransferId, status);
+            return failAndReleaseInternal(remittanceId, providerTransferId, status);
         }
 
         return recordProviderStatus(remittanceId, providerTransferId, status);
     }
 
-    @Transactional
-    protected PayoutResponse failAndRelease(
+        protected PayoutResponse failAndReleaseInternal(
         UUID remittanceId,
         String providerTransferId,
         PayoutProvider.PayoutStatus providerStatus
@@ -207,6 +203,14 @@ public class RemittancePayoutService {
             remittance.markPayoutCreated(providerTransferId, RemittanceEntity.Status.RECOVERY_REQUIRED, Instant.now());
             return new PayoutResponse(remittanceId, RemittanceEntity.Status.RECOVERY_REQUIRED, providerTransferId, "RECOVERY_REQUIRED");
         }
+    }
+
+    private PreparedPayout toPreparedSnapshot(RemittanceEntity remittance) {
+        return new PreparedPayout(
+            remittance.getId(), remittance.getProviderTransferId(), remittance.getPayoutReference(),
+            remittance.getSourceCurrency(), remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
+            null, null, null, null, null, remittance.getStatus()
+        );
     }
 
     private PayoutResponse snapshotResponse(RemittanceEntity remittance) {
