@@ -1,13 +1,15 @@
 package com.rackpay.api.remittance;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.rackpay.api.domain.money.Currency;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.rackpay.api.domain.money.Currency;
 
 @Component
 public class FlutterwavePayoutProvider implements PayoutProvider {
@@ -16,8 +18,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
     public FlutterwavePayoutProvider(
         RestClient.Builder builder,
-        @Value("\${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
-        @Value("\${rackpay.payout.flutterwave.secret-key:}") String secretKey
+        @Value("${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
+        @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey
     ) {
         this.client = builder.baseUrl(baseUrl).build();
         this.secretKey = secretKey;

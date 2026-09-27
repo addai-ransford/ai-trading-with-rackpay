@@ -9,7 +9,7 @@ CREATE TABLE remittance_countries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_remittance_country_code CHECK (code = UPPER(code)),
-    CONSTRAINT chk_remittance_country_dial_code CHECK (dial_code ~ '^\\+[0-9]{1,7}$')
+    CONSTRAINT chk_remittance_country_dial_code CHECK (dial_code ~ '^\+[0-9]{1,7}$')
 );
 CREATE TABLE mobile_money_networks (
     id UUID PRIMARY KEY,

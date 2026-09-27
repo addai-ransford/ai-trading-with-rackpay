@@ -1,14 +1,15 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Currency;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.rackpay.api.domain.money.Currency;
 
 @Component
 public class PaystackPayoutProvider implements PayoutProvider {
     private final String secretKey;
 
-    public PaystackPayoutProvider(@Value("\${rackpay.payout.paystack.secret-key:}") String secretKey) {
+    public PaystackPayoutProvider(@Value("${rackpay.payout.paystack.secret-key:}") String secretKey) {
         this.secretKey = secretKey;
     }
 

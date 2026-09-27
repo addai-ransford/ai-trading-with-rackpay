@@ -1,21 +1,29 @@
 package com.rackpay.api.persistence.remittance;
 
-import com.rackpay.api.domain.money.Currency;
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.rackpay.api.domain.money.Currency;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
 @Entity
 @Table(
-    name = "remittances",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uq_remittance_user_idempotency",
-        columnNames = {"user_id", "idempotency_key"}
-    )
+        name = "remittances",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_remittance_user_idempotency",
+                columnNames = {"user_id", "idempotency_key"}
+        )
 )
 public class RemittanceEntity {
+
     @Id
     private UUID id;
 
@@ -64,6 +72,7 @@ public class RemittanceEntity {
     @Column(name = "provider_transfer_id", length = 255)
     private String providerTransferId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private Status status;
 
@@ -85,26 +94,27 @@ public class RemittanceEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected RemittanceEntity() {}
+    protected RemittanceEntity() {
+    }
 
     public RemittanceEntity(
-        UUID id,
-        UUID userId,
-        UUID walletId,
-        UUID corridorId,
-        UUID recipientId,
-        BigDecimal sourceAmount,
-        Currency sourceCurrency,
-        BigDecimal destinationAmount,
-        Currency destinationCurrency,
-        BigDecimal feeAmount,
-        Currency feeCurrency,
-        BigDecimal fxRate,
-        Status status,
-        String idempotencyKey,
-        String requestHash,
-        Instant createdAt,
-        Instant updatedAt
+            UUID id,
+            UUID userId,
+            UUID walletId,
+            UUID corridorId,
+            UUID recipientId,
+            BigDecimal sourceAmount,
+            Currency sourceCurrency,
+            BigDecimal destinationAmount,
+            Currency destinationCurrency,
+            BigDecimal feeAmount,
+            Currency feeCurrency,
+            BigDecimal fxRate,
+            Status status,
+            String idempotencyKey,
+            String requestHash,
+            Instant createdAt,
+            Instant updatedAt
     ) {
         this.id = id;
         this.userId = userId;
@@ -125,28 +135,93 @@ public class RemittanceEntity {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public UUID getWalletId() { return walletId; }
-    public UUID getCorridorId() { return corridorId; }
-    public UUID getRecipientId() { return recipientId; }
-    public BigDecimal getSourceAmount() { return sourceAmount; }
-    public Currency getSourceCurrency() { return sourceCurrency; }
-    public BigDecimal getDestinationAmount() { return destinationAmount; }
-    public Currency getDestinationCurrency() { return destinationCurrency; }
-    public BigDecimal getFeeAmount() { return feeAmount; }
-    public Currency getFeeCurrency() { return feeCurrency; }
-    public BigDecimal getFxRate() { return fxRate; }
-    public String getPayoutProvider() { return payoutProvider; }
-    public String getPayoutReference() { return payoutReference; }
-    public String getProviderTransferId() { return providerTransferId; }
-    public Status getStatus() { return status; }
-    public String getIdempotencyKey() { return idempotencyKey; }
-    public String getRequestHash() { return requestHash; }
-    public UUID getFundingFinancialTransactionId() { return fundingFinancialTransactionId; }
-    public UUID getClearingAccountId() { return clearingAccountId; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public UUID getId() {
+        return id;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public UUID getWalletId() {
+        return walletId;
+    }
+
+    public UUID getCorridorId() {
+        return corridorId;
+    }
+
+    public UUID getRecipientId() {
+        return recipientId;
+    }
+
+    public BigDecimal getSourceAmount() {
+        return sourceAmount;
+    }
+
+    public Currency getSourceCurrency() {
+        return sourceCurrency;
+    }
+
+    public BigDecimal getDestinationAmount() {
+        return destinationAmount;
+    }
+
+    public Currency getDestinationCurrency() {
+        return destinationCurrency;
+    }
+
+    public BigDecimal getFeeAmount() {
+        return feeAmount;
+    }
+
+    public Currency getFeeCurrency() {
+        return feeCurrency;
+    }
+
+    public BigDecimal getFxRate() {
+        return fxRate;
+    }
+
+    public String getPayoutProvider() {
+        return payoutProvider;
+    }
+
+    public String getPayoutReference() {
+        return payoutReference;
+    }
+
+    public String getProviderTransferId() {
+        return providerTransferId;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public String getRequestHash() {
+        return requestHash;
+    }
+
+    public UUID getFundingFinancialTransactionId() {
+        return fundingFinancialTransactionId;
+    }
+
+    public UUID getClearingAccountId() {
+        return clearingAccountId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 
     public void setPayoutPending(String payoutProvider, String payoutReference, Instant now) {
         requireStatus(Status.FUNDS_RESERVED);
@@ -192,5 +267,11 @@ public class RemittanceEntity {
         FAILED,
         CANCELLED,
         RECOVERY_REQUIRED
+    }
+
+    private void requireStatus(Status expected) {
+        if (status != expected) {
+            throw new IllegalStateException("remittance must be in " + expected + " status, but is " + status);
+        }
     }
 }

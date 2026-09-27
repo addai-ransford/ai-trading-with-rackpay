@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: rackpay
       POSTGRES_PASSWORD: rackpay
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - rackpay-postgres-test-data:/var/lib/postgresql/data
     healthcheck:
