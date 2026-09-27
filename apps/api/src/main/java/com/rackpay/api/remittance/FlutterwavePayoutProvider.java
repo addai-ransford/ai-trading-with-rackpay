@@ -43,7 +43,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         String accountNumber = command.normalizedPhoneNumber().replace("+", "");
         Map<String, String> body = Map.of(
             "account_number", accountNumber,
-            "account_bank", command.networkCode(),
+            "account_bank", providerNetworkCode(command.networkCode()),
             "country", command.countryCode()
         );
 
@@ -95,7 +95,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         Map<String, Object> body = new java.util.HashMap<>();
-        body.put("account_bank", command.networkCode());
+        body.put("account_bank", providerNetworkCode(command.networkCode()));
         body.put("account_number", command.normalizedPhoneNumber().replace("+", ""));
         body.put("amount", command.amount().stripTrailingZeros());
         body.put("currency", command.currency().name());
@@ -176,6 +176,14 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         String id = transfer.path("id").asText(null);
         String status = transfer.path("status").asText(null);
         return id == null ? null : new PayoutResult(id, status);
+    }
+
+    private String providerNetworkCode(String networkCode) {
+        return switch (networkCode.toUpperCase(java.util.Locale.ROOT)) {
+            case "MPESA" -> "MPS";
+            case "TELECEL" -> "VODAFONE";
+            default -> networkCode;
+        };
     }
 
     private PayoutStatus mapStatus(String status) {
