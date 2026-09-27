@@ -106,11 +106,13 @@ public class RemittancePayoutService {
 
                 if (providerStatus == PayoutProvider.PayoutStatus.FAILED
                     || providerStatus == PayoutProvider.PayoutStatus.CANCELLED) {
+                    final String failedProviderTransferId = result.providerTransferId();
+                    final PayoutProvider.PayoutStatus failedStatus = providerStatus;
                     PayoutResponse next = transactionTemplate.execute(status ->
                         failAttemptAndPrepareNextInternal(
                             payout,
-                            result.providerTransferId(),
-                            providerStatus
+                            failedProviderTransferId,
+                            failedStatus
                         )
                     );
                     if (next == null) throw new IllegalStateException("Unable to advance payout attempt");
@@ -118,11 +120,13 @@ public class RemittancePayoutService {
                     continue;
                 }
 
+                final String completedProviderTransferId = result.providerTransferId();
+                final PayoutProvider.PayoutStatus completedStatus = providerStatus;
                 return transactionTemplate.execute(status ->
                     recordProviderStatusInternal(
                         payout,
-                        result.providerTransferId(),
-                        providerStatus
+                        completedProviderTransferId,
+                        completedStatus
                     )
                 );
             } catch (RuntimeException ex) {
@@ -159,7 +163,10 @@ public class RemittancePayoutService {
             PayoutProvider next = providers.nextEligible(
                 attempt.getProvider(), attemptedProviders, command
             );
-            if (next == null) return releaseAfterAllProvidersFailed(remittance, attempt.getProvider(), null);
+            if (next == null) {
+                PayoutResponse response = releaseAfterAllProvidersFailed(remittance, attempt.getProvider(), null);
+                return new PreparedPayoutMapper().toPreparedPayout(remittance, attempt.getProvider(), response);
+            }
             attempt = createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
         }
 
@@ -443,22 +450,6 @@ public class RemittancePayoutService {
         }
     }
 
-    private record PreparedPayout(
-        UUID remittanceId,
-        UUID attemptId,
-        PayoutProviderType provider,
-        String providerTransferId,
-        String payoutReference,
-        com.rackpay.api.domain.money.Currency sourceCurrency,
-        BigDecimal destinationAmount,
-        com.rackpay.api.domain.money.Currency destinationCurrency,
-        String countryCode,
-        PayoutMethod payoutMethod,
-        String networkCode,
-        String normalizedPhoneNumber,
-        String recipientName,
-        RemittanceEntity.Status status
-    ) {}
 
     public record PayoutResponse(
         UUID remittanceId,
