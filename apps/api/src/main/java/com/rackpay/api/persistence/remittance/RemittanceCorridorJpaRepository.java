@@ -1,0 +1,7 @@
+package com.rackpay.api.persistence.remittance;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+import java.util.UUID;
+public interface RemittanceCorridorJpaRepository extends JpaRepository<RemittanceCorridorEntity,UUID>{
+ Optional<RemittanceCorridorEntity> findBySourceCountryCodeIgnoreCaseAndDestinationCountryCodeIgnoreCaseAndSourceCurrencyCodeIgnoreCaseAndDestinationCurrencyCodeIgnoreCaseAndEnabledTrue(String sourceCountryCode,String destinationCountryCode,String sourceCurrencyCode,String destinationCurrencyCode);
+}
