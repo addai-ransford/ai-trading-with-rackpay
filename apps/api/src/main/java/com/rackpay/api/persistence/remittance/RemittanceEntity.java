@@ -58,6 +58,9 @@ public class RemittanceEntity {
     @Column(name = "payout_provider", length = 30)
     private String payoutProvider;
 
+    @Column(name = "payout_reference", length = 255)
+    private String payoutReference;
+
     @Column(name = "provider_transfer_id", length = 255)
     private String providerTransferId;
 
@@ -135,6 +138,7 @@ public class RemittanceEntity {
     public Currency getFeeCurrency() { return feeCurrency; }
     public BigDecimal getFxRate() { return fxRate; }
     public String getPayoutProvider() { return payoutProvider; }
+    public String getPayoutReference() { return payoutReference; }
     public String getProviderTransferId() { return providerTransferId; }
     public Status getStatus() { return status; }
     public String getIdempotencyKey() { return idempotencyKey; }
@@ -143,6 +147,31 @@ public class RemittanceEntity {
     public UUID getClearingAccountId() { return clearingAccountId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public void setPayoutPending(String payoutProvider, String payoutReference, Instant now) {
+        requireStatus(Status.FUNDS_RESERVED);
+        this.payoutProvider = payoutProvider;
+        this.payoutReference = payoutReference;
+        this.status = Status.PAYOUT_PENDING;
+        this.updatedAt = now;
+    }
+
+    public void markPayoutCreated(String providerTransferId, Status payoutStatus, Instant now) {
+        if (status != Status.PAYOUT_PENDING && status != Status.PAYOUT_PROCESSING) {
+            throw new IllegalStateException("remittance cannot record payout from " + status);
+        }
+        this.providerTransferId = providerTransferId;
+        this.status = payoutStatus;
+        this.updatedAt = now;
+    }
+
+    public void markPayoutStatus(Status payoutStatus, Instant now) {
+        if (status != Status.PAYOUT_PENDING && status != Status.PAYOUT_PROCESSING) {
+            throw new IllegalStateException("remittance cannot update payout from " + status);
+        }
+        this.status = payoutStatus;
+        this.updatedAt = now;
+    }
 
     public void markFundsReserved(UUID fundingFinancialTransactionId, UUID clearingAccountId, Instant now) {
         requireStatus(Status.CREATED);
