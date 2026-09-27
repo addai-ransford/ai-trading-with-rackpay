@@ -22,3 +22,16 @@ CREATE INDEX idx_remittances_funding_transaction
 
 CREATE INDEX idx_remittances_clearing_account
     ON remittances(clearing_account_id);
+
+ALTER TABLE remittance_quotes
+    ADD COLUMN remittance_id UUID,
+    ADD COLUMN consumed_at TIMESTAMPTZ;
+
+ALTER TABLE remittance_quotes
+    ADD CONSTRAINT fk_remittance_quote_remittance
+        FOREIGN KEY (remittance_id)
+        REFERENCES remittances(id);
+
+CREATE UNIQUE INDEX uq_remittance_quote_consumed
+    ON remittance_quotes(remittance_id)
+    WHERE remittance_id IS NOT NULL;
