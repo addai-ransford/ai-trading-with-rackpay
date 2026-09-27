@@ -44,14 +44,27 @@ public class RemittanceQuoteService {
             .orElseThrow(()->new IllegalArgumentException("Recipient does not belong to the authenticated user"));
 
         String destinationCountry=recipient.getCountryCode().toUpperCase(Locale.ROOT);
-        RemittanceCorridorEntity corridor=corridors.findAll().stream()
-            .filter(RemittanceCorridorEntity::isEnabled)
-            .filter(c->c.getSourceCountryCode().equalsIgnoreCase(sourceCountry))
-            .filter(c->c.getDestinationCountryCode().equalsIgnoreCase(destinationCountry))
-            .filter(c->c.getSourceCurrencyCode().equalsIgnoreCase(sourceCurrency.name()))
-            .filter(c->request.destinationCurrency()==null||c.getDestinationCurrencyCode().equalsIgnoreCase(request.destinationCurrency().name()))
-            .findFirst()
-            .orElseThrow(()->new IllegalArgumentException("No enabled remittance corridor exists for this route"));
+        RemittanceCorridorEntity corridor;
+        if (request.destinationCurrency() != null) {
+            corridor = corridors
+                .findBySourceCountryCodeIgnoreCaseAndDestinationCountryCodeIgnoreCaseAndSourceCurrencyCodeIgnoreCaseAndDestinationCurrencyCodeIgnoreCaseAndEnabledTrue(
+                    sourceCountry,
+                    destinationCountry,
+                    sourceCurrency.name(),
+                    request.destinationCurrency().name()
+                )
+                .orElseThrow(() -> new IllegalArgumentException("No enabled remittance corridor exists for this route"));
+        } else {
+            corridor = corridors
+                .findAllBySourceCountryCodeIgnoreCaseAndDestinationCountryCodeIgnoreCaseAndSourceCurrencyCodeIgnoreCaseAndEnabledTrue(
+                    sourceCountry,
+                    destinationCountry,
+                    sourceCurrency.name()
+                )
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No enabled remittance corridor exists for this route"));
+        }
 
         Currency destinationCurrency=parseCurrency(corridor.getDestinationCurrencyCode());
         if(request.sourceAmount().compareTo(corridor.getMinAmount())<0) throw new IllegalArgumentException("Amount is below the corridor minimum");
