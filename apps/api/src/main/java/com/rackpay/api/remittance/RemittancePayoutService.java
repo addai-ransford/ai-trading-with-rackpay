@@ -6,6 +6,8 @@ import com.rackpay.api.persistence.remittance.MobileMoneyNetworkEntity;
 import com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceEntity;
 import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
+import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptEntity;
+import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientEntity;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
 import com.rackpay.api.service.WalletCreditService;
@@ -18,6 +20,8 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -25,6 +29,7 @@ public class RemittancePayoutService {
     private final RemittanceJpaRepository remittances;
     private final RemittanceRecipientJpaRepository recipients;
     private final MobileMoneyNetworkJpaRepository networks;
+    private final RemittancePayoutAttemptJpaRepository attempts;
     private final PayoutProviderRegistry providers;
     private final WalletCreditService walletCredit;
     private final RemittanceClearingAccountService clearingAccounts;
@@ -35,15 +40,17 @@ public class RemittancePayoutService {
         RemittanceJpaRepository remittances,
         RemittanceRecipientJpaRepository recipients,
         MobileMoneyNetworkJpaRepository networks,
+        RemittancePayoutAttemptJpaRepository attempts,
         PayoutProviderRegistry providers,
         WalletCreditService walletCredit,
         RemittanceClearingAccountService clearingAccounts,
-        @Value("${rackpay.payout.default-provider:FLUTTERWAVE}") PayoutProviderType defaultProvider,
+        @Value("$"+"{rackpay.payout.default-provider:FLUTTERWAVE}") PayoutProviderType defaultProvider,
         PlatformTransactionManager transactionManager
     ) {
         this.remittances = remittances;
         this.recipients = recipients;
         this.networks = networks;
+        this.attempts = attempts;
         this.providers = providers;
         this.walletCredit = walletCredit;
         this.clearingAccounts = clearingAccounts;
@@ -52,124 +59,306 @@ public class RemittancePayoutService {
     }
 
     public PayoutResponse execute(UUID remittanceId) {
-        PreparedPayout payout = transactionTemplate.execute(
-            status -> prepareInternal(remittanceId)
-        );
-        if (payout == null) {
-            throw new IllegalStateException("Unable to prepare remittance payout");
-        }
+        int maxAttempts = PayoutProviderType.values().length + 1;
 
-        if (payout.status() == RemittanceEntity.Status.COMPLETED
-            || payout.status() == RemittanceEntity.Status.FAILED
-            || payout.status() == RemittanceEntity.Status.CANCELLED
-            || payout.status() == RemittanceEntity.Status.RECOVERY_REQUIRED) {
-            return new PayoutResponse(
-                payout.remittanceId(),
-                payout.status(),
-                payout.providerTransferId(),
-                payout.status().name()
-            );
-        }
+        for (int i = 0; i < maxAttempts; i++) {
+            PreparedPayout payout = transactionTemplate.execute(status -> prepareInternal(remittanceId));
+            if (payout == null) throw new IllegalStateException("Unable to prepare remittance payout");
 
-        PayoutProvider provider = providers.require(defaultProvider);
-
-        try {
-            if (payout.providerTransferId() != null) {
-                PayoutProvider.PayoutStatus providerStatus =
-                    provider.getPayout(payout.providerTransferId());
-
-                return transactionTemplate.execute(status ->
-                    applyProviderStatusInternal(
-                        payout.remittanceId(),
-                        providerStatus,
-                        payout.providerTransferId()
-                    )
+            if (isTerminal(payout.status())) {
+                return new PayoutResponse(
+                    payout.remittanceId(), payout.status(), payout.providerTransferId(), payout.status().name()
                 );
             }
 
-            PayoutProvider.PayoutResult result =
-                provider.findPayoutByReference(payout.payoutReference());
+            PayoutProvider provider = providers.require(payout.provider());
 
-            if (result == null) {
-                result = provider.createPayout(new PayoutProvider.CreatePayoutCommand(
-                    payout.payoutReference(),
-                    payout.destinationAmount(),
-                    payout.destinationCurrency(),
-                    payout.sourceCurrency(),
-                    payout.countryCode(),
-                    payout.payoutMethod(),
-                    payout.networkCode(),
-                    payout.normalizedPhoneNumber(),
-                    payout.recipientName()
-                ));
-            }
+            try {
+                PayoutProvider.PayoutResult result;
 
-            if (result == null || result.providerTransferId() == null
-                || result.providerTransferId().isBlank() || result.status() == null) {
-                throw new IllegalStateException("Payout provider returned an invalid transfer response");
-            }
+                if (payout.providerTransferId() != null) {
+                    PayoutProvider.PayoutStatus status = provider.getPayout(payout.providerTransferId());
+                    result = new PayoutProvider.PayoutResult(payout.providerTransferId(), status.name());
+                } else {
+                    result = provider.findPayoutByReference(payout.payoutReference());
+                    if (result == null) {
+                        result = provider.createPayout(new PayoutProvider.CreatePayoutCommand(
+                            payout.payoutReference(),
+                            payout.destinationAmount(),
+                            payout.destinationCurrency(),
+                            payout.sourceCurrency(),
+                            payout.countryCode(),
+                            payout.payoutMethod(),
+                            payout.networkCode(),
+                            payout.normalizedPhoneNumber(),
+                            payout.recipientName()
+                        ));
+                    }
+                }
 
-            final PayoutProvider.PayoutResult finalResult = result;
-            final PayoutProvider.PayoutStatus providerStatus =
-                result.status().startsWith("FAILED:")
+                if (result == null || result.status() == null) {
+                    return retryResponse(payout);
+                }
+
+                PayoutProvider.PayoutStatus providerStatus = result.status().startsWith("FAILED:")
                     ? PayoutProvider.PayoutStatus.FAILED
                     : mapProviderStatus(result.status());
 
-            if (providerStatus == PayoutProvider.PayoutStatus.FAILED
-                || providerStatus == PayoutProvider.PayoutStatus.CANCELLED) {
+                if (providerStatus == PayoutProvider.PayoutStatus.FAILED
+                    || providerStatus == PayoutProvider.PayoutStatus.CANCELLED) {
+                    PayoutResponse next = transactionTemplate.execute(status ->
+                        failAttemptAndPrepareNextInternal(
+                            payout,
+                            result.providerTransferId(),
+                            providerStatus
+                        )
+                    );
+                    if (next == null) throw new IllegalStateException("Unable to advance payout attempt");
+                    if (!"NEXT_PROVIDER".equals(next.providerStatus())) return next;
+                    continue;
+                }
+
                 return transactionTemplate.execute(status ->
-                    failAndReleaseInternal(
-                        payout.remittanceId(),
-                        finalResult.providerTransferId(),
+                    recordProviderStatusInternal(
+                        payout,
+                        result.providerTransferId(),
                         providerStatus
                     )
                 );
+            } catch (RuntimeException ex) {
+                // A transport/API exception is not proof that no transfer was created.
+                // Reconcile the same provider on the next execution before failover.
+                return retryResponse(payout);
             }
-
-            return transactionTemplate.execute(status ->
-                recordProviderStatusInternal(
-                    payout.remittanceId(),
-                    finalResult.providerTransferId(),
-                    providerStatus
-                )
-            );
-        } catch (RuntimeException ex) {
-            return new PayoutResponse(
-                payout.remittanceId(),
-                RemittanceEntity.Status.PAYOUT_PENDING,
-                payout.providerTransferId(),
-                "PAYOUT_RETRY_REQUIRED"
-            );
         }
+
+        throw new IllegalStateException("No payout provider attempt could be completed");
     }
 
     private PreparedPayout prepareInternal(UUID remittanceId) {
         RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
             .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
 
-        if (remittance.getStatus() == RemittanceEntity.Status.COMPLETED
-            || remittance.getStatus() == RemittanceEntity.Status.FAILED
-            || remittance.getStatus() == RemittanceEntity.Status.CANCELLED
-            || remittance.getStatus() == RemittanceEntity.Status.RECOVERY_REQUIRED) {
-            return terminalSnapshot(remittance);
-        }
+        if (isTerminal(remittance.getStatus())) return terminalSnapshot(remittance);
 
         RemittanceRecipientEntity recipient = recipients.findById(remittance.getRecipientId())
             .orElseThrow(() -> new IllegalStateException("remittance recipient not found"));
-
         MobileMoneyNetworkEntity network = networks.findById(recipient.getMobileMoneyNetworkId())
             .orElseThrow(() -> new IllegalStateException("mobile money network not found"));
 
-        String payoutReference = remittance.getPayoutReference();
-        if (payoutReference == null || payoutReference.isBlank()) {
-            payoutReference = "RP-" + remittance.getId().toString().replace("-", "");
-            remittance.setPayoutPending(defaultProvider.name(), payoutReference, Instant.now());
+        var command = commandFor(remittance, recipient, network);
+        var history = attempts.findAllByRemittanceIdForUpdate(remittanceId);
+        RemittancePayoutAttemptEntity attempt = history.isEmpty() ? null : history.get(0);
+
+        if (attempt == null) {
+            PayoutProvider provider = initialProvider(command);
+            attempt = createAttempt(remittance, provider.type(), 1);
+        } else if (attempt.getStatus() == RemittancePayoutAttemptEntity.Status.FAILED
+            || attempt.getStatus() == RemittancePayoutAttemptEntity.Status.CANCELLED) {
+            Set<PayoutProviderType> attemptedProviders = attemptedProviders(history);
+            PayoutProvider next = providers.nextEligible(
+                attempt.getProvider(), attemptedProviders, command
+            );
+            if (next == null) return releaseAfterAllProvidersFailed(remittance, attempt.getProvider(), null);
+            attempt = createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
         }
 
+        if (remittance.getStatus() == RemittanceEntity.Status.FUNDS_RESERVED
+            || !attempt.getProvider().name().equals(remittance.getPayoutProvider())
+            || !attempt.getPayoutReference().equals(remittance.getPayoutReference())) {
+            remittance.beginPayoutAttempt(
+                attempt.getProvider().name(),
+                attempt.getPayoutReference(),
+                Instant.now()
+            );
+        }
+
+        return prepared(remittance, attempt, recipient, network);
+    }
+
+    private PayoutProvider initialProvider(PayoutProvider.CreatePayoutCommand command) {
+        PayoutProvider preferred = providers.require(defaultProvider);
+        if (preferred.supportsPayout(command)) return preferred;
+
+        PayoutProvider fallback = providers.nextEligible(
+            defaultProvider, Set.of(), command
+        );
+        if (fallback == null) throw new IllegalStateException("No configured payout provider supports this payout");
+        return fallback;
+    }
+
+    private RemittancePayoutAttemptEntity createAttempt(
+        RemittanceEntity remittance,
+        PayoutProviderType provider,
+        int number
+    ) {
+        Instant now = Instant.now();
+        String reference = "rp-" + remittance.getId().toString().replace("-", "") + "-" + number;
+        RemittancePayoutAttemptEntity attempt = new RemittancePayoutAttemptEntity(
+            UUID.randomUUID(), remittance.getId(), number, provider, reference, now
+        );
+        return attempts.save(attempt);
+    }
+
+    private PayoutResponse failAttemptAndPrepareNextInternal(
+        PreparedPayout payout,
+        String providerTransferId,
+        PayoutProvider.PayoutStatus providerStatus
+    ) {
+        RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId())
+            .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+        RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
+            .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
+
+        attempt.record(
+            providerTransferId,
+            mapAttemptStatus(providerStatus),
+            providerStatus.name(),
+            Instant.now()
+        );
+
+        RemittanceRecipientEntity recipient = recipients.findById(remittance.getRecipientId())
+            .orElseThrow(() -> new IllegalStateException("remittance recipient not found"));
+        MobileMoneyNetworkEntity network = networks.findById(recipient.getMobileMoneyNetworkId())
+            .orElseThrow(() -> new IllegalStateException("mobile money network not found"));
+
+        var command = commandFor(remittance, recipient, network);
+        var history = attempts.findAllByRemittanceIdForUpdate(remittance.getId());
+        Set<PayoutProviderType> attemptedProviders = attemptedProviders(history);
+
+        PayoutProvider next = providers.nextEligible(
+            attempt.getProvider(), attemptedProviders, command
+        );
+
+        if (next == null) {
+            return releaseAfterAllProvidersFailed(
+                remittance, attempt.getProvider(), providerTransferId
+            );
+        }
+
+        RemittancePayoutAttemptEntity nextAttempt =
+            createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
+
+        remittance.beginPayoutAttempt(
+            next.type().name(),
+            nextAttempt.getPayoutReference(),
+            Instant.now()
+        );
+
+        return new PayoutResponse(
+            remittance.getId(),
+            RemittanceEntity.Status.PAYOUT_PENDING,
+            null,
+            "NEXT_PROVIDER"
+        );
+    }
+
+    private PayoutResponse recordProviderStatusInternal(
+        PreparedPayout payout,
+        String providerTransferId,
+        PayoutProvider.PayoutStatus providerStatus
+    ) {
+        RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId())
+            .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+        RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
+            .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
+
+        RemittanceEntity.Status mapped = mapRemittanceStatus(providerStatus);
+        attempt.record(providerTransferId, mapAttemptStatus(providerStatus), null, Instant.now());
+        remittance.markPayoutCreated(providerTransferId, mapped, Instant.now());
+
+        return new PayoutResponse(
+            remittance.getId(), mapped, providerTransferId, providerStatus.name()
+        );
+    }
+
+    private PayoutResponse releaseAfterAllProvidersFailed(
+        RemittanceEntity remittance,
+        PayoutProviderType provider,
+        String providerTransferId
+    ) {
+        if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
+            return new PayoutResponse(remittance.getId(), remittance.getStatus(), providerTransferId, "ALREADY_RELEASED");
+        }
+
+        var clearingAccount = clearingAccounts.require(remittance.getSourceCurrency());
+
+        try {
+            BigDecimal total = remittance.getSourceAmount().add(remittance.getFeeAmount());
+            walletCredit.credit(
+                new IdempotencyKey("remittance:release:" + remittance.getId()),
+                sha256(remittance.getId() + "|release|" + total.toPlainString()
+                    + "|" + remittance.getSourceCurrency().name()),
+                remittance.getWalletId(),
+                clearingAccount.getId(),
+                new Money(total, remittance.getSourceCurrency())
+            );
+
+            remittance.markPayoutCreated(
+                providerTransferId,
+                RemittanceEntity.Status.FAILED,
+                Instant.now()
+            );
+
+            return new PayoutResponse(
+                remittance.getId(), RemittanceEntity.Status.FAILED, providerTransferId,
+                "ALL_PROVIDERS_FAILED"
+            );
+        } catch (RuntimeException ex) {
+            remittance.markPayoutCreated(
+                providerTransferId,
+                RemittanceEntity.Status.RECOVERY_REQUIRED,
+                Instant.now()
+            );
+            return new PayoutResponse(
+                remittance.getId(), RemittanceEntity.Status.RECOVERY_REQUIRED,
+                providerTransferId, "RECOVERY_REQUIRED"
+            );
+        }
+    }
+
+    private PayoutResponse retryResponse(PreparedPayout payout) {
+        return new PayoutResponse(
+            payout.remittanceId(),
+            payout.status() == RemittanceEntity.Status.PAYOUT_PROCESSING
+                ? RemittanceEntity.Status.PAYOUT_PROCESSING
+                : RemittanceEntity.Status.PAYOUT_PENDING,
+            payout.providerTransferId(),
+            "PAYOUT_RETRY_REQUIRED"
+        );
+    }
+
+    private PayoutProvider.CreatePayoutCommand commandFor(
+        RemittanceEntity remittance,
+        RemittanceRecipientEntity recipient,
+        MobileMoneyNetworkEntity network
+    ) {
+        return new PayoutProvider.CreatePayoutCommand(
+            remittance.getPayoutReference(),
+            remittance.getDestinationAmount(),
+            remittance.getDestinationCurrency(),
+            remittance.getSourceCurrency(),
+            recipient.getCountryCode(),
+            recipient.getPayoutMethod(),
+            network.getCode(),
+            recipient.getNormalizedPhoneNumber(),
+            recipient.getVerifiedName()
+        );
+    }
+
+    private PreparedPayout prepared(
+        RemittanceEntity remittance,
+        RemittancePayoutAttemptEntity attempt,
+        RemittanceRecipientEntity recipient,
+        MobileMoneyNetworkEntity network
+    ) {
         return new PreparedPayout(
             remittance.getId(),
-            remittance.getProviderTransferId(),
-            payoutReference,
+            attempt.getId(),
+            attempt.getProvider(),
+            attempt.getProviderTransferId(),
+            attempt.getPayoutReference(),
             remittance.getSourceCurrency(),
             remittance.getDestinationAmount(),
             remittance.getDestinationCurrency(),
@@ -183,134 +372,63 @@ public class RemittancePayoutService {
     }
 
     private PreparedPayout terminalSnapshot(RemittanceEntity remittance) {
+        PayoutProviderType provider = remittance.getPayoutProvider() == null
+            ? defaultProvider
+            : PayoutProviderType.valueOf(remittance.getPayoutProvider());
+
         return new PreparedPayout(
-            remittance.getId(),
-            remittance.getProviderTransferId(),
-            remittance.getPayoutReference(),
-            remittance.getSourceCurrency(),
-            remittance.getDestinationAmount(),
-            remittance.getDestinationCurrency(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            remittance.getStatus()
+            remittance.getId(), null, provider, remittance.getProviderTransferId(),
+            remittance.getPayoutReference(), remittance.getSourceCurrency(),
+            remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
+            null, null, null, null, null, remittance.getStatus()
         );
     }
 
-    private PayoutResponse recordProviderStatusInternal(
-        UUID remittanceId,
-        String providerTransferId,
-        PayoutProvider.PayoutStatus status
+    private static Set<PayoutProviderType> attemptedProviders(
+        java.util.List<RemittancePayoutAttemptEntity> history
     ) {
-        RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
-            .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
-
-        RemittanceEntity.Status mapped = mapRemittanceStatus(status);
-        remittance.markPayoutCreated(providerTransferId, mapped, Instant.now());
-
-        return new PayoutResponse(remittanceId, mapped, providerTransferId, status.name());
+        Set<PayoutProviderType> result = new HashSet<>();
+        history.forEach(attempt -> result.add(attempt.getProvider()));
+        return result;
     }
 
-    private PayoutResponse applyProviderStatusInternal(
-        UUID remittanceId,
-        PayoutProvider.PayoutStatus status,
-        String providerTransferId
-    ) {
-        if (status == PayoutProvider.PayoutStatus.FAILED
-            || status == PayoutProvider.PayoutStatus.CANCELLED) {
-            return failAndReleaseInternal(remittanceId, providerTransferId, status);
-        }
-
-        return recordProviderStatusInternal(remittanceId, providerTransferId, status);
-    }
-
-    private PayoutResponse failAndReleaseInternal(
-        UUID remittanceId,
-        String providerTransferId,
-        PayoutProvider.PayoutStatus providerStatus
-    ) {
-        RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
-            .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
-
-        if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
-            return new PayoutResponse(
-                remittanceId,
-                remittance.getStatus(),
-                providerTransferId,
-                "ALREADY_RELEASED"
-            );
-        }
-
-        var clearingAccount = clearingAccounts.require(remittance.getSourceCurrency());
-
-        try {
-            BigDecimal total = remittance.getSourceAmount().add(remittance.getFeeAmount());
-
-            walletCredit.credit(
-                new IdempotencyKey("remittance:release:" + remittanceId),
-                sha256(
-                    remittanceId + "|release|" + total.toPlainString()
-                        + "|" + remittance.getSourceCurrency().name()
-                ),
-                remittance.getWalletId(),
-                clearingAccount.getId(),
-                new Money(total, remittance.getSourceCurrency())
-            );
-
-            remittance.markPayoutCreated(
-                providerTransferId,
-                RemittanceEntity.Status.FAILED,
-                Instant.now()
-            );
-
-            return new PayoutResponse(
-                remittanceId,
-                RemittanceEntity.Status.FAILED,
-                providerTransferId,
-                providerStatus.name()
-            );
-        } catch (RuntimeException ex) {
-            remittance.markPayoutCreated(
-                providerTransferId,
-                RemittanceEntity.Status.RECOVERY_REQUIRED,
-                Instant.now()
-            );
-
-            return new PayoutResponse(
-                remittanceId,
-                RemittanceEntity.Status.RECOVERY_REQUIRED,
-                providerTransferId,
-                "RECOVERY_REQUIRED"
-            );
-        }
+    private static RemittancePayoutAttemptEntity.Status mapAttemptStatus(PayoutProvider.PayoutStatus status) {
+        return switch (status) {
+            case CREATED -> RemittancePayoutAttemptEntity.Status.CREATED;
+            case PENDING -> RemittancePayoutAttemptEntity.Status.PENDING;
+            case PROCESSING -> RemittancePayoutAttemptEntity.Status.PROCESSING;
+            case COMPLETED -> RemittancePayoutAttemptEntity.Status.COMPLETED;
+            case FAILED -> RemittancePayoutAttemptEntity.Status.FAILED;
+            case CANCELLED -> RemittancePayoutAttemptEntity.Status.CANCELLED;
+            case UNKNOWN -> RemittancePayoutAttemptEntity.Status.UNKNOWN;
+        };
     }
 
     private static RemittanceEntity.Status mapRemittanceStatus(PayoutProvider.PayoutStatus status) {
         return switch (status) {
-            case CREATED, PENDING, PROCESSING -> RemittanceEntity.Status.PAYOUT_PROCESSING;
+            case CREATED, PENDING, PROCESSING, UNKNOWN -> RemittanceEntity.Status.PAYOUT_PROCESSING;
             case COMPLETED -> RemittanceEntity.Status.COMPLETED;
             case FAILED -> RemittanceEntity.Status.FAILED;
             case CANCELLED -> RemittanceEntity.Status.CANCELLED;
-            case UNKNOWN -> RemittanceEntity.Status.PAYOUT_PENDING;
         };
     }
 
     private static PayoutProvider.PayoutStatus mapProviderStatus(String status) {
-        try {
-            return PayoutProvider.PayoutStatus.valueOf(
-                status.toUpperCase(java.util.Locale.ROOT)
-            );
-        } catch (IllegalArgumentException ignored) {
-            return switch (status.toUpperCase(java.util.Locale.ROOT)) {
-                case "NEW", "INITIATED" -> PayoutProvider.PayoutStatus.CREATED;
-                case "SUCCESSFUL", "SUCCESS", "COMPLETED" -> PayoutProvider.PayoutStatus.COMPLETED;
-                case "FAILED", "ERROR" -> PayoutProvider.PayoutStatus.FAILED;
-                case "CANCELLED", "CANCELED" -> PayoutProvider.PayoutStatus.CANCELLED;
-                default -> PayoutProvider.PayoutStatus.UNKNOWN;
-            };
-        }
+        return switch (status.toUpperCase(java.util.Locale.ROOT)) {
+            case "NEW", "INITIATED", "CREATED" -> PayoutProvider.PayoutStatus.CREATED;
+            case "PENDING", "PROCESSING", "OTP", "RECEIVED" -> PayoutProvider.PayoutStatus.PENDING;
+            case "SUCCESSFUL", "SUCCESS", "COMPLETED" -> PayoutProvider.PayoutStatus.COMPLETED;
+            case "FAILED", "ERROR", "REVERSED", "ABANDONED", "BLOCKED", "REJECTED" -> PayoutProvider.PayoutStatus.FAILED;
+            case "CANCELLED", "CANCELED" -> PayoutProvider.PayoutStatus.CANCELLED;
+            default -> PayoutProvider.PayoutStatus.UNKNOWN;
+        };
+    }
+
+    private static boolean isTerminal(RemittanceEntity.Status status) {
+        return status == RemittanceEntity.Status.COMPLETED
+            || status == RemittanceEntity.Status.FAILED
+            || status == RemittanceEntity.Status.CANCELLED
+            || status == RemittanceEntity.Status.RECOVERY_REQUIRED;
     }
 
     private static String sha256(String value) {
@@ -318,9 +436,7 @@ public class RemittancePayoutService {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                 .digest(value.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder(64);
-            for (byte b : digest) {
-                hex.append(String.format("%02x", b));
-            }
+            for (byte b : digest) hex.append(String.format("%02x", b));
             return hex.toString();
         } catch (java.security.NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 is not available", e);
@@ -329,6 +445,8 @@ public class RemittancePayoutService {
 
     private record PreparedPayout(
         UUID remittanceId,
+        UUID attemptId,
+        PayoutProviderType provider,
         String providerTransferId,
         String payoutReference,
         com.rackpay.api.domain.money.Currency sourceCurrency,
