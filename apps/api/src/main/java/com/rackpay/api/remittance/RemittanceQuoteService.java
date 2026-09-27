@@ -60,7 +60,14 @@ public class RemittanceQuoteService {
         Currency feeCurrency=parseCurrency(corridor.getFeeCurrencyCode());
         if(feeCurrency!=sourceCurrency) throw new IllegalStateException("Corridor fee currency must match source currency");
 
-        BigDecimal sourceAmount=request.sourceAmount().setScale(sourceCurrency.minorUnits(),RoundingMode.HALF_EVEN);
+        int minorUnits = sourceCurrency.minorUnits();
+        if (request.sourceAmount().scale() > minorUnits
+            && request.sourceAmount().stripTrailingZeros().scale() > minorUnits) {
+            throw new IllegalArgumentException(
+                "sourceAmount has more decimal places than " + sourceCurrency.name() + " supports"
+            );
+        }
+        BigDecimal sourceAmount=request.sourceAmount().setScale(minorUnits,RoundingMode.UNNECESSARY);
         BigDecimal fee=corridor.getFeeFixedAmount()
             .add(sourceAmount.multiply(BigDecimal.valueOf(corridor.getFeeBps()))
             .divide(BigDecimal.valueOf(10000),18,RoundingMode.HALF_EVEN))
