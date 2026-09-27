@@ -81,11 +81,112 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
     @Override
     public PayoutResult createPayout(CreatePayoutCommand command) {
-        throw new UnsupportedOperationException("Flutterwave payout execution is enabled in the next remittance execution step");
+        if (secretKey.isBlank()) {
+            throw new IllegalStateException("Flutterwave secret key is not configured");
+        }
+        if (command.payoutMethod() != PayoutMethod.MOBILE_MONEY) {
+            throw new IllegalArgumentException("Flutterwave currently supports mobile money payouts in RackPay");
+        }
+        if (command.networkCode() == null || command.networkCode().isBlank()) {
+            throw new IllegalArgumentException("mobile money network is required");
+        }
+        if (command.recipientName() == null || command.recipientName().isBlank()) {
+            throw new IllegalArgumentException("verified recipient name is required");
+        }
+
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("account_bank", command.networkCode());
+        body.put("account_number", command.normalizedPhoneNumber().replace("+", ""));
+        body.put("amount", command.amount().stripTrailingZeros());
+        body.put("currency", command.currency().name());
+        body.put("beneficiary_name", command.recipientName());
+        body.put("reference", command.reference());
+        body.put("narration", "RackPay remittance " + command.reference());
+        if (command.sourceCurrency() != null && command.sourceCurrency() != command.currency()) {
+            body.put("debit_currency", command.sourceCurrency().name());
+        }
+
+        JsonNode response = client.post()
+            .uri("/transfers")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .body(body)
+            .retrieve()
+            .body(JsonNode.class);
+
+        if (response == null) {
+            throw new IllegalStateException("Flutterwave returned an empty payout response");
+        }
+
+        JsonNode data = response.path("data");
+        String providerId = data.path("id").isNumber()
+            ? data.path("id").asText()
+            : data.path("id").asText(null);
+        String status = data.path("status").asText(null);
+
+        if (!"success".equalsIgnoreCase(response.path("status").asText())
+            || providerId == null || providerId.isBlank()) {
+            String message = response.path("message").asText("Flutterwave payout creation failed");
+            return new PayoutResult(providerId, "FAILED:" + message);
+        }
+
+        return new PayoutResult(providerId, status == null ? "NEW" : status);
     }
 
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
-        throw new UnsupportedOperationException("Flutterwave payout status is enabled in the next remittance execution step");
+        JsonNode response = client.get()
+            .uri("/transfers/{id}", providerTransferId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+            .accept(MediaType.APPLICATION_JSON)
+            .retrieve()
+            .body(JsonNode.class);
+
+        if (response == null) {
+            return PayoutStatus.UNKNOWN;
+        }
+
+        JsonNode data = response.path("data");
+        return mapStatus(data.path("status").asText(null));
+    }
+
+    @Override
+    public PayoutResult findPayoutByReference(String reference) {
+        JsonNode response = client.get()
+            .uri(uriBuilder -> uriBuilder.path("/transfers")
+                .queryParam("reference", reference)
+                .queryParam("page_size", 10)
+                .build())
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+            .accept(MediaType.APPLICATION_JSON)
+            .retrieve()
+            .body(JsonNode.class);
+
+        if (response == null) {
+            return null;
+        }
+
+        JsonNode data = response.path("data");
+        if (!data.isArray() || data.isEmpty()) {
+            return null;
+        }
+
+        JsonNode transfer = data.get(0);
+        String id = transfer.path("id").asText(null);
+        String status = transfer.path("status").asText(null);
+        return id == null ? null : new PayoutResult(id, status);
+    }
+
+    private PayoutStatus mapStatus(String status) {
+        if (status == null) return PayoutStatus.UNKNOWN;
+        return switch (status.toUpperCase(java.util.Locale.ROOT)) {
+            case "NEW", "INITIATED" -> PayoutStatus.CREATED;
+            case "PENDING", "PROCESSING" -> PayoutStatus.PROCESSING;
+            case "SUCCESSFUL", "SUCCESS", "COMPLETED" -> PayoutStatus.COMPLETED;
+            case "FAILED", "ERROR" -> PayoutStatus.FAILED;
+            case "CANCELLED", "CANCELED" -> PayoutStatus.CANCELLED;
+            default -> PayoutStatus.UNKNOWN;
+        };
     }
 }
