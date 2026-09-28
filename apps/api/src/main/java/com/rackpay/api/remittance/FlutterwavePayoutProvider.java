@@ -1,6 +1,7 @@
 package com.rackpay.api.remittance;
 
 import java.util.Map;
+import java.math.RoundingMode;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -32,7 +33,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     public boolean supportsPayout(CreatePayoutCommand command) {
         return !secretKey.isBlank()
             && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
-            && command.currency() != null;
+            && command.currency() != null
+            && supportedNetwork(command.countryCode(), command.currency(), command.networkCode());
     }
 
     @Override
@@ -106,7 +108,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         Map<String, Object> body = new java.util.HashMap<>();
         body.put("account_bank", providerNetworkCode(command.networkCode()));
         body.put("account_number", command.normalizedPhoneNumber().replace("+", ""));
-        body.put("amount", command.amount().stripTrailingZeros());
+        long transferAmount = command.amount().setScale(0, RoundingMode.UNNECESSARY).longValueExact();
+        body.put("amount", transferAmount);
         body.put("currency", command.currency().name());
         body.put("beneficiary_name", command.recipientName());
         body.put("reference", command.reference());
@@ -185,6 +188,26 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         String id = transfer.path("id").asText(null);
         String status = transfer.path("status").asText(null);
         return id == null ? null : new PayoutResult(id, status);
+    }
+
+    private boolean supportedNetwork(String countryCode, Currency currency, String networkCode) {
+        if (countryCode == null || currency == null || networkCode == null) return false;
+        String country = countryCode.toUpperCase(java.util.Locale.ROOT);
+        String network = networkCode.toUpperCase(java.util.Locale.ROOT);
+        return switch (country) {
+            case "GH" -> currency == Currency.GHS
+                && switch (network) {
+                    case "MTN", "AIRTELTIGO", "TELECEL" -> true;
+                    default -> false;
+                };
+            case "KE" -> currency == Currency.KES && "MPESA".equals(network);
+            case "CI" -> currency == Currency.XOF
+                && switch (network) {
+                    case "ORANGE", "WAVE" -> true;
+                    default -> false;
+                };
+            default -> false;
+        };
     }
 
     private String providerNetworkCode(String networkCode) {
