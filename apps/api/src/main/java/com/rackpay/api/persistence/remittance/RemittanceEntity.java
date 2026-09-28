@@ -115,7 +115,9 @@ public class RemittanceEntity {
     }
 
     public void markPayoutCreated(String providerTransferId, Status payoutStatus, Instant now) {
-        if (status != Status.PAYOUT_PENDING && status != Status.PAYOUT_PROCESSING) {
+        if (status != Status.PAYOUT_PENDING
+            && status != Status.PAYOUT_PROCESSING
+            && status != Status.RECOVERY_REQUIRED) {
             throw new IllegalStateException("remittance cannot record payout from " + status);
         }
         this.providerTransferId=providerTransferId;
