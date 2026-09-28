@@ -153,6 +153,8 @@ class RemittancePayoutServiceTest {
 
     @Test
     void concurrentPayoutExecutionAllowsOnlyOneProviderCall() throws Exception {
+        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
+
         AtomicBoolean claimActive = new AtomicBoolean(false);
         CountDownLatch providerStarted = new CountDownLatch(1);
         CountDownLatch releaseProvider = new CountDownLatch(1);
