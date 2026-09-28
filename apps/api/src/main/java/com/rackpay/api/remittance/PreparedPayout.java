@@ -20,7 +20,8 @@ public record PreparedPayout(
         String networkCode,
         String normalizedPhoneNumber,
         String recipientName,
-        RemittanceEntity.Status status
+        RemittanceEntity.Status status,
+        boolean executionClaimed
         ) {
 
 }
