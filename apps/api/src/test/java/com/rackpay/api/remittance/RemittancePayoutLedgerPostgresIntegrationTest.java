@@ -49,6 +49,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     @Autowired LedgerAccountJpaRepository accounts;
     @Autowired LedgerTransactionJpaRepository transactions;
     @Autowired RemittancePayoutLedgerPostingJpaRepository postings;
+    @Autowired RemittanceJpaRepository remittances;
     @Autowired PlatformTransactionManager transactionManager;
 
     private UUID clearingId;
