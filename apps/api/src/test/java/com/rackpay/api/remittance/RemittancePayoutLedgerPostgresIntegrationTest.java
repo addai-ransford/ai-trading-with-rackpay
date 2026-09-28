@@ -209,6 +209,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void failedPayoutRecoveryIsIdempotentInPostgres() {
         WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
         RemittancePayoutRecoveryService recoveryService =
@@ -249,6 +250,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void recoveryFailurePersistsRecoveryRequiredAndRetryIsSafe() {
         WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
         Mockito.doThrow(new IllegalStateException("wallet temporarily unavailable"))
