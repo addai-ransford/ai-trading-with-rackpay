@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -35,6 +36,7 @@ public class RemittancePayoutService {
     private final RemittanceClearingAccountService clearingAccounts;
     private final PayoutProviderType defaultProvider;
     private final TransactionTemplate transactionTemplate;
+    private static final Duration PAYOUT_EXECUTION_CLAIM_TTL = Duration.ofSeconds(30);
 
     public RemittancePayoutService(
         RemittanceJpaRepository remittances,
@@ -71,6 +73,8 @@ public class RemittancePayoutService {
                 );
             }
 
+            if (!payout.executionClaimed()) return retryResponse(payout);
+
             PayoutProvider provider = providers.require(payout.provider());
 
             try {
@@ -97,7 +101,7 @@ public class RemittancePayoutService {
                 }
 
                 if (result == null || result.status() == null) {
-                    return retryResponse(payout);
+                    return markRetryRequired(payout);
                 }
 
                 PayoutProvider.PayoutStatus providerStatus = result.status().startsWith("FAILED:")
@@ -131,8 +135,8 @@ public class RemittancePayoutService {
                 );
             } catch (RuntimeException ex) {
                 // A transport/API exception is not proof that no transfer was created.
-                // Reconcile the same provider on the next execution before failover.
-                return retryResponse(payout);
+                // Persist UNKNOWN and release the short execution claim so the next execution reconciles first.
+                return markRetryRequired(payout);
             }
         }
 
@@ -154,6 +158,10 @@ public class RemittancePayoutService {
         var history = attempts.findAllByRemittanceIdForUpdate(remittanceId);
         RemittancePayoutAttemptEntity attempt = history.isEmpty() ? null : history.get(0);
 
+        if (attempt != null && remittance.hasActivePayoutExecutionClaim(Instant.now())) {
+            return prepared(remittance, attempt, recipient, network, false);
+        }
+
         if (attempt == null) {
             PayoutProvider provider = initialProvider(command);
             attempt = createAttempt(remittance, provider.type(), 1);
@@ -170,17 +178,14 @@ public class RemittancePayoutService {
             attempt = createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
         }
 
+        Instant now = Instant.now();
         if (remittance.getStatus() == RemittanceEntity.Status.FUNDS_RESERVED
             || !attempt.getProvider().name().equals(remittance.getPayoutProvider())
             || !attempt.getPayoutReference().equals(remittance.getPayoutReference())) {
-            remittance.beginPayoutAttempt(
-                attempt.getProvider().name(),
-                attempt.getPayoutReference(),
-                Instant.now()
-            );
+            remittance.beginPayoutAttempt(attempt.getProvider().name(), attempt.getPayoutReference(), now);
         }
-
-        return prepared(remittance, attempt, recipient, network);
+        remittance.claimPayoutExecution(UUID.randomUUID(), now.plus(PAYOUT_EXECUTION_CLAIM_TTL), now);
+        return prepared(remittance, attempt, recipient, network, true);
     }
 
     private PayoutProvider initialProvider(PayoutProvider.CreatePayoutCommand command) {
@@ -218,12 +223,9 @@ public class RemittancePayoutService {
         RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
             .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
 
-        attempt.record(
-            providerTransferId,
-            mapAttemptStatus(providerStatus),
-            providerStatus.name(),
-            Instant.now()
-        );
+        Instant now = Instant.now();
+        attempt.record(providerTransferId, mapAttemptStatus(providerStatus), providerStatus.name(), now);
+        remittance.clearPayoutExecutionClaim(now);
 
         RemittanceRecipientEntity recipient = recipients.findById(remittance.getRecipientId())
             .orElseThrow(() -> new IllegalStateException("remittance recipient not found"));
@@ -272,8 +274,10 @@ public class RemittancePayoutService {
             .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
 
         RemittanceEntity.Status mapped = mapRemittanceStatus(providerStatus);
-        attempt.record(providerTransferId, mapAttemptStatus(providerStatus), null, Instant.now());
-        remittance.markPayoutCreated(providerTransferId, mapped, Instant.now());
+        Instant now = Instant.now();
+        attempt.record(providerTransferId, mapAttemptStatus(providerStatus), null, now);
+        remittance.clearPayoutExecutionClaim(now);
+        remittance.markPayoutCreated(providerTransferId, mapped, now);
 
         return new PayoutResponse(
             remittance.getId(), mapped, providerTransferId, providerStatus.name()
@@ -325,6 +329,20 @@ public class RemittancePayoutService {
         }
     }
 
+    private PayoutResponse markRetryRequired(PreparedPayout payout) {
+        return transactionTemplate.execute(status -> {
+            remittances.findByIdForUpdate(payout.remittanceId())
+                .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+            RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
+                .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
+            Instant now = Instant.now();
+            attempt.record(payout.providerTransferId(), RemittancePayoutAttemptEntity.Status.UNKNOWN, "PAYOUT_RETRY_REQUIRED", now);
+            RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId()).orElseThrow();
+            remittance.clearPayoutExecutionClaim(now);
+            return retryResponse(payout);
+        });
+    }
+
     private PayoutResponse retryResponse(PreparedPayout payout) {
         return new PayoutResponse(
             payout.remittanceId(),
@@ -358,7 +376,8 @@ public class RemittancePayoutService {
         RemittanceEntity remittance,
         RemittancePayoutAttemptEntity attempt,
         RemittanceRecipientEntity recipient,
-        MobileMoneyNetworkEntity network
+        MobileMoneyNetworkEntity network,
+        boolean executionClaimed
     ) {
         return new PreparedPayout(
             remittance.getId(),
@@ -374,7 +393,8 @@ public class RemittancePayoutService {
             network.getCode(),
             recipient.getNormalizedPhoneNumber(),
             recipient.getVerifiedName(),
-            remittance.getStatus()
+            remittance.getStatus(),
+            executionClaimed
         );
     }
 
