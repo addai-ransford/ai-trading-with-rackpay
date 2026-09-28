@@ -19,6 +19,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import com.rackpay.api.service.WalletCreditService;
+import org.mockito.ArgumentCaptor;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -205,6 +207,97 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
             releaseFirst.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void failedPayoutRecoveryIsIdempotentInPostgres() {
+        WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
+        RemittancePayoutRecoveryService recoveryService =
+            new RemittancePayoutRecoveryService(
+                remittances,
+                new RemittanceClearingAccountService(accounts),
+                walletCredit,
+                transactionManager
+            );
+
+        RemittancePayoutRecoveryService.RecoveryResponse first =
+            recoveryService.recover(remittanceId, "provider-transfer-recovery-1");
+
+        RemittancePayoutRecoveryService.RecoveryResponse second =
+            recoveryService.recover(remittanceId, "provider-transfer-recovery-1");
+
+        assertEquals(RemittanceEntity.Status.FAILED, first.status());
+        assertEquals("RECOVERY_COMPLETED", first.recoveryStatus());
+        assertEquals(RemittanceEntity.Status.FAILED, second.status());
+        assertEquals("ALREADY_RECOVERED", second.recoveryStatus());
+
+        Mockito.verify(walletCredit, Mockito.times(1)).credit(
+            Mockito.any(),
+            Mockito.anyString(),
+            Mockito.eq(walletId),
+            Mockito.any(),
+            Mockito.any()
+        );
+
+        assertEquals(
+            "FAILED",
+            jdbc.queryForObject(
+                "SELECT status FROM remittances WHERE id = ?",
+                String.class,
+                remittanceId
+            )
+        );
+    }
+
+    @Test
+    void recoveryFailurePersistsRecoveryRequiredAndRetryIsSafe() {
+        WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
+        Mockito.doThrow(new IllegalStateException("wallet temporarily unavailable"))
+            .when(walletCredit)
+            .credit(
+                Mockito.any(),
+                Mockito.anyString(),
+                Mockito.eq(walletId),
+                Mockito.any(),
+                Mockito.any()
+            );
+
+        RemittancePayoutRecoveryService recoveryService =
+            new RemittancePayoutRecoveryService(
+                remittances,
+                new RemittanceClearingAccountService(accounts),
+                walletCredit,
+                transactionManager
+            );
+
+        RemittancePayoutRecoveryService.RecoveryResponse failed =
+            recoveryService.recover(remittanceId, "provider-transfer-recovery-2");
+
+        assertEquals(RemittanceEntity.Status.RECOVERY_REQUIRED, failed.status());
+        assertEquals("RECOVERY_REQUIRED", failed.recoveryStatus());
+        assertEquals(
+            "RECOVERY_REQUIRED",
+            jdbc.queryForObject(
+                "SELECT status FROM remittances WHERE id = ?",
+                String.class,
+                remittanceId
+            )
+        );
+
+        Mockito.reset(walletCredit);
+
+        RemittancePayoutRecoveryService.RecoveryResponse retried =
+            recoveryService.recover(remittanceId, "provider-transfer-recovery-2");
+
+        assertEquals(RemittanceEntity.Status.FAILED, retried.status());
+        assertEquals("RECOVERY_COMPLETED", retried.recoveryStatus());
+        Mockito.verify(walletCredit, Mockito.times(1)).credit(
+            Mockito.any(),
+            Mockito.anyString(),
+            Mockito.eq(walletId),
+            Mockito.any(),
+            Mockito.any()
+        );
     }
 
     @Test
