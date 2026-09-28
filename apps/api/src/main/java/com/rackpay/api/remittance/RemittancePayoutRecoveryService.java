@@ -115,11 +115,7 @@ public class RemittancePayoutRecoveryService {
                 }
 
                 if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
-                    remittance.markPayoutCreated(
-                        providerTransferId,
-                        RemittanceEntity.Status.RECOVERY_REQUIRED,
-                        Instant.now()
-                    );
+                    remittance.markRecoveryRequired(providerTransferId, Instant.now());
                 }
                 remittance.clearPayoutExecutionClaim(Instant.now());
 
@@ -206,6 +202,7 @@ public class RemittancePayoutRecoveryService {
                     remittance.getSourceCurrency()
                 );
 
+                remittance.markRecoveryRequired(providerTransferId, now);
                 remittance.claimPayoutExecution(
                     UUID.randomUUID(),
                     now.plus(RECOVERY_CLAIM_TTL),
