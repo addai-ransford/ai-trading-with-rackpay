@@ -79,10 +79,8 @@ public class RemittancePayoutRecoveryService {
             });
 
             return transactionTemplate.execute(status -> {
-                RemittanceEntity remittance = remittances.findByIdForUpdateSkipLocked(remittanceId)
-                    .orElse(null);
-
-                if (remittance == null) return RecoveryClaim.waiting();
+                RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
+                    .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
 
                 if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
                     return new RecoveryResponse(
@@ -176,8 +174,10 @@ public class RemittancePayoutRecoveryService {
     private RecoveryClaim waitForOrClaimRecovery(UUID remittanceId, String providerTransferId) {
         for (int attempt = 0; attempt < RECOVERY_WAIT_ATTEMPTS; attempt++) {
             RecoveryClaim claim = transactionTemplate.execute(status -> {
-                RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
-                    .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+                RemittanceEntity remittance = remittances.findByIdForUpdateSkipLocked(remittanceId)
+                    .orElse(null);
+
+                if (remittance == null) return RecoveryClaim.waiting();
 
                 if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
                     return RecoveryClaim.response(new RecoveryResponse(
