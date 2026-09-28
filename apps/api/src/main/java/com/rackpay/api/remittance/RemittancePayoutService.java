@@ -132,7 +132,21 @@ public class RemittancePayoutService {
                         )
                     );
                     if (next == null) throw new IllegalStateException("Unable to advance payout attempt");
-                    if (!"NEXT_PROVIDER".equals(next.providerStatus())) return next;
+                    if (!"NEXT_PROVIDER".equals(next.providerStatus())) {
+                        if (RemittanceEntity.Status.RECOVERY_REQUIRED == next.status()) {
+                            RemittancePayoutRecoveryService.RecoveryResponse recovery =
+                                recoveryService.recover(next.remittanceId(), next.providerTransferId());
+                            return new PayoutResponse(
+                                recovery.remittanceId(),
+                                recovery.status(),
+                                recovery.providerTransferId(),
+                                "RECOVERY_COMPLETED".equals(recovery.recoveryStatus())
+                                    ? "ALL_PROVIDERS_FAILED"
+                                    : recovery.recoveryStatus()
+                            );
+                        }
+                        return next;
+                    }
                     continue;
                 }
 
