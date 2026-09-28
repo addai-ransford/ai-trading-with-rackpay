@@ -9,7 +9,6 @@ import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaReposito
 import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientEntity;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
-import com.rackpay.api.service.WalletCreditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -38,9 +37,8 @@ class RemittancePayoutServiceTest {
     private final RemittancePayoutAttemptJpaRepository attempts =
         mock(RemittancePayoutAttemptJpaRepository.class);
     private final PayoutProviderRegistry providers = mock(PayoutProviderRegistry.class);
-    private final WalletCreditService walletCredit = mock(WalletCreditService.class);
-    private final RemittanceClearingAccountService clearingAccounts =
-        mock(RemittanceClearingAccountService.class);
+    private final RemittancePayoutRecoveryService recoveryService =
+        mock(RemittancePayoutRecoveryService.class);
     private final RemittancePayoutLedgerService payoutLedger =
         mock(RemittancePayoutLedgerService.class);
     private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
@@ -65,8 +63,7 @@ class RemittancePayoutServiceTest {
             networks,
             attempts,
             providers,
-            walletCredit,
-            clearingAccounts,
+            recoveryService,
             payoutLedger,
             PayoutProviderType.FLUTTERWAVE,
             transactionManager
@@ -151,7 +148,7 @@ class RemittancePayoutServiceTest {
 
         verify(flutterwave).createPayout(any());
         verify(paystack).createPayout(any());
-        verify(walletCredit, never()).credit(any(), any(), any(), any(), any());
+        verifyNoInteractions(recoveryService);
         verify(payoutLedger).recordCompletedPayout(eq(remittance), eq("PAYSTACK"), eq("ps-transfer-1"));
     }
 
@@ -278,10 +275,13 @@ class RemittancePayoutServiceTest {
         when(paystack.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("ps-transfer-1", "FAILED"));
 
-        LedgerAccountEntity clearingAccount = mock(LedgerAccountEntity.class);
-        UUID clearingAccountId = UUID.randomUUID();
-        when(clearingAccount.getId()).thenReturn(clearingAccountId);
-        when(clearingAccounts.require(Currency.EUR)).thenReturn(clearingAccount);
+        when(recoveryService.attemptRecovery(eq(remittance), eq("ps-transfer-1")))
+            .thenReturn(new RemittancePayoutRecoveryService.RecoveryResponse(
+                remittanceId,
+                RemittanceEntity.Status.FAILED,
+                "ps-transfer-1",
+                "RECOVERY_COMPLETED"
+            ));
 
         RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
 
@@ -290,9 +290,7 @@ class RemittancePayoutServiceTest {
         assertEquals(2, history.size());
         assertEquals(RemittancePayoutAttemptEntity.Status.FAILED, history.get(0).getStatus());
 
-        verify(walletCredit, times(1)).credit(
-            any(), any(), any(), eq(clearingAccountId), any()
-        );
+        verify(recoveryService, times(1)).attemptRecovery(eq(remittance), eq("ps-transfer-1"));
     }
 
     @Test
@@ -311,11 +309,13 @@ class RemittancePayoutServiceTest {
         when(paystack.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("ps-transfer-1", "FAILED"));
 
-        LedgerAccountEntity clearingAccount = mock(LedgerAccountEntity.class);
-        when(clearingAccount.getId()).thenReturn(UUID.randomUUID());
-        when(clearingAccounts.require(Currency.EUR)).thenReturn(clearingAccount);
-        doThrow(new RuntimeException("wallet recovery unavailable"))
-            .when(walletCredit).credit(any(), any(), any(), any(), any());
+        when(recoveryService.attemptRecovery(eq(remittance), eq("ps-transfer-1")))
+            .thenReturn(new RemittancePayoutRecoveryService.RecoveryResponse(
+                remittanceId,
+                RemittanceEntity.Status.RECOVERY_REQUIRED,
+                "ps-transfer-1",
+                "RECOVERY_REQUIRED"
+            ));
 
         RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
 
@@ -324,7 +324,7 @@ class RemittancePayoutServiceTest {
         assertEquals(2, history.size());
         assertEquals(RemittancePayoutAttemptEntity.Status.FAILED, history.get(0).getStatus());
 
-        verify(walletCredit, times(1)).credit(any(), any(), any(), any(), any());
+        verify(recoveryService, times(1)).attemptRecovery(eq(remittance), eq("ps-transfer-1"));
     }
 
     @Test
