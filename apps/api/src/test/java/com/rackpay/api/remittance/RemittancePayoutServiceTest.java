@@ -340,7 +340,7 @@ class RemittancePayoutServiceTest {
 
         verifyNoInteractions(flutterwave, paystack);
         verify(attempts, never()).save(any());
-        verify(walletCredit, never()).credit(any(), any(), any(), any(), any());
+        verifyNoInteractions(recoveryService);
     }
 
     private static RemittancePayoutAttemptEntity attempt(
