@@ -196,7 +196,7 @@ public class RemittancePayoutRecoveryService {
 
                 Instant now = Instant.now();
                 if (remittance.hasActivePayoutExecutionClaim(now)) {
-                    return RecoveryClaim.inProgress();
+                    return RecoveryClaim.waiting();
                 }
 
                 LedgerRecovery recovery = new LedgerRecovery(
@@ -257,7 +257,7 @@ public class RemittancePayoutRecoveryService {
             return new RecoveryClaim(null, null, response, false);
         }
 
-        static RecoveryClaim inProgress() {
+        static RecoveryClaim waiting() {
             return new RecoveryClaim(null, null, null, true);
         }
     }
