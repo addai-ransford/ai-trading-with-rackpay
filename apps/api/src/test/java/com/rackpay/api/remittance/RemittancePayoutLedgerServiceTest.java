@@ -36,6 +36,8 @@ class RemittancePayoutLedgerServiceTest {
         when(accounts.findById(clearingId)).thenReturn(Optional.of(clearing));
         when(accounts.findByNameAndCurrency("RackPay Payout Settlement FLUTTERWAVE EUR", Currency.EUR))
             .thenReturn(Optional.empty());
+        when(accounts.saveAndFlush(any(LedgerAccountEntity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
         when(postings.findByRemittanceId(any())).thenReturn(Optional.empty());
         when(transactions.save(any(LedgerTransactionEntity.class)))
             .thenAnswer(invocation -> invocation.getArgument(0));
