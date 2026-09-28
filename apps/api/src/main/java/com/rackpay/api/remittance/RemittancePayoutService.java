@@ -1,7 +1,5 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Money;
-import com.rackpay.api.domain.transaction.IdempotencyKey;
 import com.rackpay.api.persistence.remittance.MobileMoneyNetworkEntity;
 import com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceEntity;
@@ -10,13 +8,11 @@ import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptEntity;
 import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientEntity;
 import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
-import com.rackpay.api.service.WalletCreditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -32,8 +28,7 @@ public class RemittancePayoutService {
     private final MobileMoneyNetworkJpaRepository networks;
     private final RemittancePayoutAttemptJpaRepository attempts;
     private final PayoutProviderRegistry providers;
-    private final WalletCreditService walletCredit;
-    private final RemittanceClearingAccountService clearingAccounts;
+    private final RemittancePayoutRecoveryService recoveryService;
     private final RemittancePayoutLedgerService payoutLedger;
     private final PayoutProviderType defaultProvider;
     private final TransactionTemplate transactionTemplate;
@@ -46,8 +41,7 @@ public class RemittancePayoutService {
         MobileMoneyNetworkJpaRepository networks,
         RemittancePayoutAttemptJpaRepository attempts,
         PayoutProviderRegistry providers,
-        WalletCreditService walletCredit,
-        RemittanceClearingAccountService clearingAccounts,
+        RemittancePayoutRecoveryService recoveryService,
         RemittancePayoutLedgerService payoutLedger,
         @Value("$"+"{rackpay.payout.default-provider:FLUTTERWAVE}") PayoutProviderType defaultProvider,
         PlatformTransactionManager transactionManager
@@ -57,8 +51,7 @@ public class RemittancePayoutService {
         this.networks = networks;
         this.attempts = attempts;
         this.providers = providers;
-        this.walletCredit = walletCredit;
-        this.clearingAccounts = clearingAccounts;
+        this.recoveryService = recoveryService;
         this.payoutLedger = payoutLedger;
         this.defaultProvider = defaultProvider;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -76,7 +69,14 @@ public class RemittancePayoutService {
             if (payout == null) throw new IllegalStateException("Unable to prepare remittance payout");
 
             if (payout.status() == RemittanceEntity.Status.RECOVERY_REQUIRED) {
-                return recoverPayout(payout.remittanceId(), payout.providerTransferId());
+                RemittancePayoutRecoveryService.RecoveryResponse recovery =
+                    recoveryService.recover(payout.remittanceId(), payout.providerTransferId());
+                return new PayoutResponse(
+                    recovery.remittanceId(),
+                    recovery.status(),
+                    recovery.providerTransferId(),
+                    recovery.recoveryStatus()
+                );
             }
 
             if (isTerminal(payout.status())) {
@@ -304,88 +304,17 @@ public class RemittancePayoutService {
         PayoutProviderType provider,
         String providerTransferId
     ) {
-        if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
-            return new PayoutResponse(remittance.getId(), remittance.getStatus(), providerTransferId, "ALREADY_RELEASED");
-        }
+        RemittancePayoutRecoveryService.RecoveryResponse recovery =
+            recoveryService.attemptRecovery(remittance, providerTransferId);
 
-        var clearingAccount = clearingAccounts.require(remittance.getSourceCurrency());
-
-        try {
-            creditRecoveryInNewTransaction(remittance, clearingAccount.getId());
-            remittance.markPayoutCreated(
-                providerTransferId,
-                RemittanceEntity.Status.FAILED,
-                Instant.now()
-            );
-
-            return new PayoutResponse(
-                remittance.getId(), RemittanceEntity.Status.FAILED, providerTransferId,
-                "ALL_PROVIDERS_FAILED"
-            );
-        } catch (RuntimeException ex) {
-            // The recovery transaction is independent from the payout transaction.
-            // Its failure must not roll back the persisted RECOVERY_REQUIRED state.
-            remittance.markPayoutCreated(
-                providerTransferId,
-                RemittanceEntity.Status.RECOVERY_REQUIRED,
-                Instant.now()
-            );
-            return new PayoutResponse(
-                remittance.getId(), RemittanceEntity.Status.RECOVERY_REQUIRED,
-                providerTransferId, "RECOVERY_REQUIRED"
-            );
-        }
-    }
-
-    private void creditRecoveryInNewTransaction(RemittanceEntity remittance, UUID clearingAccountId) {
-        BigDecimal total = remittance.getSourceAmount().add(remittance.getFeeAmount());
-        recoveryTransactionTemplate.executeWithoutResult(status ->
-            walletCredit.credit(
-                new IdempotencyKey("remittance:release:" + remittance.getId()),
-                sha256(remittance.getId() + "|release|" + total.toPlainString()
-                    + "|" + remittance.getSourceCurrency().name()),
-                remittance.getWalletId(),
-                clearingAccountId,
-                new Money(total, remittance.getSourceCurrency())
-            )
+        return new PayoutResponse(
+            recovery.remittanceId(),
+            recovery.status(),
+            recovery.providerTransferId(),
+            recovery.recoveryStatus().equals("RECOVERY_COMPLETED")
+                ? "ALL_PROVIDERS_FAILED"
+                : recovery.recoveryStatus()
         );
-    }
-
-    private PayoutResponse recoverPayout(UUID remittanceId, String providerTransferId) {
-        return transactionTemplate.execute(status -> {
-            RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
-                .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
-
-            if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
-                return new PayoutResponse(
-                    remittanceId, remittance.getStatus(), providerTransferId, "ALREADY_RECOVERED"
-                );
-            }
-            if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
-                return new PayoutResponse(
-                    remittanceId, remittance.getStatus(), providerTransferId, remittance.getStatus().name()
-                );
-            }
-
-            var clearingAccount = clearingAccounts.require(remittance.getSourceCurrency());
-            try {
-                creditRecoveryInNewTransaction(remittance, clearingAccount.getId());
-                remittance.markPayoutCreated(
-                    providerTransferId,
-                    RemittanceEntity.Status.FAILED,
-                    Instant.now()
-                );
-                return new PayoutResponse(
-                    remittanceId, RemittanceEntity.Status.FAILED, providerTransferId,
-                    "RECOVERY_COMPLETED"
-                );
-            } catch (RuntimeException ex) {
-                return new PayoutResponse(
-                    remittanceId, RemittanceEntity.Status.RECOVERY_REQUIRED, providerTransferId,
-                    "RECOVERY_REQUIRED"
-                );
-            }
-        });
     }
 
     private PayoutResponse markRetryRequired(PreparedPayout payout) {
