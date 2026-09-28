@@ -316,6 +316,13 @@ class RemittancePayoutServiceTest {
                 "ps-transfer-1",
                 "RECOVERY_REQUIRED"
             ));
+        when(recoveryService.recover(eq(remittanceId), eq("ps-transfer-1")))
+            .thenReturn(new RemittancePayoutRecoveryService.RecoveryResponse(
+                remittanceId,
+                RemittanceEntity.Status.RECOVERY_REQUIRED,
+                "ps-transfer-1",
+                "RECOVERY_REQUIRED"
+            ));
 
         RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
 
