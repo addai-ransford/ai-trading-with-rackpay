@@ -15,6 +15,15 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -40,6 +49,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     @Autowired LedgerAccountJpaRepository accounts;
     @Autowired LedgerTransactionJpaRepository transactions;
     @Autowired RemittancePayoutLedgerPostingJpaRepository postings;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private UUID clearingId;
     private UUID remittanceId;
@@ -137,6 +147,62 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
                 (id, name, currency_code, account_type, created_at)
             VALUES (?, 'Integration Remittance Clearing EUR', 'EUR', 'LIABILITY', CURRENT_TIMESTAMP)
             """, clearingId);
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void postgresPessimisticLockAllowsOnlyOneActivePayoutClaim() throws Exception {
+        CountDownLatch firstClaimed = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Boolean> first = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                RemittanceEntity entity = remittances.findByIdForUpdate(remittanceId).orElseThrow();
+                if (entity.hasActivePayoutExecutionClaim(Instant.now())) return false;
+                entity.claimPayoutExecution(
+                    UUID.randomUUID(),
+                    Instant.now().plusSeconds(30),
+                    Instant.now()
+                );
+                remittances.saveAndFlush(entity);
+                firstClaimed.countDown();
+                try {
+                    if (!releaseFirst.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("timed out waiting to release first claim");
+                    }
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("interrupted while holding payout claim", ex);
+                }
+                return true;
+            }));
+
+            if (!firstClaimed.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("first transaction did not claim payout");
+            }
+
+            Future<Boolean> second = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                RemittanceEntity entity = remittances.findByIdForUpdate(remittanceId).orElseThrow();
+                if (entity.hasActivePayoutExecutionClaim(Instant.now())) return false;
+                entity.claimPayoutExecution(
+                    UUID.randomUUID(),
+                    Instant.now().plusSeconds(30),
+                    Instant.now()
+                );
+                remittances.saveAndFlush(entity);
+                return true;
+            }));
+
+            Thread.sleep(250);
+            releaseFirst.countDown();
+
+            assertEquals(true, first.get(5, TimeUnit.SECONDS));
+            assertEquals(false, second.get(5, TimeUnit.SECONDS));
+        } finally {
+            releaseFirst.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Test
