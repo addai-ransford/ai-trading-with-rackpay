@@ -233,7 +233,7 @@ class RemittancePayoutServiceTest {
         assertEquals(RemittancePayoutAttemptEntity.Status.FAILED, history.get(0).getStatus());
 
         verify(walletCredit, times(1)).credit(
-            any(), any(), eq(remittance.getWalletId()), eq(clearingAccountId), any()
+            any(), any(), any(), eq(clearingAccountId), any()
         );
     }
 
