@@ -86,8 +86,8 @@ public class RemittancePayoutRecoveryService {
         );
 
         try {
-            UUID clearingAccountId = clearingAccounts.require(recovery.currency()).getId();
-            recoveryTransactionTemplate.executeWithoutResult(status ->
+            recoveryTransactionTemplate.executeWithoutResult(status -> {
+                UUID clearingAccountId = clearingAccounts.require(recovery.currency()).getId();
                 walletCredit.credit(
                     new IdempotencyKey("remittance:release:" + remittance.getId()),
                     sha256(
@@ -97,8 +97,8 @@ public class RemittancePayoutRecoveryService {
                     remittance.getWalletId(),
                     clearingAccountId,
                     new Money(recovery.amount(), recovery.currency())
-                )
-            );
+                );
+            });
 
             remittance.markPayoutCreated(
                 providerTransferId,
