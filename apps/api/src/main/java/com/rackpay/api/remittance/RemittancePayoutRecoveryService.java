@@ -216,7 +216,7 @@ public class RemittancePayoutRecoveryService {
                 );
             });
 
-            if (!claim.inProgress()) return claim;
+            if (!claim.waiting()) return claim;
 
             try {
                 Thread.sleep(RECOVERY_WAIT.toMillis());
@@ -247,7 +247,7 @@ public class RemittancePayoutRecoveryService {
         LedgerRecovery recovery,
         UUID walletId,
         RecoveryResponse response,
-        boolean inProgress
+        boolean waiting
     ) {
         static RecoveryClaim claimed(LedgerRecovery recovery, UUID walletId) {
             return new RecoveryClaim(recovery, walletId, null, false);
