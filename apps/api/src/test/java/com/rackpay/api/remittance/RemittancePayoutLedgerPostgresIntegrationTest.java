@@ -19,6 +19,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.mock.env.MockEnvironment;
 import com.rackpay.api.service.WalletCreditService;
 
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +37,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.*;
 
 @Testcontainers
 @DataJpaTest
@@ -74,6 +77,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
         jdbc.execute("""
             TRUNCATE TABLE
                 remittance_payout_ledger_postings,
+                remittance_payout_attempts,
                 remittances,
                 remittance_recipients,
                 mobile_money_networks,
@@ -353,6 +357,102 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
                 Mockito.any()
             );
         } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void concurrentPayoutExecutionAllowsOnlyOneExternalProviderCall() throws Exception {
+        PayoutProvider provider = mock(PayoutProvider.class);
+        when(provider.type()).thenReturn(PayoutProviderType.FLUTTERWAVE);
+        when(provider.supportsPayout(any())).thenReturn(true);
+        when(provider.findPayoutByReference(anyString())).thenReturn(null);
+
+        CountDownLatch providerStarted = new CountDownLatch(1);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+        when(provider.createPayout(any())).thenAnswer(invocation -> {
+            providerStarted.countDown();
+            if (!releaseProvider.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("timed out waiting to release provider call");
+            }
+            return new PayoutProvider.PayoutResult("fw-concurrent-1", "COMPLETED");
+        });
+
+        MockEnvironment environment = new MockEnvironment()
+            .withProperty("rackpay.payout.provider-order", "FLUTTERWAVE");
+        PayoutProviderRegistry registry = new PayoutProviderRegistry(List.of(provider), environment);
+        RemittancePayoutRecoveryService recoveryService = mock(RemittancePayoutRecoveryService.class);
+        RemittancePayoutLedgerService payoutLedger = mock(RemittancePayoutLedgerService.class);
+
+        RemittancePayoutService service = new RemittancePayoutService(
+            remittances,
+            recipients,
+            networks,
+            attempts,
+            registry,
+            recoveryService,
+            payoutLedger,
+            PayoutProviderType.FLUTTERWAVE,
+            transactionManager
+        );
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<RemittancePayoutService.PayoutResponse> first =
+                executor.submit(() -> service.execute(remittanceId));
+
+            if (!providerStarted.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("first payout did not reach provider");
+            }
+
+            Future<RemittancePayoutService.PayoutResponse> second =
+                executor.submit(() -> service.execute(remittanceId));
+
+            RemittancePayoutService.PayoutResponse secondResponse =
+                second.get(5, TimeUnit.SECONDS);
+
+            assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, secondResponse.status());
+            assertEquals("PAYOUT_RETRY_REQUIRED", secondResponse.providerStatus());
+
+            releaseProvider.countDown();
+            RemittancePayoutService.PayoutResponse firstResponse =
+                first.get(5, TimeUnit.SECONDS);
+
+            assertEquals(RemittanceEntity.Status.COMPLETED, firstResponse.status());
+            assertEquals("fw-concurrent-1", firstResponse.providerTransferId());
+            verify(provider, times(1)).createPayout(any());
+            verify(provider, times(2)).findPayoutByReference(anyString());
+            verify(payoutLedger, times(1)).recordCompletedPayout(
+                any(RemittanceEntity.class), eq("FLUTTERWAVE"), eq("fw-concurrent-1")
+            );
+
+            assertEquals(
+                1,
+                jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM remittance_payout_attempts WHERE remittance_id = ?",
+                    Integer.class,
+                    remittanceId
+                )
+            );
+            assertEquals(
+                "COMPLETED",
+                jdbc.queryForObject(
+                    "SELECT status FROM remittance_payout_attempts WHERE remittance_id = ?",
+                    String.class,
+                    remittanceId
+                )
+            );
+            assertEquals(
+                "COMPLETED",
+                jdbc.queryForObject(
+                    "SELECT status FROM remittances WHERE id = ?",
+                    String.class,
+                    remittanceId
+                )
+            );
+        } finally {
+            releaseProvider.countDown();
             executor.shutdownNow();
         }
     }
