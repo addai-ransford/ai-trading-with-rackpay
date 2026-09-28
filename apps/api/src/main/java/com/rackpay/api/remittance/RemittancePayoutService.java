@@ -246,12 +246,16 @@ public class RemittancePayoutService {
         RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId())
             .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
 
+        if (!remittance.ownsPayoutExecutionClaim(payout.executionClaimToken())) {
+            return currentPayoutResponse(remittance, "STALE_EXECUTION");
+        }
+
         RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
             .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
 
         Instant now = Instant.now();
         attempt.record(providerTransferId, mapAttemptStatus(providerStatus), providerStatus.name(), now);
-        remittance.clearPayoutExecutionClaim(now);
+        remittance.clearPayoutExecutionClaim(payout.executionClaimToken(), now);
 
         RemittanceRecipientEntity recipient = recipients.findById(remittance.getRecipientId())
             .orElseThrow(() -> new IllegalStateException("remittance recipient not found"));
@@ -333,14 +337,18 @@ public class RemittancePayoutService {
 
     private PayoutResponse markRetryRequired(PreparedPayout payout) {
         return transactionTemplate.execute(status -> {
-            remittances.findByIdForUpdate(payout.remittanceId())
+            RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId())
                 .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+            if (!remittance.ownsPayoutExecutionClaim(payout.executionClaimToken())) {
+                return currentPayoutResponse(remittance, "STALE_EXECUTION");
+            }
+
             RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
                 .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
             Instant now = Instant.now();
             attempt.record(payout.providerTransferId(), RemittancePayoutAttemptEntity.Status.UNKNOWN, "PAYOUT_RETRY_REQUIRED", now);
-            RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId()).orElseThrow();
-            remittance.clearPayoutExecutionClaim(now);
+            remittance.clearPayoutExecutionClaim(payout.executionClaimToken(), now);
             return retryResponse(payout);
         });
     }
@@ -353,6 +361,18 @@ public class RemittancePayoutService {
                 : RemittanceEntity.Status.PAYOUT_PENDING,
             payout.providerTransferId(),
             "PAYOUT_RETRY_REQUIRED"
+        );
+    }
+
+    private PayoutResponse currentPayoutResponse(
+        RemittanceEntity remittance,
+        String providerStatus
+    ) {
+        return new PayoutResponse(
+            remittance.getId(),
+            remittance.getStatus(),
+            remittance.getProviderTransferId(),
+            providerStatus
         );
     }
 
@@ -396,7 +416,8 @@ public class RemittancePayoutService {
             recipient.getNormalizedPhoneNumber(),
             recipient.getVerifiedName(),
             remittance.getStatus(),
-            executionClaimed
+            executionClaimed,
+            executionClaimed ? remittance.getPayoutExecutionClaimToken() : null
         );
     }
 
@@ -409,7 +430,7 @@ public class RemittancePayoutService {
             remittance.getId(), null, provider, remittance.getProviderTransferId(),
             remittance.getPayoutReference(), remittance.getSourceCurrency(),
             remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
-            null, null, null, null, null, remittance.getStatus(), false
+            null, null, null, null, null, remittance.getStatus(), false, null
         );
     }
 
