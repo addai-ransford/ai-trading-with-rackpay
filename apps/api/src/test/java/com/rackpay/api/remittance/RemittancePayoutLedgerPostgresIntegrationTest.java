@@ -47,6 +47,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     private UUID walletId;
     private UUID corridorId;
     private UUID recipientId;
+    private UUID networkId;
 
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {
@@ -62,6 +63,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
                 remittance_payout_ledger_postings,
                 remittances,
                 remittance_recipients,
+                mobile_money_networks,
                 remittance_corridors,
                 remittance_countries,
                 wallets,
@@ -78,6 +80,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
         walletId = UUID.randomUUID();
         corridorId = UUID.randomUUID();
         recipientId = UUID.randomUUID();
+        networkId = UUID.randomUUID();
 
         jdbc.update("""
             INSERT INTO users (id, keycloak_subject, email, first_name, last_name, status)
@@ -106,12 +109,18 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
             """, corridorId);
 
         jdbc.update("""
+            INSERT INTO mobile_money_networks
+                (id, country_code, code, name, enabled)
+            VALUES (?, 'GH', 'MTN', 'MTN Mobile Money', TRUE)
+            """, networkId);
+
+        jdbc.update("""
             INSERT INTO remittance_recipients
-                (id, user_id, country_code, payout_method, phone_number,
+                (id, user_id, country_code, payout_method, mobile_money_network_id, phone_number,
                  normalized_phone_number, verified_name, active)
-            VALUES (?, ?, 'GH', 'MOBILE_MONEY', '0241234567',
+            VALUES (?, ?, 'GH', 'MOBILE_MONEY', ?, '0241234567',
                     '+233241234567', 'Integration Recipient', TRUE)
-            """, recipientId, userId);
+            """, recipientId, userId, networkId);
 
         jdbc.update("""
             INSERT INTO remittances
