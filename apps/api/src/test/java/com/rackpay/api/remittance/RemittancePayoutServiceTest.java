@@ -54,6 +54,7 @@ class RemittancePayoutServiceTest {
     private PayoutProvider flutterwave;
     private PayoutProvider paystack;
     private List<RemittancePayoutAttemptEntity> history;
+    private UUID executionClaimToken;
 
     @BeforeEach
     void setUp() {
@@ -76,6 +77,7 @@ class RemittancePayoutServiceTest {
         remittanceId = UUID.randomUUID();
         recipientId = UUID.randomUUID();
         networkId = UUID.randomUUID();
+        executionClaimToken = UUID.randomUUID();
 
         remittance = mock(RemittanceEntity.class);
         recipient = mock(RemittanceRecipientEntity.class);
@@ -92,6 +94,8 @@ class RemittancePayoutServiceTest {
         when(remittance.getDestinationAmount()).thenReturn(new BigDecimal("1250.00"));
         when(remittance.getFeeAmount()).thenReturn(new BigDecimal("2.50"));
         when(remittance.getPayoutReference()).thenReturn("rp-existing");
+        when(remittance.getPayoutExecutionClaimToken()).thenReturn(executionClaimToken);
+        when(remittance.ownsPayoutExecutionClaim(any())).thenReturn(true);
 
         when(recipient.getMobileMoneyNetworkId()).thenReturn(networkId);
         when(recipient.getCountryCode()).thenReturn("GH");
@@ -201,6 +205,24 @@ class RemittancePayoutServiceTest {
             releaseProvider.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void stalePayoutExecutionCannotOverwriteNewerExecution() {
+        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
+
+        when(flutterwave.createPayout(any()))
+            .thenReturn(new PayoutProvider.PayoutResult("fw-stale-transfer", "SUCCESSFUL"));
+        when(remittance.ownsPayoutExecutionClaim(any())).thenReturn(false);
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.FUNDS_RESERVED, response.status());
+        assertEquals("STALE_EXECUTION", response.providerStatus());
+        assertEquals(RemittancePayoutAttemptEntity.Status.CREATED, history.get(0).getStatus());
+
+        verify(flutterwave).createPayout(any());
+        verify(payoutLedger, never()).recordCompletedPayout(any(), any(), any());
     }
 
     @Test
