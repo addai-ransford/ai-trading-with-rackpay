@@ -92,6 +92,20 @@ public class RemittanceEntity {
         this.updatedAt = now;
     }
 
+    public boolean ownsPayoutExecutionClaim(UUID token) {
+        return token != null && token.equals(this.payoutExecutionClaimToken);
+    }
+
+    public boolean clearPayoutExecutionClaim(UUID token, Instant now) {
+        if (!ownsPayoutExecutionClaim(token)) {
+            return false;
+        }
+        this.payoutExecutionClaimToken = null;
+        this.payoutExecutionClaimedUntil = null;
+        this.updatedAt = now;
+        return true;
+    }
+
     public void clearPayoutExecutionClaim(Instant now) {
         this.payoutExecutionClaimToken = null;
         this.payoutExecutionClaimedUntil = null;
