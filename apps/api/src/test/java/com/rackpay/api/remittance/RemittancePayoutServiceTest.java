@@ -41,6 +41,8 @@ class RemittancePayoutServiceTest {
     private final WalletCreditService walletCredit = mock(WalletCreditService.class);
     private final RemittanceClearingAccountService clearingAccounts =
         mock(RemittanceClearingAccountService.class);
+    private final RemittancePayoutLedgerService payoutLedger =
+        mock(RemittancePayoutLedgerService.class);
     private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
     private final TransactionStatus transactionStatus = mock(TransactionStatus.class);
 
@@ -65,6 +67,7 @@ class RemittancePayoutServiceTest {
             providers,
             walletCredit,
             clearingAccounts,
+            payoutLedger,
             PayoutProviderType.FLUTTERWAVE,
             transactionManager
         );
@@ -149,6 +152,7 @@ class RemittancePayoutServiceTest {
         verify(flutterwave).createPayout(any());
         verify(paystack).createPayout(any());
         verify(walletCredit, never()).credit(any(), any(), any(), any(), any());
+        verify(payoutLedger).recordCompletedPayout(eq(remittance), eq("PAYSTACK"), eq("ps-transfer-1"));
     }
 
     @Test
