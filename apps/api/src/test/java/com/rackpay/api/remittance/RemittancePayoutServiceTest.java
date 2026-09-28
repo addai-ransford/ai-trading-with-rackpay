@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -146,6 +149,55 @@ class RemittancePayoutServiceTest {
         verify(flutterwave).createPayout(any());
         verify(paystack).createPayout(any());
         verify(walletCredit, never()).credit(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void concurrentPayoutExecutionAllowsOnlyOneProviderCall() throws Exception {
+        AtomicBoolean claimActive = new AtomicBoolean(false);
+        CountDownLatch providerStarted = new CountDownLatch(1);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+
+        when(remittance.hasActivePayoutExecutionClaim(any()))
+            .thenAnswer(invocation -> claimActive.get());
+        doAnswer(invocation -> {
+            claimActive.set(true);
+            return null;
+        }).when(remittance).claimPayoutExecution(any(), any(), any());
+        doAnswer(invocation -> {
+            claimActive.set(false);
+            return null;
+        }).when(remittance).clearPayoutExecutionClaim(any());
+
+        when(flutterwave.createPayout(any())).thenAnswer(invocation -> {
+            providerStarted.countDown();
+            assertEquals(true, releaseProvider.await(5, TimeUnit.SECONDS));
+            return new PayoutProvider.PayoutResult("fw-transfer-concurrent", "SUCCESSFUL");
+        });
+
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<RemittancePayoutService.PayoutResponse> first =
+                executor.submit(() -> service.execute(remittanceId));
+
+            assertEquals(true, providerStarted.await(5, TimeUnit.SECONDS));
+
+            java.util.concurrent.Future<RemittancePayoutService.PayoutResponse> second =
+                executor.submit(() -> service.execute(remittanceId));
+
+            RemittancePayoutService.PayoutResponse secondResponse = second.get(5, TimeUnit.SECONDS);
+            assertEquals("PAYOUT_RETRY_REQUIRED", secondResponse.providerStatus());
+
+            releaseProvider.countDown();
+            RemittancePayoutService.PayoutResponse firstResponse = first.get(5, TimeUnit.SECONDS);
+            assertEquals(RemittanceEntity.Status.COMPLETED, firstResponse.status());
+            assertEquals("fw-transfer-concurrent", firstResponse.providerTransferId());
+
+            verify(flutterwave, times(1)).createPayout(any());
+            verify(paystack, never()).createPayout(any());
+        } finally {
+            releaseProvider.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Test
