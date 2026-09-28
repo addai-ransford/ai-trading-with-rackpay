@@ -5,22 +5,27 @@ import com.rackpay.api.domain.transaction.IdempotencyKey;
 import com.rackpay.api.persistence.remittance.RemittanceEntity;
 import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
 import com.rackpay.api.service.WalletCreditService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
 @Service
 public class RemittancePayoutRecoveryService {
     private static final Logger log = LoggerFactory.getLogger(RemittancePayoutRecoveryService.class);
+    private static final Duration RECOVERY_CLAIM_TTL = Duration.ofSeconds(30);
+    private static final Duration RECOVERY_WAIT = Duration.ofMillis(50);
+    private static final int RECOVERY_WAIT_ATTEMPTS = 200;
+
     private final RemittanceJpaRepository remittances;
     private final RemittanceClearingAccountService clearingAccounts;
     private final WalletCreditService walletCredit;
@@ -45,23 +50,91 @@ public class RemittancePayoutRecoveryService {
     }
 
     /**
-     * Retries a previously persisted RECOVERY_REQUIRED remittance.
+     * Recovers reserved funds after all payout providers have definitively failed.
      *
-     * The wallet credit is idempotent and runs in an independent transaction so
-     * a failed recovery cannot mark the enclosing remittance transaction rollback-only.
+     * The remittance row is locked only long enough to claim recovery. The claim is
+     * committed before the wallet mutation starts, so a REQUIRES_NEW transaction
+     * never competes with another recovery worker holding the same remittance lock.
+     * The wallet mutation itself is idempotent by the deterministic release key.
      */
     public RecoveryResponse recover(UUID remittanceId, String providerTransferId) {
-        return transactionTemplate.execute(status -> {
-            RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
-                .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+        RecoveryClaim claim = waitForOrClaimRecovery(remittanceId, providerTransferId);
+        if (claim.response() != null) return claim.response();
 
-            return attemptRecovery(remittance, providerTransferId);
-        });
+        LedgerRecovery recovery = claim.recovery();
+
+        try {
+            recoveryTransactionTemplate.executeWithoutResult(status -> {
+                UUID clearingAccountId = clearingAccounts.require(recovery.currency()).getId();
+                walletCredit.credit(
+                    new IdempotencyKey("remittance:release:" + remittanceId),
+                    sha256(
+                        remittanceId + "|release|" + recovery.amount().toPlainString()
+                            + "|" + recovery.currency().name()
+                    ),
+                    claim.walletId(),
+                    clearingAccountId,
+                    new Money(recovery.amount(), recovery.currency())
+                );
+            });
+
+            return transactionTemplate.execute(status -> {
+                RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
+                    .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+                if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
+                    return new RecoveryResponse(
+                        remittanceId, RemittanceEntity.Status.FAILED,
+                        providerTransferId, "ALREADY_RECOVERED"
+                    );
+                }
+
+                remittance.markPayoutCreated(
+                    providerTransferId,
+                    RemittanceEntity.Status.FAILED,
+                    Instant.now()
+                );
+                remittance.clearPayoutExecutionClaim(Instant.now());
+
+                return new RecoveryResponse(
+                    remittanceId, RemittanceEntity.Status.FAILED,
+                    providerTransferId, "RECOVERY_COMPLETED"
+                );
+            });
+        } catch (RuntimeException ex) {
+            log.warn("Remittance payout recovery failed for {}", remittanceId, ex);
+            return transactionTemplate.execute(status -> {
+                RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
+                    .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+                if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
+                    return new RecoveryResponse(
+                        remittanceId, RemittanceEntity.Status.FAILED,
+                        providerTransferId, "ALREADY_RECOVERED"
+                    );
+                }
+
+                if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
+                    remittance.markPayoutCreated(
+                        providerTransferId,
+                        RemittanceEntity.Status.RECOVERY_REQUIRED,
+                        Instant.now()
+                    );
+                }
+                remittance.clearPayoutExecutionClaim(Instant.now());
+
+                return new RecoveryResponse(
+                    remittanceId, RemittanceEntity.Status.RECOVERY_REQUIRED,
+                    providerTransferId, "RECOVERY_REQUIRED"
+                );
+            });
+        }
     }
 
     /**
-     * Used by the payout state machine while it already holds the remittance lock.
-     * The wallet mutation is isolated in its own physical transaction.
+     * Called by the payout state machine while its transaction already holds the
+     * remittance lock. This method only persists the recovery-required state.
+     * The actual wallet mutation must happen after the caller commits.
      */
     public RecoveryResponse attemptRecovery(
         RemittanceEntity remittance,
@@ -83,50 +156,77 @@ public class RemittancePayoutRecoveryService {
             );
         }
 
-        LedgerRecovery recovery = new LedgerRecovery(
-            remittance.getSourceAmount().add(remittance.getFeeAmount()),
-            remittance.getSourceCurrency()
-        );
+        if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
+            remittance.markPayoutCreated(
+                providerTransferId,
+                RemittanceEntity.Status.RECOVERY_REQUIRED,
+                Instant.now()
+            );
+        }
+        remittance.clearPayoutExecutionClaim(Instant.now());
 
-        try {
-            recoveryTransactionTemplate.executeWithoutResult(status -> {
-                UUID clearingAccountId = clearingAccounts.require(recovery.currency()).getId();
-                walletCredit.credit(
-                    new IdempotencyKey("remittance:release:" + remittance.getId()),
-                    sha256(
-                        remittance.getId() + "|release|" + recovery.amount().toPlainString()
-                            + "|" + recovery.currency().name()
-                    ),
-                    remittance.getWalletId(),
-                    clearingAccountId,
-                    new Money(recovery.amount(), recovery.currency())
+        return new RecoveryResponse(
+            remittance.getId(), RemittanceEntity.Status.RECOVERY_REQUIRED,
+            providerTransferId, "RECOVERY_REQUIRED"
+        );
+    }
+
+    private RecoveryClaim waitForOrClaimRecovery(UUID remittanceId, String providerTransferId) {
+        for (int attempt = 0; attempt < RECOVERY_WAIT_ATTEMPTS; attempt++) {
+            RecoveryClaim claim = transactionTemplate.execute(status -> {
+                RemittanceEntity remittance = remittances.findByIdForUpdate(remittanceId)
+                    .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+                if (remittance.getStatus() == RemittanceEntity.Status.FAILED) {
+                    return RecoveryClaim.response(new RecoveryResponse(
+                        remittanceId, RemittanceEntity.Status.FAILED,
+                        providerTransferId, "ALREADY_RECOVERED"
+                    ));
+                }
+
+                if (remittance.getStatus() != RemittanceEntity.Status.FUNDS_RESERVED
+                    && remittance.getStatus() != RemittanceEntity.Status.PAYOUT_PENDING
+                    && remittance.getStatus() != RemittanceEntity.Status.PAYOUT_PROCESSING
+                    && remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
+                    return RecoveryClaim.response(new RecoveryResponse(
+                        remittanceId, remittance.getStatus(),
+                        providerTransferId, remittance.getStatus().name()
+                    ));
+                }
+
+                Instant now = Instant.now();
+                if (remittance.hasActivePayoutExecutionClaim(now)) {
+                    return RecoveryClaim.inProgress();
+                }
+
+                LedgerRecovery recovery = new LedgerRecovery(
+                    remittance.getSourceAmount().add(remittance.getFeeAmount()),
+                    remittance.getSourceCurrency()
+                );
+
+                remittance.claimPayoutExecution(
+                    UUID.randomUUID(),
+                    now.plus(RECOVERY_CLAIM_TTL),
+                    now
+                );
+
+                return RecoveryClaim.claimed(
+                    recovery,
+                    remittance.getWalletId()
                 );
             });
 
-            remittance.markPayoutCreated(
-                providerTransferId,
-                RemittanceEntity.Status.FAILED,
-                Instant.now()
-            );
+            if (!claim.inProgress()) return claim;
 
-            return new RecoveryResponse(
-                remittance.getId(), RemittanceEntity.Status.FAILED, providerTransferId,
-                "RECOVERY_COMPLETED"
-            );
-        } catch (RuntimeException ex) {
-            log.warn("Remittance payout recovery failed for {}", remittance.getId(), ex);
-            if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
-                remittance.markPayoutCreated(
-                    providerTransferId,
-                    RemittanceEntity.Status.RECOVERY_REQUIRED,
-                    Instant.now()
-                );
+            try {
+                Thread.sleep(RECOVERY_WAIT.toMillis());
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("interrupted while waiting for remittance recovery", ex);
             }
-            return new RecoveryResponse(
-                remittance.getId(), RemittanceEntity.Status.RECOVERY_REQUIRED,
-                providerTransferId, "RECOVERY_REQUIRED"
-            );
         }
+
+        throw new IllegalStateException("timed out waiting for remittance recovery claim");
     }
 
     private static String sha256(String value) {
@@ -142,6 +242,25 @@ public class RemittancePayoutRecoveryService {
     }
 
     private record LedgerRecovery(BigDecimal amount, com.rackpay.api.domain.money.Currency currency) {}
+
+    private record RecoveryClaim(
+        LedgerRecovery recovery,
+        UUID walletId,
+        RecoveryResponse response,
+        boolean inProgress
+    ) {
+        static RecoveryClaim claimed(LedgerRecovery recovery, UUID walletId) {
+            return new RecoveryClaim(recovery, walletId, null, false);
+        }
+
+        static RecoveryClaim response(RecoveryResponse response) {
+            return new RecoveryClaim(null, null, response, false);
+        }
+
+        static RecoveryClaim inProgress() {
+            return new RecoveryClaim(null, null, null, true);
+        }
+    }
 
     public record RecoveryResponse(
         UUID remittanceId,
