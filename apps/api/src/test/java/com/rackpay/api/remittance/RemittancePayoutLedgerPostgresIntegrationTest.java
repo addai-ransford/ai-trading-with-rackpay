@@ -20,7 +20,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import com.rackpay.api.service.WalletCreditService;
-import org.mockito.ArgumentCaptor;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -298,6 +297,61 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
             Mockito.any(),
             Mockito.any()
         );
+    }
+
+    @Test
+    void concurrentRecoveryAllowsOnlyOneWalletRelease() throws Exception {
+        WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
+        RemittancePayoutRecoveryService recoveryService =
+            new RemittancePayoutRecoveryService(
+                remittances,
+                new RemittanceClearingAccountService(accounts),
+                walletCredit,
+                transactionManager
+            );
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<RemittancePayoutRecoveryService.RecoveryResponse> first =
+                executor.submit(() -> recoveryService.recover(
+                    remittanceId, "provider-transfer-concurrent"
+                ));
+            Future<RemittancePayoutRecoveryService.RecoveryResponse> second =
+                executor.submit(() -> recoveryService.recover(
+                    remittanceId, "provider-transfer-concurrent"
+                ));
+
+            var firstResponse = first.get(10, TimeUnit.SECONDS);
+            var secondResponse = second.get(10, TimeUnit.SECONDS);
+
+            long completed = java.util.stream.Stream.of(firstResponse, secondResponse)
+                .filter(response -> response.status() == RemittanceEntity.Status.FAILED)
+                .count();
+
+            assertEquals(2, completed);
+            assertEquals(
+                1,
+                java.util.stream.Stream.of(firstResponse, secondResponse)
+                    .filter(response -> "RECOVERY_COMPLETED".equals(response.recoveryStatus()))
+                    .count()
+            );
+            assertEquals(
+                1,
+                java.util.stream.Stream.of(firstResponse, secondResponse)
+                    .filter(response -> "ALREADY_RECOVERED".equals(response.recoveryStatus()))
+                    .count()
+            );
+
+            Mockito.verify(walletCredit, Mockito.times(1)).credit(
+                Mockito.any(),
+                Mockito.anyString(),
+                Mockito.eq(walletId),
+                Mockito.any(),
+                Mockito.any()
+            );
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
