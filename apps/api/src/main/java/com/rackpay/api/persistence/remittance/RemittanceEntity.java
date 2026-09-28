@@ -133,6 +133,18 @@ public class RemittanceEntity {
         this.updatedAt=now;
     }
 
+    public void markRecoveryRequired(String providerTransferId, Instant now) {
+        if (status != Status.FUNDS_RESERVED
+            && status != Status.PAYOUT_PENDING
+            && status != Status.PAYOUT_PROCESSING
+            && status != Status.RECOVERY_REQUIRED) {
+            throw new IllegalStateException("remittance cannot require payout recovery from " + status);
+        }
+        this.providerTransferId = providerTransferId;
+        this.status = Status.RECOVERY_REQUIRED;
+        this.updatedAt = now;
+    }
+
     public void markFundsReserved(UUID fundingFinancialTransactionId, UUID clearingAccountId, Instant now) {
         requireStatus(Status.CREATED);
         this.fundingFinancialTransactionId=fundingFinancialTransactionId;
