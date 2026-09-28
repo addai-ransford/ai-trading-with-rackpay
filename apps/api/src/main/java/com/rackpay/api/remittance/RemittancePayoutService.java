@@ -34,6 +34,7 @@ public class RemittancePayoutService {
     private final PayoutProviderRegistry providers;
     private final WalletCreditService walletCredit;
     private final RemittanceClearingAccountService clearingAccounts;
+    private final RemittancePayoutLedgerService payoutLedger;
     private final PayoutProviderType defaultProvider;
     private final TransactionTemplate transactionTemplate;
     private static final Duration PAYOUT_EXECUTION_CLAIM_TTL = Duration.ofSeconds(30);
@@ -46,6 +47,7 @@ public class RemittancePayoutService {
         PayoutProviderRegistry providers,
         WalletCreditService walletCredit,
         RemittanceClearingAccountService clearingAccounts,
+        RemittancePayoutLedgerService payoutLedger,
         @Value("$"+"{rackpay.payout.default-provider:FLUTTERWAVE}") PayoutProviderType defaultProvider,
         PlatformTransactionManager transactionManager
     ) {
@@ -56,6 +58,7 @@ public class RemittancePayoutService {
         this.providers = providers;
         this.walletCredit = walletCredit;
         this.clearingAccounts = clearingAccounts;
+        this.payoutLedger = payoutLedger;
         this.defaultProvider = defaultProvider;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
@@ -278,6 +281,9 @@ public class RemittancePayoutService {
         attempt.record(providerTransferId, mapAttemptStatus(providerStatus), null, now);
         remittance.clearPayoutExecutionClaim(now);
         remittance.markPayoutCreated(providerTransferId, mapped, now);
+        if (mapped == RemittanceEntity.Status.COMPLETED) {
+            payoutLedger.recordCompletedPayout(remittance, payout.provider().name(), providerTransferId);
+        }
 
         return new PayoutResponse(
             remittance.getId(), mapped, providerTransferId, providerStatus.name()
