@@ -465,6 +465,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void unknownProviderTimeoutIsReconciledWithoutCreatingDuplicatePayout() {
         PayoutProvider provider = mock(PayoutProvider.class);
         when(provider.type()).thenReturn(PayoutProviderType.FLUTTERWAVE);
