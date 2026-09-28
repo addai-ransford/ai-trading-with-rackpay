@@ -7,6 +7,9 @@ import com.rackpay.api.persistence.ledger.LedgerTransactionJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceEntity;
 import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittancePayoutLedgerPostingJpaRepository;
+import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
+import com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository;
+import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.env.MockEnvironment;
 import com.rackpay.api.service.WalletCreditService;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +59,9 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     @Autowired LedgerTransactionJpaRepository transactions;
     @Autowired RemittancePayoutLedgerPostingJpaRepository postings;
     @Autowired RemittanceJpaRepository remittances;
+    @Autowired RemittanceRecipientJpaRepository recipients;
+    @Autowired MobileMoneyNetworkJpaRepository networks;
+    @Autowired RemittancePayoutAttemptJpaRepository attempts;
     @Autowired PlatformTransactionManager transactionManager;
 
     private UUID clearingId;
