@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +20,7 @@ import java.util.UUID;
 
 @Service
 public class RemittancePayoutRecoveryService {
+    private static final Logger log = LoggerFactory.getLogger(RemittancePayoutRecoveryService.class);
     private final RemittanceJpaRepository remittances;
     private final RemittanceClearingAccountService clearingAccounts;
     private final WalletCreditService walletCredit;
@@ -111,6 +114,7 @@ public class RemittancePayoutRecoveryService {
                 "RECOVERY_COMPLETED"
             );
         } catch (RuntimeException ex) {
+            log.warn("Remittance payout recovery failed for {}", remittance.getId(), ex);
             if (remittance.getStatus() != RemittanceEntity.Status.RECOVERY_REQUIRED) {
                 remittance.markPayoutCreated(
                     providerTransferId,
