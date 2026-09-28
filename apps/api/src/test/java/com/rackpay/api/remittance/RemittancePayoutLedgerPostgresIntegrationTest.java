@@ -5,6 +5,7 @@ import com.rackpay.api.persistence.ledger.LedgerAccountEntity;
 import com.rackpay.api.persistence.ledger.LedgerAccountJpaRepository;
 import com.rackpay.api.persistence.ledger.LedgerTransactionJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittanceEntity;
+import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
 import com.rackpay.api.persistence.remittance.RemittancePayoutLedgerPostingJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
