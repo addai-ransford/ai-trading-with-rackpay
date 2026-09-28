@@ -422,7 +422,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
             assertEquals(RemittanceEntity.Status.COMPLETED, firstResponse.status());
             assertEquals("fw-concurrent-1", firstResponse.providerTransferId());
             verify(provider, times(1)).createPayout(any());
-            verify(provider, times(2)).findPayoutByReference(anyString());
+            verify(provider, times(1)).findPayoutByReference(anyString());
             verify(payoutLedger, times(1)).recordCompletedPayout(
                 any(RemittanceEntity.class), eq("FLUTTERWAVE"), eq("fw-concurrent-1")
             );
