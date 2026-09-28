@@ -238,6 +238,38 @@ class RemittancePayoutServiceTest {
     }
 
     @Test
+    void payoutRecoveryFailureLeavesRemittanceInRecoveryRequired() {
+        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
+
+        when(providers.nextEligible(
+            eq(PayoutProviderType.FLUTTERWAVE), any(), any()
+        )).thenReturn(paystack);
+        when(providers.nextEligible(
+            eq(PayoutProviderType.PAYSTACK), any(), any()
+        )).thenReturn(null);
+
+        when(flutterwave.createPayout(any()))
+            .thenReturn(new PayoutProvider.PayoutResult("fw-transfer-1", "FAILED"));
+        when(paystack.createPayout(any()))
+            .thenReturn(new PayoutProvider.PayoutResult("ps-transfer-1", "FAILED"));
+
+        LedgerAccountEntity clearingAccount = mock(LedgerAccountEntity.class);
+        when(clearingAccount.getId()).thenReturn(UUID.randomUUID());
+        when(clearingAccounts.require(Currency.EUR)).thenReturn(clearingAccount);
+        doThrow(new RuntimeException("wallet recovery unavailable"))
+            .when(walletCredit).credit(any(), any(), any(), any(), any());
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.RECOVERY_REQUIRED, response.status());
+        assertEquals("RECOVERY_REQUIRED", response.providerStatus());
+        assertEquals(2, history.size());
+        assertEquals(RemittancePayoutAttemptEntity.Status.FAILED, history.get(0).getStatus());
+
+        verify(walletCredit, times(1)).credit(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void completedRemittanceDoesNotCreateAnotherProviderPayout() {
         when(remittance.getStatus()).thenReturn(RemittanceEntity.Status.COMPLETED);
         when(remittance.getPayoutProvider()).thenReturn(PayoutProviderType.FLUTTERWAVE.name());
