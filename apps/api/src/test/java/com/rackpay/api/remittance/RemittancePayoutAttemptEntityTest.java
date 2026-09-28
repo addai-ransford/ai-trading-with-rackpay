@@ -27,9 +27,7 @@ class RemittancePayoutAttemptEntityTest {
 
         attempt.record(
             "fw-transfer-1",
-            com.rackpay.api.remittance.PayoutProvider.PayoutStatus.COMPLETED == null
-                ? RemittancePayoutAttemptEntity.Status.COMPLETED
-                : RemittancePayoutAttemptEntity.Status.COMPLETED,
+            RemittancePayoutAttemptEntity.Status.COMPLETED,
             null,
             completed
         );
