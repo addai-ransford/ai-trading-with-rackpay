@@ -472,6 +472,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
         when(provider.createPayout(any()))
             .thenThrow(new IllegalStateException("provider request timed out"));
         when(provider.findPayoutByReference(anyString()))
+            .thenReturn(null)
             .thenReturn(new PayoutProvider.PayoutResult("fw-reconciled-1", "COMPLETED"));
 
         MockEnvironment environment = new MockEnvironment()
