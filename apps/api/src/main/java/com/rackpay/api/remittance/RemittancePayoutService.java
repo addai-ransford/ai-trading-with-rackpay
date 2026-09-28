@@ -300,13 +300,18 @@ public class RemittancePayoutService {
     ) {
         RemittanceEntity remittance = remittances.findByIdForUpdate(payout.remittanceId())
             .orElseThrow(() -> new IllegalArgumentException("remittance not found"));
+
+        if (!remittance.ownsPayoutExecutionClaim(payout.executionClaimToken())) {
+            return currentPayoutResponse(remittance, "STALE_EXECUTION");
+        }
+
         RemittancePayoutAttemptEntity attempt = attempts.findById(payout.attemptId())
             .orElseThrow(() -> new IllegalArgumentException("payout attempt not found"));
 
         RemittanceEntity.Status mapped = mapRemittanceStatus(providerStatus);
         Instant now = Instant.now();
         attempt.record(providerTransferId, mapAttemptStatus(providerStatus), null, now);
-        remittance.clearPayoutExecutionClaim(now);
+        remittance.clearPayoutExecutionClaim(payout.executionClaimToken(), now);
         remittance.markPayoutCreated(providerTransferId, mapped, now);
         if (mapped == RemittanceEntity.Status.COMPLETED) {
             payoutLedger.recordCompletedPayout(remittance, payout.provider().name(), providerTransferId);
