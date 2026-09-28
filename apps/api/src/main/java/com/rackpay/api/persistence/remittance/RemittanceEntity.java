@@ -36,6 +36,8 @@ public class RemittanceEntity {
     @Column(name="clearing_account_id") private UUID clearingAccountId;
     @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt;
     @Column(name="updated_at",nullable=false) private Instant updatedAt;
+    @Column(name="payout_execution_claim_token") private UUID payoutExecutionClaimToken;
+    @Column(name="payout_execution_claimed_until") private Instant payoutExecutionClaimedUntil;
 
     protected RemittanceEntity() {}
 
@@ -72,6 +74,29 @@ public class RemittanceEntity {
     public UUID getClearingAccountId(){return clearingAccountId;}
     public Instant getCreatedAt(){return createdAt;}
     public Instant getUpdatedAt(){return updatedAt;}
+    public UUID getPayoutExecutionClaimToken(){return payoutExecutionClaimToken;}
+    public Instant getPayoutExecutionClaimedUntil(){return payoutExecutionClaimedUntil;}
+
+    public boolean hasActivePayoutExecutionClaim(Instant now) {
+        return payoutExecutionClaimToken != null
+            && payoutExecutionClaimedUntil != null
+            && payoutExecutionClaimedUntil.isAfter(now);
+    }
+
+    public void claimPayoutExecution(UUID token, Instant claimedUntil, Instant now) {
+        if (hasActivePayoutExecutionClaim(now)) {
+            throw new IllegalStateException("remittance payout is already being processed");
+        }
+        this.payoutExecutionClaimToken = token;
+        this.payoutExecutionClaimedUntil = claimedUntil;
+        this.updatedAt = now;
+    }
+
+    public void clearPayoutExecutionClaim(Instant now) {
+        this.payoutExecutionClaimToken = null;
+        this.payoutExecutionClaimedUntil = null;
+        this.updatedAt = now;
+    }
 
     public void setPayoutPending(String payoutProvider, String payoutReference, Instant now) {
         requireStatus(Status.FUNDS_RESERVED);
