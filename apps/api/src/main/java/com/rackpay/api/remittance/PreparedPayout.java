@@ -21,7 +21,8 @@ public record PreparedPayout(
         String normalizedPhoneNumber,
         String recipientName,
         RemittanceEntity.Status status,
-        boolean executionClaimed
+        boolean executionClaimed,
+        UUID executionClaimToken
         ) {
 
 }
