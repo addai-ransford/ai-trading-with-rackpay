@@ -465,6 +465,94 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     }
 
     @Test
+    void unknownProviderTimeoutIsReconciledWithoutCreatingDuplicatePayout() {
+        PayoutProvider provider = mock(PayoutProvider.class);
+        when(provider.type()).thenReturn(PayoutProviderType.FLUTTERWAVE);
+        when(provider.supportsPayout(any())).thenReturn(true);
+        when(provider.createPayout(any()))
+            .thenThrow(new IllegalStateException("provider request timed out"));
+        when(provider.findPayoutByReference(anyString()))
+            .thenReturn(new PayoutProvider.PayoutResult("fw-reconciled-1", "COMPLETED"));
+
+        MockEnvironment environment = new MockEnvironment()
+            .withProperty("rackpay.payout.provider-order", "FLUTTERWAVE");
+        PayoutProviderRegistry registry = new PayoutProviderRegistry(List.of(provider), environment);
+        RemittancePayoutRecoveryService recoveryService = mock(RemittancePayoutRecoveryService.class);
+        RemittancePayoutLedgerService payoutLedger = mock(RemittancePayoutLedgerService.class);
+
+        RemittancePayoutService service = new RemittancePayoutService(
+            remittances,
+            recipients,
+            networks,
+            attempts,
+            registry,
+            recoveryService,
+            payoutLedger,
+            PayoutProviderType.FLUTTERWAVE,
+            transactionManager
+        );
+
+        RemittancePayoutService.PayoutResponse firstResponse = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, firstResponse.status());
+        assertEquals("PAYOUT_RETRY_REQUIRED", firstResponse.providerStatus());
+
+        assertEquals(
+            "UNKNOWN",
+            jdbc.queryForObject(
+                "SELECT status FROM remittance_payout_attempts WHERE remittance_id = ?",
+                String.class,
+                remittanceId
+            )
+        );
+        assertEquals(
+            0,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM remittance_payout_ledger_postings WHERE remittance_id = ?",
+                Integer.class,
+                remittanceId
+            )
+        );
+
+        RemittancePayoutService.PayoutResponse reconciled = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.COMPLETED, reconciled.status());
+        assertEquals("fw-reconciled-1", reconciled.providerTransferId());
+        assertEquals("COMPLETED", reconciled.providerStatus());
+
+        verify(provider, times(1)).createPayout(any());
+        verify(provider, times(2)).findPayoutByReference(anyString());
+        verify(payoutLedger, times(1)).recordCompletedPayout(
+            any(RemittanceEntity.class), eq("FLUTTERWAVE"), eq("fw-reconciled-1")
+        );
+
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM remittance_payout_attempts WHERE remittance_id = ?",
+                Integer.class,
+                remittanceId
+            )
+        );
+        assertEquals(
+            "COMPLETED",
+            jdbc.queryForObject(
+                "SELECT status FROM remittance_payout_attempts WHERE remittance_id = ?",
+                String.class,
+                remittanceId
+            )
+        );
+        assertEquals(
+            "COMPLETED",
+            jdbc.queryForObject(
+                "SELECT status FROM remittances WHERE id = ?",
+                String.class,
+                remittanceId
+            )
+        );
+    }
+
+    @Test
     void completedPayoutProducesBalancedPostgresLedgerAndIsIdempotent() {
         RemittancePayoutLedgerService service =
             new RemittancePayoutLedgerService(accounts, transactions, postings);
