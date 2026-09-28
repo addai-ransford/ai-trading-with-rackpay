@@ -407,7 +407,7 @@ public class RemittancePayoutService {
             remittance.getId(), null, provider, remittance.getProviderTransferId(),
             remittance.getPayoutReference(), remittance.getSourceCurrency(),
             remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
-            null, null, null, null, null, remittance.getStatus()
+            null, null, null, null, null, remittance.getStatus(), false
         );
     }
 
