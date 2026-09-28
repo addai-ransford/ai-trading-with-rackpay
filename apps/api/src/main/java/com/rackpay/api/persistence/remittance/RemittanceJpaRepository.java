@@ -19,6 +19,14 @@ public interface RemittanceJpaRepository extends JpaRepository<RemittanceEntity,
         where r.id = :id
         """)
     Optional<RemittanceEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Query(value = """
+        select *
+        from remittances
+        where id = :id
+        for no key update skip locked
+        """, nativeQuery = true)
+    Optional<RemittanceEntity> findByIdForUpdateSkipLocked(@Param("id") UUID id);
     
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
