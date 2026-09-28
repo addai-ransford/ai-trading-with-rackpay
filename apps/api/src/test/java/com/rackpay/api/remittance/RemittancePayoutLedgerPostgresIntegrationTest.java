@@ -300,6 +300,7 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void concurrentRecoveryAllowsOnlyOneWalletRelease() throws Exception {
         WalletCreditService walletCredit = Mockito.mock(WalletCreditService.class);
         RemittancePayoutRecoveryService recoveryService =
