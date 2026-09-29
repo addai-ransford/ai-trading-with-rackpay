@@ -1,14 +1,18 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.persistence.ledger.LedgerAccountEntity;
-import com.rackpay.api.persistence.remittance.MobileMoneyNetworkEntity;
-import com.rackpay.api.persistence.remittance.RemittanceEntity;
-import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptEntity;
-import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittanceRecipientEntity;
-import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
+import com.rackpay.api.remittance.core.model.*;
+import com.rackpay.api.remittance.core.service.*;
+import com.rackpay.api.remittance.ports.out.*;
+
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -32,8 +36,8 @@ class RemittancePayoutServiceTest {
 
     private final RemittanceJpaRepository remittances = mock(RemittanceJpaRepository.class);
     private final RemittanceRecipientJpaRepository recipients = mock(RemittanceRecipientJpaRepository.class);
-    private final com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository networks =
-        mock(com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository.class);
+    private final com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkJpaRepository networks =
+        mock(com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkJpaRepository.class);
     private final RemittancePayoutAttemptJpaRepository attempts =
         mock(RemittancePayoutAttemptJpaRepository.class);
     private final PayoutProviderRegistry providers = mock(PayoutProviderRegistry.class);
