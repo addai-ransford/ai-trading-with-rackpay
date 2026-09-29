@@ -1,15 +1,7 @@
 package com.rackpay.api.payment.adapters.out.providers.stripe;
 
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.mollie.Checkout;
 import com.rackpay.api.payment.core.model.PaymentProviderType;
-import com.rackpay.api.payment.ports.out.CreatePaymentCommand;
 import com.rackpay.api.payment.ports.out.PaymentProvider;
-import com.rackpay.api.payment.ports.out.PaymentSession;
-import com.rackpay.api.payment.ports.out.PaymentStatus;
-import com.rackpay.api.payment.ports.out.WebhookResult;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rackpay.api.shared.core.money.Currency;
