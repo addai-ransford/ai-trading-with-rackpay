@@ -1,9 +1,6 @@
 package com.rackpay.api.auth.adapters.in.web;
 
 import com.rackpay.api.auth.core.service.RegistrationService;
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
-
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
