@@ -200,6 +200,35 @@ jobs:
 
               p.write_text(text)
 
+          # Second pass: derive the actual post-move class catalog and repair same-package imports.
+          catalog = {}
+          for p in root.rglob("*.java"):
+              rel = p.relative_to(root)
+              parent = str(rel.parent).replace("/", ".")
+              pkg_name = "com.rackpay.api" if parent == "." else "com.rackpay.api." + parent
+              source = p.read_text()
+              for m in re.finditer(r"\\b(?:class|interface|enum|record)\\s+([A-Za-z0-9_]+)", source):
+                  catalog[m.group(1)] = pkg_name + "." + m.group(1)
+
+          for p in root.rglob("*.java"):
+              rel = p.relative_to(root)
+              parent = str(rel.parent).replace("/", ".")
+              pkg_name = "com.rackpay.api" if parent == "." else "com.rackpay.api." + parent
+              source = p.read_text()
+              extra = []
+              for simple, fqcn in catalog.items():
+                  target_pkg = fqcn.rsplit(".", 1)[0]
+                  if target_pkg != pkg_name and simple in source and f"import {fqcn};" not in source:
+                      if not re.search(r"\\b(?:class|interface|enum|record)\\s+" + re.escape(simple) + r"\\b", source):
+                          extra.append(f"import {fqcn};")
+              if extra:
+                  lines = source.splitlines(True)
+                  for idx, line in enumerate(lines):
+                      if line.startswith("package "):
+                          lines[idx+1:idx+1] = ["\\n"] + [x + "\\n" for x in sorted(set(extra))]
+                          break
+                  p.write_text("".join(lines))
+
           # Mirror test packages with the refactored feature boundaries.
           test_root = Path("apps/api/src/test/java/com/rackpay/api")
           test_map = {
