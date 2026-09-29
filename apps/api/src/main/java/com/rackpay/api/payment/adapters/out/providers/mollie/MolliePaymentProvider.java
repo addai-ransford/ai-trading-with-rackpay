@@ -173,6 +173,8 @@ public class MolliePaymentProvider implements PaymentProvider {
     private Response fetch(String id) {
         requireConfigured();
         return retryExecutor.execute(
+            "MOLLIE",
+            "payment-status",
             () -> {
                 Response r = client.get()
                     .uri("/payments/{id}", id)

@@ -85,6 +85,8 @@ public class StripePaymentProvider implements PaymentProvider {
     public PaymentStatus getPayment(String id) {
         requireConfigured();
         return retryExecutor.execute(
+            "STRIPE",
+            "payment-status",
             () -> {
                 Response r = client.get()
                     .uri("/checkout/sessions/{id}", id)
