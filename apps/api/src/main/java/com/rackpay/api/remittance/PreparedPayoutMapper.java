@@ -23,7 +23,8 @@ public class PreparedPayoutMapper {
             null,
             null,
             response.status(),
-            false
+            false,
+            null
         );
     }
 }
