@@ -1,4 +1,4 @@
-package com.rackpay.api.config;
+package com.rackpay.api.shared.configuration;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
