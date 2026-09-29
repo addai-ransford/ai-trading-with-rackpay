@@ -1,9 +1,14 @@
 package com.rackpay.api.auth.adapters.out.keycloak;
 
-import com.rackpay.api.persistence.admin.PlatformAdminEntity;
-import com.rackpay.api.persistence.admin.PlatformAdminJpaRepository;
-import com.rackpay.api.persistence.user.UserEntity;
-import com.rackpay.api.persistence.user.UserJpaRepository;
+import com.rackpay.api.auth.adapters.in.web.RegistrationRequest;
+import com.rackpay.api.auth.adapters.in.web.RegistrationResponse;
+import com.rackpay.api.auth.core.service.RegistrationService;
+import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
+
+import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminEntity;
+import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserEntity;
+import com.rackpay.api.user.adapters.out.persistence.UserJpaRepository;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

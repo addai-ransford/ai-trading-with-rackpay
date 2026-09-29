@@ -1,6 +1,6 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

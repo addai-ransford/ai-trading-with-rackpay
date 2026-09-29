@@ -1,5 +1,7 @@
 package com.rackpay.api.ledger.core.model;
 
+import com.rackpay.api.shared.core.service.must;
+
 import java.util.UUID;
 
 public record LedgerAccountId(UUID value) {

@@ -1,7 +1,9 @@
 package com.rackpay.api.auth.adapters.in.web;
 
-import com.rackpay.api.persistence.user.CurrentUserService;
-import com.rackpay.api.persistence.user.UserEntity;
+import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
+
+import com.rackpay.api.user.adapters.out.persistence.CurrentUserService;
+import com.rackpay.api.user.adapters.out.persistence.UserEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

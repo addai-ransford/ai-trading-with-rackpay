@@ -1,6 +1,8 @@
 package com.rackpay.api.ledger.core.model;
 
-import com.rackpay.api.domain.money.Currency;
+import com.rackpay.api.shared.core.service.must;
+
+import com.rackpay.api.shared.core.money.Currency;
 
 import java.math.BigDecimal;
 import java.util.List;

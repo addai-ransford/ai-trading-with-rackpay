@@ -1,7 +1,7 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.persistence.remittance.RemittanceEntity;
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
