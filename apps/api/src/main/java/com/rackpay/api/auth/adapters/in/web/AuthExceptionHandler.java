@@ -1,4 +1,4 @@
-package com.rackpay.api.auth;
+package com.rackpay.api.auth.adapters.in.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
