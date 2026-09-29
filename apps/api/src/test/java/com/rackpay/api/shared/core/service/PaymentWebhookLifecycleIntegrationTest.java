@@ -1,5 +1,8 @@
 package com.rackpay.api.shared.core.service;
 
+import com.rackpay.api.payment.core.service.*;
+import com.rackpay.api.wallet.core.service.*;
+
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.payment.adapters.out.persistence.PaymentProviderEventEntity;
 import com.rackpay.api.payment.ports.out.PaymentProvider;
