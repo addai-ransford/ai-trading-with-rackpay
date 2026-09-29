@@ -1,8 +1,6 @@
 package com.rackpay.api.remittance.core.service;
 
 import com.rackpay.api.ledger.core.model.LedgerAccount;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-
 import com.rackpay.api.ledger.core.model.LedgerAccountType;
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountEntity;
