@@ -2,6 +2,7 @@ package com.rackpay.api.payment.adapters.in.web;
 
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.payment.core.service.PaymentService;
+import com.rackpay.api.payment.core.service.PaymentService.AuthenticationData;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.security.core.Authentication;
