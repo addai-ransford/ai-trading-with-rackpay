@@ -1,4 +1,4 @@
-package com.rackpay.api.auth;
+package com.rackpay.api.auth.adapters.out.keycloak;
 
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;

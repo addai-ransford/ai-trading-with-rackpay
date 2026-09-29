@@ -1,4 +1,4 @@
-package com.rackpay.api.auth;
+package com.rackpay.api.auth.adapters.out.keycloak;
 
 import com.rackpay.api.persistence.admin.PlatformAdminEntity;
 import com.rackpay.api.persistence.admin.PlatformAdminJpaRepository;

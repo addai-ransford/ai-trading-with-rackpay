@@ -1,4 +1,4 @@
-package com.rackpay.api.auth;
+package com.rackpay.api.auth.adapters.in.web;
 
 import com.rackpay.api.persistence.user.CurrentUserService;
 import com.rackpay.api.persistence.user.UserEntity;
