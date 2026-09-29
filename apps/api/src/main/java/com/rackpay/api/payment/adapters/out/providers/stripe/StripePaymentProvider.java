@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryClassifier;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -25,17 +27,20 @@ public class StripePaymentProvider implements PaymentProvider {
     private final String secretKey;
     private final String webhookSecret;
     private final ObjectMapper mapper;
+    private final ProviderRetryExecutor retryExecutor;
 
     public StripePaymentProvider(
         RestClient.Builder builder,
         @Value("${rackpay.payment.stripe.base-url:https://api.stripe.com/v1}") String baseUrl,
         @Value("$"+"{RACKPAY_STRIPE_SECRET_KEY:}") String secretKey,
         @Value("$"+"{RACKPAY_STRIPE_WEBHOOK_SECRET:}") String webhookSecret,
-        ObjectMapper mapper
+        ObjectMapper mapper,
+        ProviderRetryExecutor retryExecutor
     ) {
         this.secretKey = secretKey;
         this.webhookSecret = webhookSecret;
         this.mapper = mapper;
+        this.retryExecutor = retryExecutor;
         this.client = builder.baseUrl(baseUrl).build();
     }
 
@@ -79,12 +84,17 @@ public class StripePaymentProvider implements PaymentProvider {
     @Override
     public PaymentStatus getPayment(String id) {
         requireConfigured();
-        Response r = client.get()
-            .uri("/checkout/sessions/{id}", id)
-            .headers(h -> h.setBasicAuth(secretKey, ""))
-            .retrieve()
-            .body(Response.class);
-        return r == null ? PaymentStatus.UNKNOWN : map(r.paymentStatus());
+        return retryExecutor.execute(
+            () -> {
+                Response r = client.get()
+                    .uri("/checkout/sessions/{id}", id)
+                    .headers(h -> h.setBasicAuth(secretKey, ""))
+                    .retrieve()
+                    .body(Response.class);
+                return r == null ? PaymentStatus.UNKNOWN : map(r.paymentStatus());
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     @Override
