@@ -1,7 +1,7 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.persistence.remittance.RemittanceEntity;
-import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +28,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Import({
     RemittancePayoutRecoveryService.class,
     RemittanceClearingAccountService.class,
-    com.rackpay.api.service.WalletCreditService.class,
-    com.rackpay.api.service.WalletFinancialOperationService.class,
-    com.rackpay.api.service.FinancialTransactionService.class,
-    com.rackpay.api.service.WalletLedgerService.class
+    com.rackpay.api.wallet.core.service.WalletCreditService.class,
+    com.rackpay.api.wallet.core.service.WalletFinancialOperationService.class,
+    com.rackpay.api.shared.core.service.FinancialTransactionService.class,
+    com.rackpay.api.wallet.core.service.WalletLedgerService.class
 })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class RemittancePayoutRecoveryPostgresIntegrationTest {

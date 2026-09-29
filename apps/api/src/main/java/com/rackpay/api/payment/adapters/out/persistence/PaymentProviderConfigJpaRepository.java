@@ -1,0 +1,21 @@
+package com.rackpay.api.payment.adapters.out.persistence;
+
+import com.rackpay.api.payment.ports.out.PaymentProvider;
+
+import com.rackpay.api.payment.core.model.PaymentProviderType;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
+import java.util.*;
+
+public interface PaymentProviderConfigJpaRepository extends JpaRepository<PaymentProviderConfigEntity,UUID> {
+    Optional<PaymentProviderConfigEntity> findByProvider(PaymentProviderType provider);
+    Optional<PaymentProviderConfigEntity> findByActiveTrue();
+    List<PaymentProviderConfigEntity> findAllByOrderByProviderAsc();
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from PaymentProviderConfigEntity p order by p.provider")
+    List<PaymentProviderConfigEntity> findAllForUpdate();
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from PaymentProviderConfigEntity p where p.id = :id")
+    Optional<PaymentProviderConfigEntity> findByIdForUpdate(@Param("id") UUID id);
+}

@@ -1,5 +1,9 @@
 package com.rackpay.api.auth.adapters.in.web;
 
+import com.rackpay.api.auth.core.exception.RegistrationException;
+import com.rackpay.api.payment.adapters.out.persistence.Status;
+import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

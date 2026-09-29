@@ -1,6 +1,6 @@
 package com.rackpay.api.shared.configuration;
 
-import com.rackpay.api.security.PlatformAdminAuthorizationManager;
+import com.rackpay.api.auth.adapters.in.security.PlatformAdminAuthorizationManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;

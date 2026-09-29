@@ -1,16 +1,26 @@
 package com.rackpay.api.auth.core.service;
 
-import com.rackpay.api.domain.ledger.LedgerAccountType;
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.persistence.ledger.LedgerAccountEntity;
-import com.rackpay.api.persistence.ledger.LedgerAccountJpaRepository;
-import com.rackpay.api.persistence.user.UserEntity;
-import com.rackpay.api.persistence.user.UserJpaRepository;
-import com.rackpay.api.persistence.user.UserStatus;
-import com.rackpay.api.persistence.wallet.WalletBalanceEntity;
-import com.rackpay.api.persistence.wallet.WalletBalanceJpaRepository;
-import com.rackpay.api.persistence.wallet.WalletEntity;
-import com.rackpay.api.persistence.wallet.WalletJpaRepository;
+import com.rackpay.api.auth.adapters.in.web.RegistrationRequest;
+import com.rackpay.api.auth.adapters.in.web.RegistrationResponse;
+import com.rackpay.api.auth.adapters.out.keycloak.KeycloakAdminClient;
+import com.rackpay.api.auth.core.exception.RegistrationException;
+import com.rackpay.api.ledger.core.model.LedgerAccount;
+import com.rackpay.api.payment.adapters.out.persistence.Status;
+import com.rackpay.api.payment.adapters.out.persistence.Type;
+import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
+import com.rackpay.api.wallet.core.model.Wallet;
+
+import com.rackpay.api.ledger.core.model.LedgerAccountType;
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountEntity;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserEntity;
+import com.rackpay.api.user.adapters.out.persistence.UserJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserStatus;
+import com.rackpay.api.wallet.adapters.out.persistence.WalletBalanceEntity;
+import com.rackpay.api.wallet.adapters.out.persistence.WalletBalanceJpaRepository;
+import com.rackpay.api.wallet.adapters.out.persistence.WalletEntity;
+import com.rackpay.api.wallet.adapters.out.persistence.WalletJpaRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;

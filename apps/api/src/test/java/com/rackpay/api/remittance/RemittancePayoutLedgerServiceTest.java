@@ -1,13 +1,13 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.persistence.ledger.LedgerAccountEntity;
-import com.rackpay.api.persistence.ledger.LedgerAccountJpaRepository;
-import com.rackpay.api.persistence.ledger.LedgerTransactionEntity;
-import com.rackpay.api.persistence.ledger.LedgerTransactionJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittanceEntity;
-import com.rackpay.api.persistence.remittance.RemittancePayoutLedgerPostingEntity;
-import com.rackpay.api.persistence.remittance.RemittancePayoutLedgerPostingJpaRepository;
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountEntity;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountJpaRepository;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerTransactionEntity;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerTransactionJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutLedgerPostingEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutLedgerPostingJpaRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -30,7 +30,7 @@ class RemittancePayoutLedgerServiceTest {
         UUID clearingId = UUID.randomUUID();
         LedgerAccountEntity clearing = new LedgerAccountEntity(
             clearingId, "RackPay Remittance Clearing EUR", Currency.EUR,
-            com.rackpay.api.domain.ledger.LedgerAccountType.LIABILITY, Instant.now()
+            com.rackpay.api.ledger.core.model.LedgerAccountType.LIABILITY, Instant.now()
         );
 
         when(accounts.findById(clearingId)).thenReturn(Optional.of(clearing));
@@ -62,10 +62,10 @@ class RemittancePayoutLedgerServiceTest {
 
         LedgerTransactionEntity tx = txCaptor.getValue();
         assertEquals(2, tx.getEntries().size());
-        assertEquals(com.rackpay.api.domain.ledger.EntryDirection.DEBIT,
+        assertEquals(com.rackpay.api.ledger.core.model.EntryDirection.DEBIT,
             tx.getEntries().get(0).getDirection());
         assertEquals(clearingId, tx.getEntries().get(0).getAccount().getId());
-        assertEquals(com.rackpay.api.domain.ledger.EntryDirection.CREDIT,
+        assertEquals(com.rackpay.api.ledger.core.model.EntryDirection.CREDIT,
             tx.getEntries().get(1).getDirection());
         assertEquals(new BigDecimal("102.50"), tx.getEntries().get(0).getAmount());
         assertEquals(new BigDecimal("102.50"), tx.getEntries().get(1).getAmount());

@@ -1,5 +1,8 @@
 package com.rackpay.api.auth.adapters.out.keycloak;
 
+import com.rackpay.api.payment.adapters.out.persistence.Type;
+import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
+
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
