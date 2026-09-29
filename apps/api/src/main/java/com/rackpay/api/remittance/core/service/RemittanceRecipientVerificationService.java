@@ -4,7 +4,6 @@ import com.rackpay.api.remittance.core.model.MobileMoneyNetwork;
 import com.rackpay.api.remittance.core.model.PayoutMethod;
 import com.rackpay.api.remittance.core.model.PayoutProviderType;
 import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import com.rackpay.api.remittance.ports.out.VerifyRecipientCommand;
 import com.rackpay.api.shared.core.money.Money;
 
 import com.rackpay.api.shared.core.money.Currency;
