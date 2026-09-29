@@ -1,5 +1,7 @@
 package com.rackpay.api.remittance;
 
+import com.rackpay.api.remittance.core.service.*;
+
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
