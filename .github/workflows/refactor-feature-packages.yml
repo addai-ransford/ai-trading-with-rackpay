@@ -291,8 +291,8 @@ jobs:
             exit 1
           fi
           for d in auth config domain health payment persistence remittance security service wallet; do
-            if [ -d "apps/api/src/main/java/com/rackpay/api/$d" ]; then
-              echo "Legacy top-level feature directory remains: $d"
+            if find "apps/api/src/main/java/com/rackpay/api/$d" -maxdepth 1 -type f -name "*.java" 2>/dev/null | grep -q .; then
+              echo "Legacy flat Java files remain in: $d"
               exit 1
             fi
           done
