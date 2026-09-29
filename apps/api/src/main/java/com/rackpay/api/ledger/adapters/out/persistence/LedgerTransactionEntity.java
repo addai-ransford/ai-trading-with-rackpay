@@ -2,8 +2,6 @@ package com.rackpay.api.ledger.adapters.out.persistence;
 
 import com.rackpay.api.ledger.core.model.LedgerEntry;
 import com.rackpay.api.ledger.core.model.LedgerTransaction;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;

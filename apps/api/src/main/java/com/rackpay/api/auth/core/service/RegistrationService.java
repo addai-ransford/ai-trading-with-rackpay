@@ -5,9 +5,6 @@ import com.rackpay.api.auth.adapters.in.web.RegistrationResponse;
 import com.rackpay.api.auth.adapters.out.keycloak.KeycloakAdminClient;
 import com.rackpay.api.auth.core.exception.RegistrationException;
 import com.rackpay.api.ledger.core.model.LedgerAccount;
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
 import com.rackpay.api.wallet.core.model.Wallet;
 
 import com.rackpay.api.ledger.core.model.LedgerAccountType;
