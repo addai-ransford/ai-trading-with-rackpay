@@ -1,6 +1,5 @@
 package com.rackpay.api.wallet.core.model;
 
-import com.rackpay.api.shared.core.service.must;
 
 import java.util.UUID;
 
