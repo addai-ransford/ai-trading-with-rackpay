@@ -1,4 +1,4 @@
-package com.rackpay.api.auth;
+package com.rackpay.api.auth.core.service;
 
 import com.rackpay.api.domain.ledger.LedgerAccountType;
 import com.rackpay.api.domain.money.Currency;
