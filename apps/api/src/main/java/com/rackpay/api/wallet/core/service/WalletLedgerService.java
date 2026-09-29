@@ -10,7 +10,6 @@ import com.rackpay.api.ledger.core.model.LedgerAccountId;
 import com.rackpay.api.ledger.core.model.LedgerEntry;
 import com.rackpay.api.ledger.core.model.LedgerTransaction;
 import com.rackpay.api.shared.core.money.Currency;
-import com.rackpay.api.shared.core.service.must;
 import com.rackpay.api.wallet.adapters.out.persistence.WalletBalanceEntity;
 import com.rackpay.api.wallet.adapters.out.persistence.WalletBalanceJpaRepository;
 import com.rackpay.api.wallet.adapters.out.persistence.WalletJpaRepository;
