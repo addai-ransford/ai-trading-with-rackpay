@@ -1,9 +1,6 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
 import com.rackpay.api.remittance.core.service.RemittanceHistoryService;
-import com.rackpay.api.remittance.core.service.RemittanceResponse;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

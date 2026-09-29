@@ -1,8 +1,5 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
-import com.rackpay.api.remittance.adapters.out.persistence.payout;
-import com.rackpay.api.remittance.core.service.PayoutResponse;
 import com.rackpay.api.remittance.core.service.RemittancePayoutService;
 
 import jakarta.validation.Valid;

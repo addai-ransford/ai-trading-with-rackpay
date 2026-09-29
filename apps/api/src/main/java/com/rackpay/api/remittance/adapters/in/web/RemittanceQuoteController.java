@@ -1,8 +1,5 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
-import com.rackpay.api.remittance.core.service.QuoteRequest;
-import com.rackpay.api.remittance.core.service.QuoteResponse;
 import com.rackpay.api.remittance.core.service.RemittanceQuoteService;
 
 import org.springframework.security.core.Authentication;
