@@ -100,6 +100,8 @@ public class PaystackPayoutProvider implements PayoutProvider {
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
         return retryExecutor.execute(
+            "PAYSTACK",
+            "payout-status",
             () -> {
                 JsonNode response = client.get().uri("/transfer/{idOrCode}", providerTransferId)
                     .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
@@ -114,6 +116,8 @@ public class PaystackPayoutProvider implements PayoutProvider {
     @Override
     public PayoutResult findPayoutByReference(String reference) {
         return retryExecutor.execute(
+            "PAYSTACK",
+            "payout-reconciliation",
             () -> {
                 JsonNode response = client.get().uri("/transfer/verify/{reference}", normalizeReference(reference))
                     .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
