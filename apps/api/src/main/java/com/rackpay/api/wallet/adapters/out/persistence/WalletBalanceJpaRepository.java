@@ -1,6 +1,5 @@
 package com.rackpay.api.wallet.adapters.out.persistence;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
 import com.rackpay.api.wallet.core.model.Wallet;
 import com.rackpay.api.wallet.core.model.WalletId;
 
