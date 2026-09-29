@@ -290,10 +290,12 @@ jobs:
             echo "Legacy persistence package references remain"
             exit 1
           fi
-          if find apps/api/src/main/java/com/rackpay/api -maxdepth 1 -type d \\( -name auth -o -name config -o -name domain -o -name health -o -name payment -o -name persistence -o -name remittance -o -name security -o -name service -o -name wallet \\) | grep .; then
-            echo "Legacy top-level feature directories remain"
-            exit 1
-          fi
+          for d in auth config domain health payment persistence remittance security service wallet; do
+            if [ -d "apps/api/src/main/java/com/rackpay/api/$d" ]; then
+              echo "Legacy top-level feature directory remains: $d"
+              exit 1
+            fi
+          done
 
       - name: Attempt tests
         continue-on-error: true
