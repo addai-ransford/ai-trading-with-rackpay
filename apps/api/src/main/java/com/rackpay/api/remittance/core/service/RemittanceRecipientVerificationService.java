@@ -1,13 +1,9 @@
 package com.rackpay.api.remittance.core.service;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
-import com.rackpay.api.remittance.adapters.out.persistence.payout;
 import com.rackpay.api.remittance.core.model.MobileMoneyNetwork;
 import com.rackpay.api.remittance.core.model.PayoutMethod;
 import com.rackpay.api.remittance.core.model.PayoutProviderType;
 import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import com.rackpay.api.remittance.ports.out.RecipientVerification;
 import com.rackpay.api.remittance.ports.out.VerifyRecipientCommand;
 import com.rackpay.api.shared.core.money.Money;
 
