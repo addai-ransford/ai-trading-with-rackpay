@@ -1,7 +1,5 @@
 package com.rackpay.api.shared.core.transaction;
 
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-
 import java.time.Instant;
 import java.util.Objects;
 
