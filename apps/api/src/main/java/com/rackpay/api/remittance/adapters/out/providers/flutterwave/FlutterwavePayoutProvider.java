@@ -14,19 +14,24 @@ import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryClassifier;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 
 @Component
 public class FlutterwavePayoutProvider implements PayoutProvider {
     private final RestClient client;
     private final String secretKey;
+    private final ProviderRetryExecutor retryExecutor;
 
     public FlutterwavePayoutProvider(
         RestClient.Builder builder,
         @Value("${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
-        @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey
+        @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey,
+        ProviderRetryExecutor retryExecutor
     ) {
         this.client = builder.baseUrl(baseUrl).build();
         this.secretKey = secretKey;
+        this.retryExecutor = retryExecutor;
     }
 
     @Override
@@ -151,46 +156,45 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
-        JsonNode response = client.get()
-            .uri("/transfers/{id}", providerTransferId)
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .body(JsonNode.class);
-
-        if (response == null) {
-            return PayoutStatus.UNKNOWN;
-        }
-
-        JsonNode data = response.path("data");
-        return mapStatus(data.path("status").asText(null));
+        return retryExecutor.execute(
+            () -> {
+                JsonNode response = client.get()
+                    .uri("/transfers/{id}", providerTransferId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(JsonNode.class);
+                if (response == null) return PayoutStatus.UNKNOWN;
+                JsonNode data = response.path("data");
+                return mapStatus(data.path("status").asText(null));
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     @Override
     public PayoutResult findPayoutByReference(String reference) {
-        JsonNode response = client.get()
-            .uri(uriBuilder -> uriBuilder.path("/transfers")
-                .queryParam("reference", reference)
-                .queryParam("page_size", 10)
-                .build())
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .body(JsonNode.class);
-
-        if (response == null) {
-            return null;
-        }
-
-        JsonNode data = response.path("data");
-        if (!data.isArray() || data.isEmpty()) {
-            return null;
-        }
-
-        JsonNode transfer = data.get(0);
-        String id = transfer.path("id").asText(null);
-        String status = transfer.path("status").asText(null);
-        return id == null ? null : new PayoutResult(id, status);
+        return retryExecutor.execute(
+            () -> {
+                JsonNode response = client.get()
+                    .uri(uriBuilder -> uriBuilder.path("/transfers")
+                        .queryParam("reference", reference)
+                        .queryParam("page_size", 10)
+                        .build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(JsonNode.class);
+                if (response == null) return null;
+                JsonNode data = response.path("data");
+                if (!data.isArray() || data.isEmpty()) return null;
+                JsonNode transfer = data.get(0);
+                String id = transfer.path("id").asText(null);
+                String status = transfer.path("status").asText(null);
+                return id == null ? null : new PayoutResult(id, status);
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     private boolean supportedNetwork(String countryCode, Currency currency, String networkCode) {
