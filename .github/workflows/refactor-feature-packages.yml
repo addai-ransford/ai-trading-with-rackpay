@@ -188,13 +188,13 @@ jobs:
               for old_fqcn, new_fqcn in class_pkg.items():
                   simple = old_fqcn.rsplit(".", 1)[-1]
                   target_pkg = new_fqcn.rsplit(".", 1)[0]
-                  if target_pkg != current_pkg and re.search(r"\\b" + re.escape(simple) + r"\\b", text):
-                      if f"import {new_fqcn};" not in text and not re.search(r"\\b(?:class|interface|enum|record)\\s+" + re.escape(simple) + r"\\b", text):
+                  if target_pkg != current_pkg and re.search(r"\b" + re.escape(simple) + r"\b", text):
+                      if f"import {new_fqcn};" not in text and not re.search(r"\\b(?:class|interface|enum|record)\\s+" + re.escape(simple) + r"\b", text):
                           imports.append(f"import {new_fqcn};")
               if imports:
                   package_match = re.search(r"^package\\s+[^;]+;\\n", text, re.M)
                   if package_match:
-                      text = text[:package_match.end()] + "\\n" + "\\n".join(sorted(set(imports))) + "\\n" + text[package_match.end():]
+                      text = text[:package_match.end()] + "\n" + "\\n".join(sorted(set(imports))) + "\n" + text[package_match.end():]
 
               p.write_text(text)
 
