@@ -1,6 +1,5 @@
 package com.rackpay.api.payment.core.service;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
 import com.rackpay.api.payment.core.model.PaymentProviderType;
 import com.rackpay.api.payment.ports.out.PaymentProvider;
 

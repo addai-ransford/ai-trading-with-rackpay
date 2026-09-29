@@ -1,11 +1,6 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
 import com.rackpay.api.remittance.core.service.RemittanceRecipientVerificationService;
-import com.rackpay.api.remittance.core.service.VerificationRequest;
-import com.rackpay.api.remittance.core.service.VerificationResponse;
-import com.rackpay.api.remittance.ports.out.RecipientVerification;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,6 +1,5 @@
 package com.rackpay.api.remittance.adapters.out.persistence;
 
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
 import com.rackpay.api.shared.core.money.Currency;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
