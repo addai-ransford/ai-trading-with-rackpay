@@ -177,6 +177,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     @Override
     public PayoutResult findPayoutByReference(String reference) {
         return retryExecutor.execute(
+            "FLUTTERWAVE",
+            "payout-reconciliation",
             () -> {
                 JsonNode response = client.get()
                     .uri(uriBuilder -> uriBuilder.path("/transfers")
