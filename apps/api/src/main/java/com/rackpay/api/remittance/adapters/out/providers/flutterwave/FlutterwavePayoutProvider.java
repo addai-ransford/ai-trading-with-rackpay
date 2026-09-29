@@ -157,6 +157,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
         return retryExecutor.execute(
+            "FLUTTERWAVE",
+            "payout-status",
             () -> {
                 JsonNode response = client.get()
                     .uri("/transfers/{id}", providerTransferId)
