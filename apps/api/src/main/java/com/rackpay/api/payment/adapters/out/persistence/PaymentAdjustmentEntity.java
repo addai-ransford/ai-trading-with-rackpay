@@ -1,6 +1,5 @@
 package com.rackpay.api.payment.adapters.out.persistence;
 
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
 import com.rackpay.api.payment.ports.out.PaymentProvider;
 import com.rackpay.api.shared.core.transaction.FinancialTransaction;
 import com.rackpay.api.shared.core.transaction.TransactionId;
