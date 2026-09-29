@@ -1,5 +1,8 @@
 package com.rackpay.api.auth;
 
+import com.rackpay.api.auth.core.service.*;
+import com.rackpay.api.auth.adapters.out.persistence.*;
+
 import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminJpaRepository;
 import com.rackpay.api.user.adapters.out.persistence.UserEntity;
 import com.rackpay.api.user.adapters.out.persistence.UserJpaRepository;
