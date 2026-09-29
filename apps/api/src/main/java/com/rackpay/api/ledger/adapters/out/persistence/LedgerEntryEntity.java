@@ -3,9 +3,6 @@ package com.rackpay.api.ledger.adapters.out.persistence;
 import com.rackpay.api.ledger.core.model.LedgerAccount;
 import com.rackpay.api.ledger.core.model.LedgerEntry;
 import com.rackpay.api.ledger.core.model.LedgerTransaction;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
-
 import com.rackpay.api.ledger.core.model.EntryDirection;
 import com.rackpay.api.shared.core.money.Currency;
 import jakarta.persistence.*;

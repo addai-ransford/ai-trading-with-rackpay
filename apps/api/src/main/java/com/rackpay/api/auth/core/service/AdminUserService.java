@@ -2,8 +2,6 @@ package com.rackpay.api.auth.core.service;
 
 import com.rackpay.api.auth.adapters.in.web.RegistrationRequest;
 import com.rackpay.api.auth.adapters.in.web.RegistrationResponse;
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
-
 import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminEntity;
 import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminJpaRepository;
 import com.rackpay.api.user.adapters.out.persistence.UserEntity;
