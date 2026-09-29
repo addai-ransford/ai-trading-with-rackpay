@@ -1,11 +1,8 @@
 package com.rackpay.api.wallet.core.service;
 
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
 import com.rackpay.api.shared.core.service.FinancialTransactionService;
 import com.rackpay.api.shared.core.transaction.FinancialTransaction;
 import com.rackpay.api.shared.core.transaction.TransactionId;
-import com.rackpay.api.transaction.adapters.out.persistence.OperationType;
 import com.rackpay.api.wallet.core.model.Wallet;
 
 import com.rackpay.api.shared.core.money.Money;
