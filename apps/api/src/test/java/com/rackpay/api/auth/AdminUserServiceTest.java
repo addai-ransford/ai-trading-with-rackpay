@@ -1,9 +1,14 @@
 package com.rackpay.api.auth;
 
-import com.rackpay.api.persistence.admin.PlatformAdminJpaRepository;
-import com.rackpay.api.persistence.user.UserEntity;
-import com.rackpay.api.persistence.user.UserJpaRepository;
-import com.rackpay.api.persistence.user.UserStatus;
+import com.rackpay.api.auth.adapters.in.web.*;
+
+import com.rackpay.api.auth.core.service.*;
+import com.rackpay.api.auth.adapters.out.persistence.*;
+
+import com.rackpay.api.admin.adapters.out.persistence.PlatformAdminJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserEntity;
+import com.rackpay.api.user.adapters.out.persistence.UserJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;

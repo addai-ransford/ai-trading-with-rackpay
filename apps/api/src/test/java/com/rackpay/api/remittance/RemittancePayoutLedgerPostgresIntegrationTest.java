@@ -1,15 +1,19 @@
 package com.rackpay.api.remittance;
 
-import com.rackpay.api.domain.money.Currency;
-import com.rackpay.api.persistence.ledger.LedgerAccountEntity;
-import com.rackpay.api.persistence.ledger.LedgerAccountJpaRepository;
-import com.rackpay.api.persistence.ledger.LedgerTransactionJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittanceEntity;
-import com.rackpay.api.persistence.remittance.RemittanceJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittancePayoutLedgerPostingJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittanceRecipientJpaRepository;
-import com.rackpay.api.persistence.remittance.MobileMoneyNetworkJpaRepository;
-import com.rackpay.api.persistence.remittance.RemittancePayoutAttemptJpaRepository;
+import com.rackpay.api.remittance.core.service.*;
+import com.rackpay.api.remittance.core.model.*;
+import com.rackpay.api.remittance.ports.out.*;
+
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountEntity;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerAccountJpaRepository;
+import com.rackpay.api.ledger.adapters.out.persistence.LedgerTransactionJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutLedgerPostingJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +27,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.env.MockEnvironment;
-import com.rackpay.api.service.WalletCreditService;
+import com.rackpay.api.wallet.core.service.WalletCreditService;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
