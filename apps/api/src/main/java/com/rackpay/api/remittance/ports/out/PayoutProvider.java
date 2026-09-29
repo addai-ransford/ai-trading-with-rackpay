@@ -1,8 +1,5 @@
 package com.rackpay.api.remittance.ports.out;
 
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.remittance.adapters.out.persistence.payout;
 import com.rackpay.api.remittance.core.model.PayoutMethod;
 import com.rackpay.api.remittance.core.model.PayoutProviderType;
 
