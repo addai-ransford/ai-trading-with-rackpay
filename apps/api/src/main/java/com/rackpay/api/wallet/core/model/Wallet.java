@@ -1,6 +1,5 @@
 package com.rackpay.api.wallet.core.model;
 
-import com.rackpay.api.shared.core.service.must;
 
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.shared.core.money.Money;
