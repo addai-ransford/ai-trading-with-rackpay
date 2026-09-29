@@ -1,7 +1,5 @@
 package com.rackpay.api.shared.core.transaction;
 
-import com.rackpay.api.shared.core.service.must;
-
 import java.util.UUID;
 
 public record TransactionId(UUID value) {
