@@ -5,6 +5,8 @@ import com.rackpay.api.payment.ports.out.PaymentProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryClassifier;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -18,18 +20,21 @@ public class MolliePaymentProvider implements PaymentProvider {
     private final String apiKey;
     private final String webhookSecret;
     private final ObjectMapper objectMapper;
+    private final ProviderRetryExecutor retryExecutor;
 
     public MolliePaymentProvider(
         RestClient.Builder builder,
         @Value("${rackpay.payment.mollie.base-url:https://api.mollie.com/v2}") String baseUrl,
         @Value("$"+"{RACKPAY_MOLLIE_API_KEY:}") String apiKey,
         @Value("$"+"{RACKPAY_MOLLIE_WEBHOOK_SECRET:}") String webhookSecret,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ProviderRetryExecutor retryExecutor
     ) {
         this.apiKey = apiKey;
         this.webhookSecret = webhookSecret;
         this.client = builder.baseUrl(baseUrl).build();
         this.objectMapper = objectMapper;
+        this.retryExecutor = retryExecutor;
     }
 
     @Override
@@ -167,15 +172,18 @@ public class MolliePaymentProvider implements PaymentProvider {
 
     private Response fetch(String id) {
         requireConfigured();
-        Response r = client.get()
-            .uri("/payments/{id}", id)
-            .header("Authorization", "Bearer " + apiKey)
-            .retrieve()
-            .body(Response.class);
-        if (r == null) {
-            throw new IllegalStateException("Mollie payment not found");
-        }
-        return r;
+        return retryExecutor.execute(
+            () -> {
+                Response r = client.get()
+                    .uri("/payments/{id}", id)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .retrieve()
+                    .body(Response.class);
+                if (r == null) throw new IllegalStateException("Mollie payment not found");
+                return r;
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     private void requireConfigured() {
