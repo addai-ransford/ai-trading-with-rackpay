@@ -1,6 +1,5 @@
 package com.rackpay.api.remittance.adapters.out.persistence;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
 import com.rackpay.api.shared.core.transaction.IdempotencyKey;
 
 import java.util.Optional;

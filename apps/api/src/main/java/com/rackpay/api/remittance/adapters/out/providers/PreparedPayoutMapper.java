@@ -1,11 +1,7 @@
 package com.rackpay.api.remittance.adapters.out.providers;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
-import com.rackpay.api.payment.adapters.out.providers.stripe.Response;
 import com.rackpay.api.remittance.core.model.PayoutProviderType;
 import com.rackpay.api.remittance.core.model.PreparedPayout;
-import com.rackpay.api.remittance.core.service.PayoutResponse;
 import com.rackpay.api.remittance.core.service.RemittancePayoutService;
 import com.rackpay.api.remittance.ports.out.PayoutProvider;
 import com.rackpay.api.shared.core.money.Currency;

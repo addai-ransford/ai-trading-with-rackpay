@@ -1,10 +1,6 @@
 package com.rackpay.api.remittance.adapters.out.persistence;
 
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
 import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import com.rackpay.api.remittance.ports.out.PayoutStatus;
-import com.rackpay.api.shared.core.service.must;
 import com.rackpay.api.shared.core.transaction.FinancialTransaction;
 import com.rackpay.api.shared.core.transaction.IdempotencyKey;
 import com.rackpay.api.shared.core.transaction.TransactionId;

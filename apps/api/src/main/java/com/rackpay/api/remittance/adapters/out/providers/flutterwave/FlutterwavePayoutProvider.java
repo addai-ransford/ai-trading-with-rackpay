@@ -1,18 +1,8 @@
 package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
-import com.rackpay.api.payment.adapters.out.persistence.Status;
-import com.rackpay.api.payment.adapters.out.persistence.Type;
-import com.rackpay.api.payment.adapters.out.providers.mollie.Amount;
-import com.rackpay.api.remittance.adapters.out.persistence.payout;
 import com.rackpay.api.remittance.core.model.PayoutMethod;
 import com.rackpay.api.remittance.core.model.PayoutProviderType;
-import com.rackpay.api.remittance.ports.out.CreatePayoutCommand;
 import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import com.rackpay.api.remittance.ports.out.PayoutResult;
-import com.rackpay.api.remittance.ports.out.PayoutStatus;
-import com.rackpay.api.remittance.ports.out.RecipientVerification;
-import com.rackpay.api.remittance.ports.out.VerifyRecipientCommand;
-
 import java.util.Map;
 import java.math.RoundingMode;
 
