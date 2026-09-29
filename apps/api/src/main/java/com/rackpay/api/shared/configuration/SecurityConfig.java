@@ -1,4 +1,4 @@
-package com.rackpay.api.config;
+package com.rackpay.api.shared.configuration;
 
 import com.rackpay.api.security.PlatformAdminAuthorizationManager;
 import org.springframework.context.annotation.Bean;
