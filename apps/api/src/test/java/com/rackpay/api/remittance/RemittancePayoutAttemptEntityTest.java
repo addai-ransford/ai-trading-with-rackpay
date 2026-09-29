@@ -1,5 +1,8 @@
 package com.rackpay.api.remittance;
 
+import com.rackpay.api.remittance.core.model.*;
+import com.rackpay.api.remittance.core.service.*;
+
 import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptEntity;
 import org.junit.jupiter.api.Test;
 
