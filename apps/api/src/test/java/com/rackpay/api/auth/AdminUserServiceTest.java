@@ -1,5 +1,7 @@
 package com.rackpay.api.auth;
 
+import com.rackpay.api.auth.adapters.in.web.*;
+
 import com.rackpay.api.auth.core.service.*;
 import com.rackpay.api.auth.adapters.out.persistence.*;
 
