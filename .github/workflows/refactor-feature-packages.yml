@@ -280,7 +280,15 @@ jobs:
                   except OSError: pass
           PY
 
-      - name: Verify
+      - name: Debug package imports
+        run: |
+          echo "=== RemittancePayoutService ==="
+          grep -nE "^(package|import .*PreparedPayout|import .*PayoutProvider|import .*PayoutProviderType)" apps/api/src/main/java/com/rackpay/api/remittance/core/service/RemittancePayoutService.java || true
+          echo "=== PaymentProvider ==="
+          grep -nE "^(package|import .*PaymentProviderType)" apps/api/src/main/java/com/rackpay/api/payment/ports/out/PaymentProvider.java || true
+          echo "=== PaymentWebhookController ==="
+          grep -nE "^(package|import .*PaymentProviderType)" apps/api/src/main/java/com/rackpay/api/payment/adapters/in/web/PaymentWebhookController.java || true
+\n      - name: Verify
         run: |
           if [ -x ./gradlew ]; then
             ./gradlew -p apps/api test
