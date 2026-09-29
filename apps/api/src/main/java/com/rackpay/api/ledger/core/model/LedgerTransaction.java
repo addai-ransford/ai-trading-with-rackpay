@@ -1,4 +1,4 @@
-package com.rackpay.api.domain.ledger;
+package com.rackpay.api.ledger.core.model;
 
 import com.rackpay.api.domain.money.Currency;
 
