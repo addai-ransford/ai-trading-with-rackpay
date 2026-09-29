@@ -1,5 +1,7 @@
 package com.rackpay.api.shared.core.service;
 
+import com.rackpay.api.wallet.core.service.*;
+
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.shared.core.money.Money;
 import com.rackpay.api.shared.core.transaction.IdempotencyKey;
