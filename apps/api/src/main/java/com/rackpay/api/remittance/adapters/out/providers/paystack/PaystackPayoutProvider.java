@@ -8,9 +8,11 @@ import com.rackpay.api.remittance.ports.out.PayoutProvider.PayoutResult;
 import com.rackpay.api.remittance.ports.out.PayoutProvider.PayoutStatus;
 import com.rackpay.api.remittance.ports.out.PayoutProvider.RecipientVerification;
 import com.rackpay.api.remittance.ports.out.PayoutProvider.VerifyRecipientCommand;
+import com.rackpay.api.shared.core.money.Currency;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryClassifier;
+import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.rackpay.api.shared.core.money.Currency;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -26,14 +28,17 @@ import java.util.Map;
 public class PaystackPayoutProvider implements PayoutProvider {
     private final RestClient client;
     private final String secretKey;
+    private final ProviderRetryExecutor retryExecutor;
 
     public PaystackPayoutProvider(
         RestClient.Builder builder,
         @Value("$"+"{rackpay.payout.paystack.base-url:https://api.paystack.co}") String baseUrl,
-        @Value("$"+"{rackpay.payout.paystack.secret-key:}") String secretKey
+        @Value("$"+"{rackpay.payout.paystack.secret-key:}") String secretKey,
+        ProviderRetryExecutor retryExecutor
     ) {
         this.client = builder.baseUrl(baseUrl).build();
         this.secretKey = secretKey;
+        this.retryExecutor = retryExecutor;
     }
 
     @Override public PayoutProviderType type() { return PayoutProviderType.PAYSTACK; }
@@ -47,8 +52,8 @@ public class PaystackPayoutProvider implements PayoutProvider {
     public boolean supportsPayout(CreatePayoutCommand command) {
         return !secretKey.isBlank()
             && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
-            && (("GH".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.GHS)
-                || ("KE".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.KES))
+            && ((("GH".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.GHS)
+                || ("KE".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.KES)))
             && supportedNetwork(command.networkCode());
     }
 
@@ -94,25 +99,35 @@ public class PaystackPayoutProvider implements PayoutProvider {
 
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
-        JsonNode response = client.get().uri("/transfer/{idOrCode}", providerTransferId)
-            .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
-            .retrieve().body(JsonNode.class);
-        if (response == null || !response.path("status").asBoolean(false)) return PayoutStatus.UNKNOWN;
-        return mapStatus(response.path("data").path("status").asText(null));
+        return retryExecutor.execute(
+            () -> {
+                JsonNode response = client.get().uri("/transfer/{idOrCode}", providerTransferId)
+                    .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
+                    .retrieve().body(JsonNode.class);
+                if (response == null || !response.path("status").asBoolean(false)) return PayoutStatus.UNKNOWN;
+                return mapStatus(response.path("data").path("status").asText(null));
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     @Override
     public PayoutResult findPayoutByReference(String reference) {
-        JsonNode response = client.get().uri("/transfer/verify/{reference}", normalizeReference(reference))
-            .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
-            .retrieve().body(JsonNode.class);
-        if (response == null || !response.path("status").asBoolean(false)) return null;
+        return retryExecutor.execute(
+            () -> {
+                JsonNode response = client.get().uri("/transfer/verify/{reference}", normalizeReference(reference))
+                    .headers(h -> h.setBearerAuth(secretKey)).accept(MediaType.APPLICATION_JSON)
+                    .retrieve().body(JsonNode.class);
+                if (response == null || !response.path("status").asBoolean(false)) return null;
 
-        JsonNode data = response.path("data");
-        String id = data.path("id").asText(null);
-        String transferCode = data.path("transfer_code").asText(null);
-        if (id == null && transferCode == null) return null;
-        return new PayoutResult(id != null ? id : transferCode, data.path("status").asText("UNKNOWN"));
+                JsonNode data = response.path("data");
+                String id = data.path("id").asText(null);
+                String transferCode = data.path("transfer_code").asText(null);
+                if (id == null && transferCode == null) return null;
+                return new PayoutResult(id != null ? id : transferCode, data.path("status").asText("UNKNOWN"));
+            },
+            ProviderRetryClassifier::isTransient
+        );
     }
 
     private String createRecipient(CreatePayoutCommand command) {
