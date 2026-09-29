@@ -73,3 +73,11 @@ rackpay:
     paystack:
       base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
       secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
+
+  providers:
+    retry:
+      max-attempts: ${RACKPAY_PROVIDER_RETRY_MAX_ATTEMPTS:3}
+      initial-backoff: ${RACKPAY_PROVIDER_RETRY_INITIAL_BACKOFF:500ms}
+      max-backoff: ${RACKPAY_PROVIDER_RETRY_MAX_BACKOFF:5s}
+      multiplier: ${RACKPAY_PROVIDER_RETRY_MULTIPLIER:2.0}
+      jitter: ${RACKPAY_PROVIDER_RETRY_JITTER:0.20}
