@@ -288,7 +288,8 @@ jobs:
           grep -nE "^(package|import .*PaymentProviderType)" apps/api/src/main/java/com/rackpay/api/payment/ports/out/PaymentProvider.java || true
           echo "=== PaymentWebhookController ==="
           grep -nE "^(package|import .*PaymentProviderType)" apps/api/src/main/java/com/rackpay/api/payment/adapters/in/web/PaymentWebhookController.java || true
-\n      - name: Verify
+
+      - name: Verify
         run: |
           if [ -x ./gradlew ]; then
             ./gradlew -p apps/api test
