@@ -156,7 +156,8 @@ jobs:
           java_files = list(root.rglob("*.java"))
           for p in java_files:
               rel = p.relative_to(root).as_posix()
-              pkg = old_base + str(p.relative_to(root).parent).replace("/", ".")
+              parent = str(p.relative_to(root).parent).replace("/", ".")
+              pkg = old_base if parent == "." else old_base + parent
               text = p.read_text()
               text = re.sub(r"^package\s+[^;]+;", f"package {pkg};", text, count=1, flags=re.M)
               for old_fqcn, new_fqcn in sorted(class_pkg.items(), key=lambda x: -len(x[0])):
@@ -180,6 +181,45 @@ jobs:
               for old_prefix, new_prefix in prefixes.items():
                   text = text.replace(old_prefix, new_prefix)
               p.write_text(text)
+
+          # Mirror test packages with the refactored feature boundaries.
+          test_root = Path("apps/api/src/test/java/com/rackpay/api")
+          test_map = {
+              "auth": "auth",
+              "domain/ledger": "ledger/core/model",
+              "domain/money": "shared/core/money",
+              "domain/transaction": "shared/core/transaction",
+              "domain/wallet": "wallet/core/model",
+              "persistence/admin": "auth/adapters/out/persistence",
+              "persistence/remittance": "remittance/adapters/out/persistence",
+              "remittance": "remittance",
+              "security": "auth/adapters/in/security",
+              "service": "shared/core/service",
+          }
+          if test_root.exists():
+              for src in list(test_root.rglob("*.java")):
+                  rel = src.relative_to(test_root).as_posix()
+                  target_dir = None
+                  for old_dir, new_dir in test_map.items():
+                      if rel.startswith(old_dir + "/"):
+                          target_dir = new_dir
+                          break
+                  if target_dir is not None:
+                      dst = test_root / target_dir / src.name
+                      dst.parent.mkdir(parents=True, exist_ok=True)
+                      shutil.move(src, dst)
+
+              for p in test_root.rglob("*.java"):
+                  rel = p.relative_to(test_root)
+                  parent = str(rel.parent).replace("/", ".")
+                  pkg = "com.rackpay.api" if parent == "." else "com.rackpay.api." + parent
+                  text = p.read_text()
+                  text = re.sub(r"^package\s+[^;]+;", f"package {pkg};", text, count=1, flags=re.M)
+                  for old_fqcn, new_fqcn in sorted(class_pkg.items(), key=lambda x: -len(x[0])):
+                      text = text.replace(old_fqcn, new_fqcn)
+                  for old_prefix, new_prefix in prefixes.items():
+                      text = text.replace(old_prefix, new_prefix)
+                  p.write_text(text)
 
           # Remove now-empty legacy directories.
           for d in ["auth","config","domain","health","payment","persistence","remittance","security","service","wallet"]:
