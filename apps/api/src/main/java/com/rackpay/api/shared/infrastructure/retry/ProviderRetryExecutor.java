@@ -6,14 +6,23 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ProviderRetryExecutor {
     private final RetryPolicy policy;
 
-    public ProviderRetryExecutor() {
-        this(new RetryPolicy(3, Duration.ofMillis(500), Duration.ofSeconds(5), 2.0, 0.20));
+    @Autowired
+    public ProviderRetryExecutor(
+        @Value("${rackpay.providers.retry.max-attempts:3}") int maxAttempts,
+        @Value("${rackpay.providers.retry.initial-backoff:500ms}") Duration initialBackoff,
+        @Value("${rackpay.providers.retry.max-backoff:5s}") Duration maxBackoff,
+        @Value("${rackpay.providers.retry.multiplier:2.0}") double multiplier,
+        @Value("${rackpay.providers.retry.jitter:0.20}") double jitter
+    ) {
+        this(new RetryPolicy(maxAttempts, initialBackoff, maxBackoff, multiplier, jitter));
     }
 
     public ProviderRetryExecutor(RetryPolicy policy) {
