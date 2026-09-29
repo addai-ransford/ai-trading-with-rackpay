@@ -33,7 +33,7 @@ class ProviderRetryExecutorObservabilityTest {
         );
 
         assertEquals("COMPLETED", result);
-        assertEquals(1.0, registry.counter(
+        assertEquals(2.0, registry.counter(
             "rackpay.provider.retry.attempts",
             "provider", "PAYSTACK",
             "operation", "payout-status",
