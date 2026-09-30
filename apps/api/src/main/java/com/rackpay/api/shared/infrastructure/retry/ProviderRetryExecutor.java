@@ -78,12 +78,14 @@ public class ProviderRetryExecutor {
                     );
                     throw propagate(failure);
                 }
+
+                Duration delay = withJitter(policy.backoffFor(attempt));
                 log.warn(
                     "provider_operation_retry provider={} operation={} attempt={} next_backoff={}ms exception={} correlation_id={}",
-                    provider, operation, attempt, withJitter(policy.backoffFor(attempt)).toMillis(),
+                    provider, operation, attempt, delay.toMillis(),
                     failure.getClass().getSimpleName(), MDC.get("correlationId")
                 );
-                sleep(withJitter(policy.backoffFor(attempt)));
+                sleep(delay);
             }
         }
         throw propagate(last);
