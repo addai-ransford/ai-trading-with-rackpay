@@ -93,7 +93,21 @@ Request:
 
 Current limits: page >= 0, size 1-100.
 
-The current response is Spring's `Page` representation. This should be replaced with an explicit mobile pagination DTO before final public API freeze.
+The response uses the stable pagination DTO:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 25,
+  "totalElements": 0,
+  "totalPages": 0,
+  "first": true,
+  "last": true
+}
+```
+
+The mobile client must not depend on Spring Data's `Page` metadata.
 
 ## Payments
 
@@ -296,18 +310,9 @@ Idempotency-Key: <client-generated-key>
 
 The backend supports `X-Correlation-Id` and returns a correlation ID for tracing.
 
-## Error contract — remaining freeze item
+## Error contract
 
-The current backend does **not** yet expose one unified application-error envelope. Registration conflicts currently return:
-
-```json
-{
-  "error": "registration_conflict",
-  "message": "..."
-}
-```
-
-Before the mobile API is considered frozen, application errors should use stable codes instead of frontend branching on exception text. Target shape:
+Application errors use one envelope:
 
 ```json
 {
@@ -318,13 +323,24 @@ Before the mobile API is considered frozen, application errors should use stable
 }
 ```
 
-Other remaining contract-freeze items:
+The mobile client must branch on `code`, not exception message text.
 
-1. Replace framework-specific Spring `Page` output with an explicit pagination DTO.
-2. Add stable application error codes/envelope.
-3. Add contract/integration tests for public v1 endpoints.
-4. Add the AI trading API contract before implementing its mobile screens.
-5. Decide whether payment checkout should remain provider-specific or use a backend checkout/session abstraction.
+```json
+{
+  "code": "REMITTANCE_QUOTE_EXPIRED",
+  "message": "The remittance quote has expired.",
+  "correlationId": "uuid",
+  "details": {}
+}
+```
+
+Stable error and pagination contracts are now part of v1.
+
+Endpoint-level MockMvc coverage covers the pagination boundary and stable error responses. PostgreSQL integration tests continue to cover the financial state machine and payout ledger/recovery paths.
+
+Payment checkout remains provider-neutral at the API boundary: the backend selects Mollie/Stripe, while the mobile client receives a generic `checkoutUrl`, provider identifier, provider payment ID and backend status. No provider-specific mobile integration is required.
+
+The AI trading execution engine remains a separate Python service. Its mobile-facing contract is defined in `docs/ai-trading-api-contract.md`; the Java financial API does not fabricate trading results or balances.
 
 ## Mobile architecture
 
