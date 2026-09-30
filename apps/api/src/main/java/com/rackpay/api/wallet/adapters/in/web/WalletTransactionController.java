@@ -1,14 +1,10 @@
 package com.rackpay.api.wallet.adapters.in.web;
 
-import com.rackpay.api.shared.core.transaction.FinancialTransaction;
-import com.rackpay.api.wallet.core.model.Wallet;
-import com.rackpay.api.wallet.core.model.WalletId;
-
+import com.rackpay.api.shared.adapters.in.web.PageResponse;
 import com.rackpay.api.user.adapters.out.persistence.CurrentUserService;
 import com.rackpay.api.transaction.adapters.out.persistence.FinancialTransactionJpaRepository;
 import com.rackpay.api.wallet.adapters.out.persistence.WalletEntity;
 import com.rackpay.api.wallet.adapters.out.persistence.WalletJpaRepository;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
@@ -32,7 +28,7 @@ public class WalletTransactionController {
     }
 
     @GetMapping
-    public Page<WalletTransactionResponse> list(
+    public PageResponse<WalletTransactionResponse> list(
         Authentication authentication,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "25") int size
@@ -48,10 +44,12 @@ public class WalletTransactionController {
         WalletEntity wallet = wallets.findByOwnerId(userId)
             .orElseThrow(() -> new IllegalStateException("RackPay wallet is not provisioned"));
 
-        return transactions.findAllByWalletIdOrderByCreatedAtDesc(
-                wallet.getId(),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-            )
-            .map(WalletTransactionResponse::from);
+        return PageResponse.from(
+            transactions.findAllByWalletIdOrderByCreatedAtDesc(
+                    wallet.getId(),
+                    PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+                )
+                .map(WalletTransactionResponse::from)
+        );
     }
 }
