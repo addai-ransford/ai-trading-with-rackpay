@@ -25,21 +25,27 @@ export async function apiFetch<T>(
   init: RequestInit = {},
   accessToken?: string,
 ): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Content-Type", "application/json");
+
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...init.headers,
-    },
+    headers,
   });
 
   if (response.ok) {
-    return response.status === 204 ? (undefined as T) : response.json() as Promise<T>;
+    return response.status === 204
+      ? (undefined as T)
+      : (await response.json()) as T;
   }
 
   const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+
   throw new ApiError(
     payload.message ?? "The request could not be completed.",
     response.status,
