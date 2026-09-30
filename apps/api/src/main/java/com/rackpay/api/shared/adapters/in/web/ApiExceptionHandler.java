@@ -97,7 +97,26 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     ResponseEntity<ApiErrorResponse> illegalState(IllegalStateException ex) {
-        return error(HttpStatus.CONFLICT, "INVALID_STATE", safeMessage(ex), Map.of());
+        String message = safeMessage(ex);
+        String code = switch (message) {
+            case "remittance quote has expired" -> "REMITTANCE_QUOTE_EXPIRED";
+            case "remittance quote has already been used" -> "REMITTANCE_QUOTE_ALREADY_USED";
+            case "wallet is not provisioned", "RackPay wallet is not provisioned" ->
+                "WALLET_NOT_PROVISIONED";
+            case "Corridor fee currency must match source currency" ->
+                "REMITTANCE_CORRIDOR_CONFIGURATION_ERROR";
+            case "FX provider returned an invalid rate" ->
+                "FX_RATE_UNAVAILABLE";
+            case "Calculated destination amount is invalid" ->
+                "REMITTANCE_AMOUNT_INVALID";
+            default -> "INVALID_STATE";
+        };
+        return error(
+            code.equals("INVALID_STATE") ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST,
+            code,
+            publicMessage(code, message),
+            Map.of()
+        );
     }
 
     @ExceptionHandler(Exception.class)
@@ -146,6 +165,12 @@ public class ApiExceptionHandler {
             case "WALLET_NOT_PROVISIONED" -> "The wallet is not provisioned.";
             case "IDEMPOTENCY_KEY_REUSED" ->
                 "The idempotency key was already used for a different request.";
+            case "REMITTANCE_CORRIDOR_CONFIGURATION_ERROR" ->
+                "The remittance corridor configuration is invalid.";
+            case "FX_RATE_UNAVAILABLE" ->
+                "A valid exchange rate is not currently available.";
+            case "REMITTANCE_AMOUNT_INVALID" ->
+                "The remittance amount is invalid.";
             default -> fallback;
         };
     }
