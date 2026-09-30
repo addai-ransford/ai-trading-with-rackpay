@@ -70,9 +70,29 @@ public class ApiExceptionHandler {
             case "Destination country does not accept remittances" ->
                 "REMITTANCE_COUNTRY_NOT_RECEIVABLE";
             case "countryCode is required" -> "REMITTANCE_COUNTRY_REQUIRED";
+            case "Recipient does not belong to the authenticated user" -> "RECIPIENT_NOT_FOUND";
+            case "No enabled remittance corridor exists for this route" ->
+                "REMITTANCE_CORRIDOR_UNAVAILABLE";
+            case "Amount is below the corridor minimum" -> "REMITTANCE_AMOUNT_BELOW_MINIMUM";
+            case "Amount exceeds the corridor maximum" -> "REMITTANCE_AMOUNT_ABOVE_MAXIMUM";
+            case "remittance quote not found" -> "REMITTANCE_QUOTE_NOT_FOUND";
+            case "remittance quote has expired" -> "REMITTANCE_QUOTE_EXPIRED";
+            case "remittance quote has already been used" -> "REMITTANCE_QUOTE_ALREADY_USED";
+            case "wallet is not provisioned", "RackPay wallet is not provisioned" ->
+                "WALLET_NOT_PROVISIONED";
+            case "idempotency key was already used for a different remittance request" ->
+                "IDEMPOTENCY_KEY_REUSED";
+            case "remittance quote does not belong to the authenticated user" ->
+                "REMITTANCE_QUOTE_NOT_FOUND";
             default -> "INVALID_REQUEST";
         };
-        return error(HttpStatus.BAD_REQUEST, code, publicMessage(code, message), Map.of());
+        HttpStatus status = switch (code) {
+            case "REMITTANCE_NOT_FOUND", "RECIPIENT_NOT_FOUND", "REMITTANCE_QUOTE_NOT_FOUND" ->
+                HttpStatus.NOT_FOUND;
+            case "IDEMPOTENCY_KEY_REUSED" -> HttpStatus.CONFLICT;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return error(status, code, publicMessage(code, message), Map.of());
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -113,6 +133,19 @@ public class ApiExceptionHandler {
             case "REMITTANCE_COUNTRY_NOT_RECEIVABLE" ->
                 "The selected destination country does not accept remittances.";
             case "REMITTANCE_COUNTRY_REQUIRED" -> "A destination country is required.";
+            case "RECIPIENT_NOT_FOUND", "REMITTANCE_QUOTE_NOT_FOUND" ->
+                "The requested remittance resource could not be found.";
+            case "REMITTANCE_CORRIDOR_UNAVAILABLE" ->
+                "The selected remittance route is not currently available.";
+            case "REMITTANCE_AMOUNT_BELOW_MINIMUM" ->
+                "The amount is below the minimum allowed for this corridor.";
+            case "REMITTANCE_AMOUNT_ABOVE_MAXIMUM" ->
+                "The amount exceeds the maximum allowed for this corridor.";
+            case "REMITTANCE_QUOTE_EXPIRED" -> "The remittance quote has expired.";
+            case "REMITTANCE_QUOTE_ALREADY_USED" -> "The remittance quote has already been used.";
+            case "WALLET_NOT_PROVISIONED" -> "The wallet is not provisioned.";
+            case "IDEMPOTENCY_KEY_REUSED" ->
+                "The idempotency key was already used for a different request.";
             default -> fallback;
         };
     }
