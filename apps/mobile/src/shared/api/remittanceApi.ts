@@ -1,6 +1,4 @@
 import { apiFetch } from "./httpClient";
-import type { PageResponse } from "./apiTypes";
-
 export type Remittance = {
   remittanceId: string;
   recipientName: string;
@@ -71,4 +69,3 @@ export async function listMobileMoneyNetworks(
   );
 }
 
-export type _UnusedPageTypeGuard = PageResponse<unknown>;
