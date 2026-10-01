@@ -23,8 +23,8 @@ export function RemittancePage() {
   const [recipientId, setRecipientId] = useState<string>();
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("country");
-  const [sourceCountryCode, setSourceCountryCode] = useState("BE");
-  const [sourceCurrency, setSourceCurrency] = useState("EUR");
+  const [sourceCountryCode, setSourceCountryCode] = useState<string>();
+  const [sourceCurrency, setSourceCurrency] = useState<string>();
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
 
   const countriesQuery = useQuery({
@@ -40,6 +40,14 @@ export function RemittancePage() {
     enabled: Boolean(accessToken),
     staleTime: 5 * 60_000,
   });
+
+  useEffect(() => {
+    const first = sendCountriesQuery.data?.[0];
+    if (first && !sourceCountryCode) {
+      setSourceCountryCode(first.code);
+      setSourceCurrency(first.currencyCode);
+    }
+  }, [sendCountriesQuery.data, sourceCountryCode]);
 
   const networksQuery = useQuery({
     queryKey: ["remittance", "networks", country?.code],
@@ -72,7 +80,7 @@ export function RemittancePage() {
 
   const quoteMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !recipientId || !country || !amount.trim()) {
+      if (!accessToken || !recipientId || !country || !sourceCountryCode || !sourceCurrency || !amount.trim()) {
         throw new Error("Quote details are incomplete.");
       }
 
@@ -295,7 +303,7 @@ export function RemittancePage() {
             You send
             <div className="mt-2 flex">
               <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {sourceCurrency}
+                {sourceCurrency ?? "—"}
               </span>
               <input
                 value={amount}
@@ -311,6 +319,8 @@ export function RemittancePage() {
             type="button"
             disabled={
               !amount.trim() ||
+              !sourceCountryCode ||
+              !sourceCurrency ||
               quoteMutation.isPending
             }
             onClick={() => quoteMutation.mutate()}
