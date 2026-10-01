@@ -6,3 +6,25 @@ export const keycloak = new Keycloak({
   realm: env.keycloak.realm,
   clientId: env.keycloak.clientId,
 });
+
+const redirectUri = () =>
+  env.keycloak.redirectUri ??
+  (typeof window !== "undefined" ? window.location.origin : undefined);
+
+export function login() {
+  return keycloak.login({
+    redirectUri: redirectUri(),
+  });
+}
+
+export function register() {
+  return keycloak.register({
+    redirectUri: redirectUri(),
+  });
+}
+
+export function logout() {
+  return keycloak.logout({
+    redirectUri: redirectUri(),
+  });
+}
