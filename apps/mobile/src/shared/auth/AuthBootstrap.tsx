@@ -1,9 +1,9 @@
 import { useEffect, type PropsWithChildren } from "react";
-import { keycloak } from "./keycloak";
+import { getKeycloak, initializeKeycloak } from "./keycloak";
 import { useAuthStore, type AuthUser } from "./authStore";
 
 function readUser(): AuthUser | undefined {
-  const parsed = keycloak.tokenParsed;
+  const parsed = getKeycloak().tokenParsed;
   if (!parsed) return undefined;
 
   return {
@@ -23,6 +23,7 @@ export function AuthBootstrap({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let active = true;
+    const keycloak = getKeycloak();
 
     const syncSession = () => {
       if (!active) return;
@@ -38,12 +39,7 @@ export function AuthBootstrap({ children }: PropsWithChildren) {
       });
     };
 
-    void keycloak
-      .init({
-        onLoad: "check-sso",
-        pkceMethod: "S256",
-        checkLoginIframe: false,
-      })
+    void initializeKeycloak()
       .then((authenticated) => {
         if (!active) return;
         if (authenticated) {
