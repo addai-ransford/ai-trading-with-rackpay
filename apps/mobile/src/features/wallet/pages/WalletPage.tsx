@@ -10,6 +10,7 @@ import { useState } from "react";
 import {
   type Currency,
   getWallet,
+  listWalletTransactions,
   openWalletBalance,
 } from "../api/walletApi";
 import { useAuthStore } from "../../../shared/auth/authStore";
@@ -163,9 +164,7 @@ function WalletTransactions({ accessToken }: { accessToken?: string }) {
     queryKey: ["wallet", "transactions", 0],
     queryFn: () => {
       if (!accessToken) throw new Error("Missing access token");
-      return import("../api/walletApi").then(({ listWalletTransactions }) =>
-        listWalletTransactions(accessToken),
-      );
+      return listWalletTransactions(accessToken);
     },
     enabled: Boolean(accessToken),
     staleTime: 15_000,
