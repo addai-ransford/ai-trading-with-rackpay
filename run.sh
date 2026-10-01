@@ -83,10 +83,6 @@ until docker compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -U rackpay -
 done
 echo "PostgreSQL is ready."
 
-echo ""
-echo "Stopping any background Gradle processes..."
-gradle --stop >/dev/null 2>&1 || true
-
 set -a
 source "$ENV_FILE"
 set +a
@@ -99,7 +95,7 @@ echo "Starting RackPay API on http://localhost:8080..."
 ) &
 API_PID=$!
 
-echo "Starting RackPay mobile frontend on http://localhost:5173..."
+echo "Starting RackPay mobile frontend on http://localhost:4000..."
 (
   cd "$MOBILE_DIR"
   if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
@@ -112,7 +108,7 @@ WEB_PID=$!
 
 echo ""
 echo "RackPay is running:"
-echo "  Frontend: http://localhost:5173"
+echo "  Frontend: http://localhost:4000"
 echo "  API:      http://localhost:8080"
 echo ""
 echo "Press Ctrl+C to stop the frontend and backend."
