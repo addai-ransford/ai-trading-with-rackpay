@@ -14,14 +14,12 @@ const redirectUri = () =>
 export function login() {
   return keycloak.login({
     redirectUri: redirectUri(),
-    pkceMethod: "S256",
   });
 }
 
 export function register() {
   return keycloak.register({
     redirectUri: redirectUri(),
-    pkceMethod: "S256",
   });
 }
 
