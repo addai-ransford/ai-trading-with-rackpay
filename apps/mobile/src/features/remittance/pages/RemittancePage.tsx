@@ -31,6 +31,7 @@ export function RemittancePage() {
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
   const [quoteNow, setQuoteNow] = useState(() => Date.now());
+  const [fundIdempotencyKey, setFundIdempotencyKey] = useState<string>();
 
   const countriesQuery = useQuery({
     queryKey: ["remittance", "countries", "RECEIVE"],
@@ -117,7 +118,8 @@ export function RemittancePage() {
   const fundMutation = useMutation({
     mutationFn: () => {
       if (!accessToken || !quote) throw new Error("Quote is required.");
-      return fundRemittance(accessToken, quote.quoteId, crypto.randomUUID());
+      if (!fundIdempotencyKey) throw new Error("Funding key is not ready.");
+      return fundRemittance(accessToken, quote.quoteId, fundIdempotencyKey);
     },
     onSuccess: (result) => setFundedRemittanceId(result.remittanceId),
   });
@@ -423,7 +425,7 @@ export function RemittancePage() {
                   </p>
                   <button
                     type="button"
-                    disabled={fundMutation.isPending}
+                    disabled={fundMutation.isPending || !fundIdempotencyKey}
                     onClick={() => fundMutation.mutate()}
                     className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
                   >
