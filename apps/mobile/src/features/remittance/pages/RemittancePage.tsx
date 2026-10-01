@@ -105,6 +105,10 @@ export function RemittancePage() {
         sourceAmount: amount.trim(),
       });
     },
+    onSuccess: () => {
+      setFundIdempotencyKey(crypto.randomUUID());
+      setFundedRemittanceId(undefined);
+    },
   });
 
   useEffect(() => {
