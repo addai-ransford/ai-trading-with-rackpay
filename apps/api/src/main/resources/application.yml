@@ -43,6 +43,8 @@ info:
     name: RackPay Financial Core
     version: 0.1.0
 rackpay:
+  web:
+    allowed-origins: ${RACKPAY_WEB_ALLOWED_ORIGINS:http://localhost:4000}
   keycloak:
     admin:
       base-url: ${RACKPAY_KEYCLOAK_BASE_URL:http://localhost:8081}
