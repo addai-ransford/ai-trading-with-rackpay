@@ -26,8 +26,6 @@ export function RemittancePage() {
   const [recipientId, setRecipientId] = useState<string>();
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("country");
-  const [sourceCountryCode, setSourceCountryCode] = useState<string>();
-  const [sourceCurrency, setSourceCurrency] = useState<string>();
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
   const [quoteNow, setQuoteNow] = useState(() => Date.now());
@@ -47,13 +45,6 @@ export function RemittancePage() {
     staleTime: 5 * 60_000,
   });
 
-  useEffect(() => {
-    const first = sendCountriesQuery.data?.[0];
-    if (first && !sourceCountryCode) {
-      setSourceCountryCode(first.code);
-      setSourceCurrency(first.currencyCode);
-    }
-  }, [sendCountriesQuery.data, sourceCountryCode]);
 
   const networksQuery = useQuery({
     queryKey: ["remittance", "networks", country?.code],
@@ -81,6 +72,7 @@ export function RemittancePage() {
       setRecipientName(result.verifiedName);
       setRecipientId(result.recipientId);
       setConfirmedRecipient(false);
+      if (result.verifiedName) setStep("recipient");
     },
   });
 
@@ -93,14 +85,15 @@ export function RemittancePage() {
 
   const quoteMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !recipientId || !country || !sourceCountryCode || !sourceCurrency || !amount.trim()) {
+      const sourceCountry = sendCountriesQuery.data?.[0];
+      if (!accessToken || !recipientId || !country || !sourceCountry || !amount.trim()) {
         throw new Error("Quote details are incomplete.");
       }
 
       return createQuote(accessToken, {
         recipientId,
-        sourceCountryCode,
-        sourceCurrency,
+        sourceCountryCode: sourceCountry.code,
+        sourceCurrency: sourceCountry.currencyCode,
         destinationCurrency: country.currencyCode,
         sourceAmount: amount.trim(),
       });
@@ -111,11 +104,6 @@ export function RemittancePage() {
     },
   });
 
-  useEffect(() => {
-    if (verifyMutation.data?.verifiedName) {
-      setStep("recipient");
-    }
-  }, [verifyMutation.data]);
 
   const quote = quoteMutation.data;
 
@@ -348,7 +336,7 @@ export function RemittancePage() {
             You send
             <div className="mt-2 flex">
               <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {sourceCurrency ?? "—"}
+                {sendCountriesQuery.data?.[0]?.currencyCode ?? "—"}
               </span>
               <input
                 value={amount}
@@ -364,8 +352,7 @@ export function RemittancePage() {
             type="button"
             disabled={
               !amount.trim() ||
-              !sourceCountryCode ||
-              !sourceCurrency ||
+              !sendCountriesQuery.data?.[0] ||
               quoteMutation.isPending
             }
             onClick={() => quoteMutation.mutate()}
