@@ -4,8 +4,11 @@ import { ArrowLeft, CheckCircle2, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
+  fundRemittance,
+  getRemittance,
   listMobileMoneyNetworks,
   listRemittanceCountries,
+  triggerPayout,
   verifyRecipient,
   type MobileMoneyNetwork,
   type RemittanceCountry,
@@ -26,6 +29,8 @@ export function RemittancePage() {
   const [sourceCountryCode, setSourceCountryCode] = useState<string>();
   const [sourceCurrency, setSourceCurrency] = useState<string>();
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
+  const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
+  const [quoteNow, setQuoteNow] = useState(() => Date.now());
 
   const countriesQuery = useQuery({
     queryKey: ["remittance", "countries", "RECEIVE"],
@@ -78,6 +83,21 @@ export function RemittancePage() {
     },
   });
 
+  const fundMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || !quote) throw new Error("Quote is required.");
+      return fundRemittance(accessToken, quote.quoteId, crypto.randomUUID());
+    },
+    onSuccess: (result) => setFundedRemittanceId(result.remittanceId),
+  });
+
+  const payoutMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || !fundedRemittanceId) throw new Error("Remittance is not funded.");
+      return triggerPayout(accessToken, fundedRemittanceId);
+    },
+  });
+
   const quoteMutation = useMutation({
     mutationFn: () => {
       if (!accessToken || !recipientId || !country || !sourceCountryCode || !sourceCurrency || !amount.trim()) {
@@ -101,10 +121,29 @@ export function RemittancePage() {
   }, [verifyMutation.data]);
 
   const quote = quoteMutation.data;
+
+  useEffect(() => {
+    if (!quote) return;
+    const timer = window.setInterval(() => setQuoteNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [quote]);
+
   const quoteExpired = useMemo(
-    () => (quote ? Date.parse(quote.expiresAt) <= Date.now() : false),
-    [quote],
+    () => (quote ? Date.parse(quote.expiresAt) <= quoteNow : false),
+    [quote, quoteNow],
   );
+
+  const remittanceQuery = useQuery({
+    queryKey: ["remittance", "detail", fundedRemittanceId],
+    queryFn: () => getRemittance(accessToken!, fundedRemittanceId!),
+    enabled: Boolean(accessToken && fundedRemittanceId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && ["COMPLETED", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"].includes(status)
+        ? false
+        : 3000;
+    },
+  });
 
   if (!accessToken) {
     return null;
@@ -360,11 +399,38 @@ export function RemittancePage() {
                 <p className="mt-4 text-sm text-amber-300">
                   This quote has expired. Get a new quote before funding.
                 </p>
+              ) : fundedRemittanceId ? (
+                <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Remittance</p>
+                  <p className="mt-1 font-medium">{remittanceQuery.data?.status ?? "FUNDS_RESERVED"}</p>
+                  <p className="mt-1 text-xs text-slate-500">The backend is the source of truth for the transfer state.</p>
+                  {!["PAYOUT_PENDING", "PAYOUT_PROCESSING", "COMPLETED"].includes(remittanceQuery.data?.status ?? "") ? (
+                    <button
+                      type="button"
+                      disabled={payoutMutation.isPending || !remittanceQuery.data}
+                      onClick={() => payoutMutation.mutate()}
+                      className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
+                    >
+                      {payoutMutation.isPending ? "Starting payout…" : "Start payout"}
+                    </button>
+                  ) : null}
+                  {payoutMutation.isError ? <p className="mt-3 text-sm text-red-300">The payout request could not be started.</p> : null}
+                </div>
               ) : (
-                <p className="mt-4 text-xs leading-5 text-slate-500">
-                  Funding and payout will be handled by the backend. The app does not
-                  choose a payout provider or determine final remittance state.
-                </p>
+                <>
+                  <p className="mt-4 text-xs leading-5 text-slate-500">
+                    Funding and payout are handled by the backend. The app does not choose a payout provider or determine final remittance state.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={fundMutation.isPending}
+                    onClick={() => fundMutation.mutate()}
+                    className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
+                  >
+                    {fundMutation.isPending ? "Funding…" : "Fund remittance"}
+                  </button>
+                  {fundMutation.isError ? <p className="mt-3 text-sm text-red-300">The remittance could not be funded. Your wallet was not assumed to be debited by the app.</p> : null}
+                </>
               )}
             </div>
           ) : null}
