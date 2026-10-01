@@ -83,14 +83,6 @@ export function RemittancePage() {
     },
   });
 
-  const fundMutation = useMutation({
-    mutationFn: () => {
-      if (!accessToken || !quote) throw new Error("Quote is required.");
-      return fundRemittance(accessToken, quote.quoteId, crypto.randomUUID());
-    },
-    onSuccess: (result) => setFundedRemittanceId(result.remittanceId),
-  });
-
   const payoutMutation = useMutation({
     mutationFn: () => {
       if (!accessToken || !fundedRemittanceId) throw new Error("Remittance is not funded.");
@@ -121,6 +113,14 @@ export function RemittancePage() {
   }, [verifyMutation.data]);
 
   const quote = quoteMutation.data;
+
+  const fundMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || !quote) throw new Error("Quote is required.");
+      return fundRemittance(accessToken, quote.quoteId, crypto.randomUUID());
+    },
+    onSuccess: (result) => setFundedRemittanceId(result.remittanceId),
+  });
 
   useEffect(() => {
     if (!quote) return;
