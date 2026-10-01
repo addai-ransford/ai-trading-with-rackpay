@@ -1,4 +1,4 @@
-import { LogOut, WalletCards } from "lucide-react";
+import { LogOut, Send, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../../shared/auth/authStore";
 import { logout } from "../../../shared/auth/keycloak";
@@ -50,16 +50,24 @@ export function HomePage() {
         </span>
       </Link>
 
-      <div className="grid gap-3">
-        {["Remittance", "AI Trading"].map((feature) => (
-          <div
-            key={feature}
-            className="rounded-2xl border border-slate-800 bg-slate-900 p-4"
-          >
-            <p className="font-medium">{feature}</p>
-            <p className="mt-1 text-sm text-slate-500">Coming next.</p>
-          </div>
-        ))}
+      <Link
+        to="/remittance"
+        className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800"
+      >
+        <span className="rounded-xl bg-slate-800 p-2">
+          <Send size={18} />
+        </span>
+        <span>
+          <span className="block font-medium">Remittance</span>
+          <span className="mt-1 block text-sm text-slate-500">
+            Verify a recipient and request a live transfer quote.
+          </span>
+        </span>
+      </Link>
+
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <p className="font-medium">AI Trading</p>
+        <p className="mt-1 text-sm text-slate-500">Coming next.</p>
       </div>
     </section>
   );
