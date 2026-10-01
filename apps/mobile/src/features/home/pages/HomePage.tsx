@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import { LogOut, WalletCards } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../../../shared/auth/authStore";
 import { logout } from "../../../shared/auth/keycloak";
 
@@ -28,12 +29,29 @@ export function HomePage() {
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
         <p className="text-xs uppercase tracking-wide text-slate-500">Signed in as</p>
-        <p className="mt-1 font-medium">{user?.name ?? user?.username ?? user?.email ?? "RackPay user"}</p>
+        <p className="mt-1 font-medium">
+          {user?.name ?? user?.username ?? user?.email ?? "RackPay user"}
+        </p>
         {user?.email ? <p className="mt-1 text-sm text-slate-500">{user.email}</p> : null}
       </div>
 
+      <Link
+        to="/wallet"
+        className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800"
+      >
+        <span className="rounded-xl bg-slate-800 p-2">
+          <WalletCards size={18} />
+        </span>
+        <span>
+          <span className="block font-medium">Wallet</span>
+          <span className="mt-1 block text-sm text-slate-500">
+            View balances and wallet activity.
+          </span>
+        </span>
+      </Link>
+
       <div className="grid gap-3">
-        {["Wallet", "Remittance", "AI Trading"].map((feature) => (
+        {["Remittance", "AI Trading"].map((feature) => (
           <div
             key={feature}
             className="rounded-2xl border border-slate-800 bg-slate-900 p-4"
