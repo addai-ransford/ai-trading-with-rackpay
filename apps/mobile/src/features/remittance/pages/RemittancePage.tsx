@@ -23,11 +23,20 @@ export function RemittancePage() {
   const [recipientId, setRecipientId] = useState<string>();
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("country");
+  const [sourceCountryCode, setSourceCountryCode] = useState("BE");
+  const [sourceCurrency, setSourceCurrency] = useState("EUR");
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
 
   const countriesQuery = useQuery({
     queryKey: ["remittance", "countries", "RECEIVE"],
     queryFn: () => listRemittanceCountries(accessToken!),
+    enabled: Boolean(accessToken),
+    staleTime: 5 * 60_000,
+  });
+
+  const sendCountriesQuery = useQuery({
+    queryKey: ["remittance", "countries", "SEND"],
+    queryFn: () => listRemittanceCountries(accessToken!, "SEND"),
     enabled: Boolean(accessToken),
     staleTime: 5 * 60_000,
   });
@@ -69,8 +78,8 @@ export function RemittancePage() {
 
       return createQuote(accessToken, {
         recipientId,
-        sourceCountryCode: "BE",
-        sourceCurrency: "EUR",
+        sourceCountryCode,
+        sourceCurrency,
         destinationCurrency: country.currencyCode,
         sourceAmount: amount.trim(),
       });
@@ -279,14 +288,14 @@ export function RemittancePage() {
         <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
           <h2 className="font-medium">Amount</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Enter the amount in your EUR wallet. RackPay supplies the quote and FX rate.
+            Enter the amount in your sending currency. RackPay supplies the quote and FX rate.
           </p>
 
           <label className="mt-5 block text-sm text-slate-400">
             You send
             <div className="mt-2 flex">
               <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                EUR
+                {sourceCurrency}
               </span>
               <input
                 value={amount}
