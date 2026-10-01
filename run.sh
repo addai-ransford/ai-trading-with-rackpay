@@ -118,9 +118,19 @@ echo ""
 echo "Press Ctrl+C to stop the frontend and backend."
 echo ""
 
-wait -n "$API_PID" "$WEB_PID"
-STATUS=$?
+while kill -0 "$API_PID" >/dev/null 2>&1 && kill -0 "$WEB_PID" >/dev/null 2>&1; do
+  sleep 1
+done
 
-echo ""
-echo "A RackPay development process stopped (exit code $STATUS)."
+STATUS=0
+if ! kill -0 "$API_PID" >/dev/null 2>&1; then
+  wait "$API_PID" 2>/dev/null || STATUS=$?
+  echo ""
+  echo "RackPay API stopped (exit code $STATUS)."
+else
+  wait "$WEB_PID" 2>/dev/null || STATUS=$?
+  echo ""
+  echo "RackPay frontend stopped (exit code $STATUS)."
+fi
+
 exit "$STATUS"
