@@ -20,11 +20,6 @@ ALTER TABLE wallets
     FOREIGN KEY (owner_id)
     REFERENCES users(id);
 
-ALTER TABLE wallets
-    ADD CONSTRAINT fk_wallet_ledger_account
-    FOREIGN KEY (ledger_account_id)
-    REFERENCES ledger_accounts(id);
-
 CREATE UNIQUE INDEX uq_wallet_ledger_account_nonnull
     ON wallets(ledger_account_id)
     WHERE ledger_account_id IS NOT NULL;

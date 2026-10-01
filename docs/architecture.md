@@ -379,3 +379,174 @@ These rules should remain true as the system grows:
 8. **Posted ledger entries are immutable.**
 9. **Client state is never treated as authoritative financial state.**
 10. **All financial providers reconcile against RackPay's ledger.**
+
+
+## Wallet-to-Ledger Atomic Posting
+
+The wallet and accounting ledger are deliberately treated as one financial operation. A remittance, trading allocation, withdrawal, deposit, or other money movement must never update a wallet balance independently of its corresponding accounting entries.
+
+The financial posting flow is:
+
+```text
+                    RackPay API
+                        │
+                 @Transactional
+                        │
+             ┌──────────▼──────────┐
+             │ WalletLedgerService │
+             └──────────┬──────────┘
+                        │
+              Pessimistic wallet lock
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+     Wallet balance              Ledger posting
+          │                           │
+          │                    ┌──────┴──────┐
+          │                    ▼             ▼
+          │                  DEBIT        CREDIT
+          │
+          └────────────── PostgreSQL ──────────────
+```
+
+### 1. Transaction boundary
+
+The application service uses a single database transaction for the complete financial operation. This means the wallet mutation and its ledger entries are committed together or rolled back together.
+
+For example, if a €100 operation starts successfully but ledger persistence fails, the wallet must not remain €100 lower. The database transaction rolls the wallet change back as well.
+
+### 2. Pessimistic wallet locking
+
+Before changing the wallet balance, the service obtains a database row lock using JPA's pessimistic write lock. This protects against concurrent requests attempting to spend the same available balance.
+
+Conceptually:
+
+```text
+Request A ──┐
+            ├── lock wallet ──> validate ──> debit ──> post ledger ──> commit
+Request B ──┘
+                 │
+                 └── waits for the wallet lock
+```
+
+The lock is important because a normal read followed by a write can allow two concurrent requests to observe the same balance before either request commits.
+
+### 3. Currency enforcement
+
+The wallet, debit ledger account, credit ledger account, and requested money amount must use the same currency for a single-currency posting. Currency conversion is a separate business operation and must not be silently performed by the ledger.
+
+### 4. Double-entry accounting
+
+Every posted ledger transaction contains at least two entries. A balanced transaction has equal total debits and credits:
+
+```text
+Ledger Transaction
+       │
+       ├── DEBIT  €100
+       │
+       └── CREDIT €100
+
+       DEBITS = CREDITS
+```
+
+The ledger therefore records the accounting movement rather than relying only on the wallet's current balance.
+
+### 5. Wallet balance as a current-state projection
+
+The wallet balance is maintained for efficient authorization and user-facing reads, but the ledger is the accounting record. Remittance and trading must not maintain independent authoritative balances.
+
+```text
+                         Financial Ledger
+                              │
+                ┌─────────────┴─────────────┐
+                │                           │
+          Wallet projection          Financial history
+                │                           │
+        available balance          immutable postings
+                │
+        ┌───────┴────────┐
+        ▼                ▼
+   Remittance         Trading
+```
+
+Both domains consume funds from the same wallet and therefore share the same financial source of truth.
+
+### 6. Database as the final consistency boundary
+
+Java domain rules provide business validation, Hibernate maps persistence objects, and PostgreSQL provides structural constraints. Flyway owns the schema lifecycle.
+
+```text
+Domain rules
+     ↓
+Spring service
+     ↓
+@Transactional
+     ↓
+Spring Data JPA / Hibernate
+     ↓
+PostgreSQL constraints + locks
+     ↑
+Flyway schema migrations
+```
+
+This layered approach is intentional: application validation provides clear business behavior, while database constraints protect the persisted financial data from invalid states even when multiple application paths or concurrent transactions are involved.
+
+### Architectural invariant
+
+> **A financial operation is atomic: wallet state and ledger state move together. The wallet is the shared current-state projection; the ledger is the accounting record.**
+
+
+## Identity, Authentication, and User Provisioning
+
+RackPay uses Keycloak as the identity and authentication authority while keeping the RackPay user record and all financial state inside the RackPay database.
+
+The identity relationship is:
+
+```text
+Keycloak subject (sub)
+        ↓
+RackPay User UUID
+        ↓
+Primary Wallet UUID
+        ↓
+Wallet Ledger Account UUID
+```
+
+### Registration
+
+The initial registration flow is:
+
+1. The mobile/web client submits registration details to `POST /api/v1/auth/register`.
+2. The RackPay API creates the identity in Keycloak through a confidential server-side admin integration.
+3. The API creates the RackPay user record using the Keycloak subject.
+4. The API creates the user's primary wallet using the configured default currency.
+5. The API creates and links the wallet's ledger account.
+6. The API returns the RackPay user and wallet identifiers.
+
+Passwords are never stored in RackPay. The API must use TLS in every non-local environment and must never log the submitted password or Keycloak client secret.
+
+If local provisioning fails after Keycloak creation, the registration service attempts compensating deletion of the Keycloak identity. A production deployment must additionally provide reconciliation for orphaned identities.
+
+### Login
+
+Login is performed by Keycloak using OpenID Connect Authorization Code with PKCE. The mobile application should use the platform browser/authentication session rather than collecting Keycloak credentials in an embedded WebView.
+
+The RackPay API validates Keycloak access tokens as a JWT resource server and maps the token `sub` claim to the RackPay user. Financial operations use the RackPay UUID, not the Keycloak identifier, as their internal owner reference.
+
+### Administrative Keycloak Access
+
+The server-side Keycloak integration uses a confidential service-account client with only the realm-management permissions required for user provisioning. Client credentials remain server-side and are supplied through environment/secret configuration.
+
+The Keycloak Admin API is not used as the application login endpoint. It is an administrative provisioning interface only.
+
+### Automatic Wallet Provisioning
+
+A successful registration always creates the initial wallet and links it to a ledger account. The default wallet currency is configuration-driven:
+
+```yaml
+rackpay:
+  wallet:
+    default-currency: EUR
+```
+
+The wallet is the shared financial account used by both remittance and AI-assisted trading; neither feature owns a second independent cash balance.

@@ -1,0 +1,1 @@
+CREATE TABLE payment_provider_events (id UUID PRIMARY KEY, provider VARCHAR(20) NOT NULL, event_id VARCHAR(255) NOT NULL, provider_payment_id VARCHAR(255), event_type VARCHAR(100) NOT NULL, received_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, processed_at TIMESTAMPTZ, status VARCHAR(20) NOT NULL, CONSTRAINT uq_payment_provider_event UNIQUE (provider, event_id));

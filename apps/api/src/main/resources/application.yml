@@ -1,0 +1,87 @@
+logging:
+  pattern:
+    level: '%5p [${spring.application.name:},%X{correlationId:-}]'
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${RACKPAY_KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/rackpay}
+  application:
+    name: rackpay-api
+  datasource:
+    url: ${RACKPAY_DATABASE_URL:jdbc:postgresql://localhost:5432/rackpay}
+    username: ${RACKPAY_DATABASE_USERNAME:rackpay}
+    password: ${RACKPAY_DATABASE_PASSWORD:rackpay}
+    hikari:
+      maximum-pool-size: ${RACKPAY_DB_POOL_SIZE:10}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+server:
+  port: 8080
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+info:
+  app:
+    name: RackPay Financial Core
+    version: 0.1.0
+rackpay:
+  keycloak:
+    admin:
+      base-url: ${RACKPAY_KEYCLOAK_BASE_URL:http://localhost:8081}
+      realm: ${RACKPAY_KEYCLOAK_REALM:rackpay}
+      client-id: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_ID:rackpay-admin}
+      client-secret: ${RACKPAY_KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  bootstrap-admin:
+    enabled: ${RACKPAY_BOOTSTRAP_ADMIN_ENABLED:false}
+    email: ${RACKPAY_BOOTSTRAP_ADMIN_EMAIL:}
+    first-name: ${RACKPAY_BOOTSTRAP_ADMIN_FIRST_NAME:}
+    last-name: ${RACKPAY_BOOTSTRAP_ADMIN_LAST_NAME:}
+    phone: ${RACKPAY_BOOTSTRAP_ADMIN_PHONE:}
+    password: ${RACKPAY_BOOTSTRAP_ADMIN_PASSWORD:}
+  wallet:
+    default-currency: ${RACKPAY_WALLET_DEFAULT_CURRENCY:EUR}
+  payment:
+    adjustment-recovery-delay-ms: ${RACKPAY_PAYMENT_ADJUSTMENT_RECOVERY_DELAY_MS:300000}
+    environment: ${RACKPAY_PAYMENT_ENVIRONMENT:sandbox}
+    mollie:
+      base-url: ${RACKPAY_MOLLIE_BASE_URL:https://api.mollie.com/v2}
+    stripe:
+      base-url: ${RACKPAY_STRIPE_BASE_URL:https://api.stripe.com/v1}
+  remittance:
+    quote-lifetime: PT2M
+    fx-rates: {}
+  payout:
+    default-provider: ${RACKPAY_PAYOUT_DEFAULT_PROVIDER:FLUTTERWAVE}
+    provider-order: ${RACKPAY_PAYOUT_PROVIDER_ORDER:FLUTTERWAVE,PAYSTACK}
+    flutterwave:
+      base-url: ${RACKPAY_FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
+      secret-key: ${RACKPAY_FLUTTERWAVE_SECRET_KEY:}
+    paystack:
+      base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
+      secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
+
+  providers:
+    retry:
+      max-attempts: ${RACKPAY_PROVIDER_RETRY_MAX_ATTEMPTS:3}
+      initial-backoff: ${RACKPAY_PROVIDER_RETRY_INITIAL_BACKOFF:500ms}
+      max-backoff: ${RACKPAY_PROVIDER_RETRY_MAX_BACKOFF:5s}
+      multiplier: ${RACKPAY_PROVIDER_RETRY_MULTIPLIER:2.0}
+      jitter: ${RACKPAY_PROVIDER_RETRY_JITTER:0.20}

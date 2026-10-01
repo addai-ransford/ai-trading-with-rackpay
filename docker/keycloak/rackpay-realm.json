@@ -1,0 +1,49 @@
+{
+  "realm": "rackpay",
+  "enabled": true,
+  "displayName": "RackPay",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "USER",
+        "description": "RackPay application user"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Legacy identity role; RackPay API authorization is database-backed"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "rackpay-admin",
+      "name": "RackPay Backend Admin Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "change-me-local",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-rackpay-admin",
+      "enabled": true,
+      "serviceAccountClientId": "rackpay-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "query-users",
+          "view-users"
+        ]
+      }
+    }
+  ]
+}

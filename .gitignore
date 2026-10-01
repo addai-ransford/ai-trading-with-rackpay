@@ -10,3 +10,7 @@ coverage/
 *.tsbuildinfo
 .vscode/
 .idea/
+
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
