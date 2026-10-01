@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
@@ -157,6 +157,13 @@ export function RemittancePage() {
           <p className="text-sm text-slate-500">Send money</p>
           <h1 className="text-3xl font-semibold tracking-tight">Remittance</h1>
         </div>
+        <Link
+          to="/remittance/history"
+          className="ml-auto rounded-xl border border-slate-800 p-2 text-slate-300"
+          aria-label="Remittance history"
+        >
+          <History size={18} />
+        </Link>
       </header>
 
       <div className="flex gap-2">
