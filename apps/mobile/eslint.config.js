@@ -5,11 +5,18 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   { ignores: ["dist", "node_modules"] },
+
   js.configs.recommended,
+
   tseslint.configs.recommended,
+
   reactHooks.configs["recommended-latest"],
+
   {
     files: ["**/*.{ts,tsx}"],
+    plugins: {
+      "react-refresh": reactRefresh,
+    },
     rules: {
       "react-refresh/only-export-components": "warn",
     },
