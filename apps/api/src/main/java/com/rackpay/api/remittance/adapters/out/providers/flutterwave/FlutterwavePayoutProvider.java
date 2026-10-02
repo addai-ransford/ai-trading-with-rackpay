@@ -1,33 +1,36 @@
 package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
-import com.rackpay.api.remittance.core.model.PayoutMethod;
-import com.rackpay.api.remittance.core.model.PayoutProviderType;
-import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import java.util.Map;
 import java.math.RoundingMode;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.rackpay.api.remittance.core.model.PayoutMethod;
+import com.rackpay.api.remittance.core.model.PayoutProviderType;
+import com.rackpay.api.remittance.ports.out.PayoutProvider;
 import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.shared.infrastructure.retry.ProviderRetryClassifier;
 import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 
 @Component
 public class FlutterwavePayoutProvider implements PayoutProvider {
+
     private final RestClient client;
     private final String secretKey;
     private final ProviderRetryExecutor retryExecutor;
 
     public FlutterwavePayoutProvider(
-        RestClient.Builder builder,
-        @Value("${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
-        @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey,
-        ProviderRetryExecutor retryExecutor
+            RestClient.Builder builder,
+            @Value("${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
+            @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey,
+            ProviderRetryExecutor retryExecutor
     ) {
         this.client = builder.baseUrl(baseUrl).build();
         this.secretKey = secretKey;
@@ -35,22 +38,24 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     }
 
     @Override
-    public PayoutProviderType type() { return PayoutProviderType.FLUTTERWAVE; }
+    public PayoutProviderType type() {
+        return PayoutProviderType.FLUTTERWAVE;
+    }
 
     @Override
     public boolean supportsPayout(CreatePayoutCommand command) {
         return !secretKey.isBlank()
-            && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
-            && command.currency() != null
-            && supportedNetwork(command.countryCode(), command.currency(), command.networkCode());
+                && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
+                && command.currency() != null
+                && supportedNetwork(command.countryCode(), command.currency(), command.networkCode());
     }
 
     @Override
     public boolean supportsRecipientVerification(String countryCode, Currency currency, PayoutMethod payoutMethod) {
         return "GH".equalsIgnoreCase(countryCode)
-            && currency == Currency.GHS
-            && payoutMethod == PayoutMethod.MOBILE_MONEY
-            && !secretKey.isBlank();
+                && currency == Currency.GHS
+                && payoutMethod == PayoutMethod.MOBILE_MONEY
+                && !secretKey.isBlank();
     }
 
     @Override
@@ -61,25 +66,50 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
         String accountNumber = command.normalizedPhoneNumber().replace("+", "");
         Map<String, String> body = Map.of(
-            "account_number", accountNumber,
-            "account_bank", providerNetworkCode(command.networkCode()),
-            "country", command.countryCode()
+                "account_number", accountNumber,
+                "account_bank", providerNetworkCode(command.networkCode()),
+                "country", command.countryCode()
         );
 
-        JsonNode response = client.post()
-            .uri("/accounts/resolve")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(body)
-            .retrieve()
-            .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = client.post()
+                    .uri("/accounts/resolve")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientResponseException exception) {
+            String failureReason = switch (exception.getStatusCode().value()) {
+                case 400, 422 ->
+                    "The provider rejected this phone number or mobile-money network.";
+                case 401, 403 ->
+                    "Recipient verification provider credentials were rejected.";
+                default ->
+                    "Recipient verification is temporarily unavailable. Try again later.";
+            };
+            return new RecipientVerification(
+                    false, command.normalizedPhoneNumber(), null, null, failureReason
+            );
+        } catch (RestClientException exception) {
+            return new RecipientVerification(
+                    false,
+                    command.normalizedPhoneNumber(),
+                    null,
+                    null,
+                    "Could not reach the recipient verification service. Try again later."
+            );
+        }
 
-        if (response == null) throw new IllegalStateException("Flutterwave returned an empty recipient verification response");
+        if (response == null) {
+            throw new IllegalStateException("Flutterwave returned an empty recipient verification response");
+        }
 
         if (!"success".equalsIgnoreCase(response.path("status").asText())) {
             return new RecipientVerification(
-                false, command.normalizedPhoneNumber(), null, null,
-                response.path("message").asText("Recipient could not be verified")
+                    false, command.normalizedPhoneNumber(), null, null,
+                    response.path("message").asText("Recipient could not be verified")
             );
         }
 
@@ -90,11 +120,11 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         return new RecipientVerification(
-            true,
-            command.normalizedPhoneNumber(),
-            name.trim(),
-            data.path("account_number").asText(null),
-            null
+                true,
+                command.normalizedPhoneNumber(),
+                name.trim(),
+                data.path("account_number").asText(null),
+                null
         );
     }
 
@@ -127,13 +157,13 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         JsonNode response = client.post()
-            .uri("/transfers")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(body)
-            .retrieve()
-            .body(JsonNode.class);
+                .uri("/transfers")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(JsonNode.class);
 
         if (response == null) {
             throw new IllegalStateException("Flutterwave returned an empty payout response");
@@ -141,12 +171,12 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
         JsonNode data = response.path("data");
         String providerId = data.path("id").isNumber()
-            ? data.path("id").asText()
-            : data.path("id").asText(null);
+                ? data.path("id").asText()
+                : data.path("id").asText(null);
         String status = data.path("status").asText(null);
 
         if (!"success".equalsIgnoreCase(response.path("status").asText())
-            || providerId == null || providerId.isBlank()) {
+                || providerId == null || providerId.isBlank()) {
             String message = response.path("message").asText("Flutterwave payout creation failed");
             return new PayoutResult(providerId, "FAILED:" + message);
         }
@@ -157,87 +187,114 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     @Override
     public PayoutStatus getPayout(String providerTransferId) {
         return retryExecutor.execute(
-            "FLUTTERWAVE",
-            "payout-status",
-            () -> {
-                JsonNode response = client.get()
-                    .uri("/transfers/{id}", providerTransferId)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(JsonNode.class);
-                if (response == null) return PayoutStatus.UNKNOWN;
-                JsonNode data = response.path("data");
-                return mapStatus(data.path("status").asText(null));
-            },
-            ProviderRetryClassifier::isTransient
+                "FLUTTERWAVE",
+                "payout-status",
+                () -> {
+                    JsonNode response = client.get()
+                            .uri("/transfers/{id}", providerTransferId)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .retrieve()
+                            .body(JsonNode.class);
+                    if (response == null) {
+                        return PayoutStatus.UNKNOWN;
+                    }
+                    JsonNode data = response.path("data");
+                    return mapStatus(data.path("status").asText(null));
+                },
+                ProviderRetryClassifier::isTransient
         );
     }
 
     @Override
     public PayoutResult findPayoutByReference(String reference) {
         return retryExecutor.execute(
-            "FLUTTERWAVE",
-            "payout-reconciliation",
-            () -> {
-                JsonNode response = client.get()
-                    .uri(uriBuilder -> uriBuilder.path("/transfers")
-                        .queryParam("reference", reference)
-                        .queryParam("page_size", 10)
-                        .build())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(JsonNode.class);
-                if (response == null) return null;
-                JsonNode data = response.path("data");
-                if (!data.isArray() || data.isEmpty()) return null;
-                JsonNode transfer = data.get(0);
-                String id = transfer.path("id").asText(null);
-                String status = transfer.path("status").asText(null);
-                return id == null ? null : new PayoutResult(id, status);
-            },
-            ProviderRetryClassifier::isTransient
+                "FLUTTERWAVE",
+                "payout-reconciliation",
+                () -> {
+                    JsonNode response = client.get()
+                            .uri(uriBuilder -> uriBuilder.path("/transfers")
+                            .queryParam("reference", reference)
+                            .queryParam("page_size", 10)
+                            .build())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .retrieve()
+                            .body(JsonNode.class);
+                    if (response == null) {
+                        return null;
+                    }
+                    JsonNode data = response.path("data");
+                    if (!data.isArray() || data.isEmpty()) {
+                        return null;
+                    }
+                    JsonNode transfer = data.get(0);
+                    String id = transfer.path("id").asText(null);
+                    String status = transfer.path("status").asText(null);
+                    return id == null ? null : new PayoutResult(id, status);
+                },
+                ProviderRetryClassifier::isTransient
         );
     }
 
     private boolean supportedNetwork(String countryCode, Currency currency, String networkCode) {
-        if (countryCode == null || currency == null || networkCode == null) return false;
+        if (countryCode == null || currency == null || networkCode == null) {
+            return false;
+        }
         String country = countryCode.toUpperCase(java.util.Locale.ROOT);
         String network = networkCode.toUpperCase(java.util.Locale.ROOT);
         return switch (country) {
-            case "GH" -> currency == Currency.GHS
+            case "GH" ->
+                currency == Currency.GHS
                 && switch (network) {
-                    case "MTN", "AIRTELTIGO", "TELECEL" -> true;
-                    default -> false;
+                    case "MTN", "AIRTELTIGO", "TELECEL" ->
+                        true;
+                    default ->
+                        false;
                 };
-            case "KE" -> currency == Currency.KES && "MPESA".equals(network);
-            case "CI" -> currency == Currency.XOF
+            case "KE" ->
+                currency == Currency.KES && "MPESA".equals(network);
+            case "CI" ->
+                currency == Currency.XOF
                 && switch (network) {
-                    case "ORANGE", "WAVE" -> true;
-                    default -> false;
+                    case "ORANGE", "WAVE" ->
+                        true;
+                    default ->
+                        false;
                 };
-            default -> false;
+            default ->
+                false;
         };
     }
 
     private String providerNetworkCode(String networkCode) {
         return switch (networkCode.toUpperCase(java.util.Locale.ROOT)) {
-            case "MPESA" -> "MPS";
-            case "TELECEL" -> "VODAFONE";
-            default -> networkCode;
+            case "MPESA" ->
+                "MPS";
+            case "TELECEL" ->
+                "VODAFONE";
+            default ->
+                networkCode;
         };
     }
 
     private PayoutStatus mapStatus(String status) {
-        if (status == null) return PayoutStatus.UNKNOWN;
+        if (status == null) {
+            return PayoutStatus.UNKNOWN;
+        }
         return switch (status.toUpperCase(java.util.Locale.ROOT)) {
-            case "NEW", "INITIATED" -> PayoutStatus.CREATED;
-            case "PENDING", "PROCESSING" -> PayoutStatus.PROCESSING;
-            case "SUCCESSFUL", "SUCCESS", "COMPLETED" -> PayoutStatus.COMPLETED;
-            case "FAILED", "ERROR" -> PayoutStatus.FAILED;
-            case "CANCELLED", "CANCELED" -> PayoutStatus.CANCELLED;
-            default -> PayoutStatus.UNKNOWN;
+            case "NEW", "INITIATED" ->
+                PayoutStatus.CREATED;
+            case "PENDING", "PROCESSING" ->
+                PayoutStatus.PROCESSING;
+            case "SUCCESSFUL", "SUCCESS", "COMPLETED" ->
+                PayoutStatus.COMPLETED;
+            case "FAILED", "ERROR" ->
+                PayoutStatus.FAILED;
+            case "CANCELLED", "CANCELED" ->
+                PayoutStatus.CANCELLED;
+            default ->
+                PayoutStatus.UNKNOWN;
         };
     }
 }

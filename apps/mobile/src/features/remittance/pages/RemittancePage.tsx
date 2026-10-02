@@ -22,6 +22,7 @@ export function RemittancePage() {
   const [country, setCountry] = useState<RemittanceCountry>();
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [verificationFailure, setVerificationFailure] = useState<string>();
   const [recipientName, setRecipientName] = useState<string>();
   const [recipientId, setRecipientId] = useState<string>();
   const [amount, setAmount] = useState("");
@@ -45,7 +46,6 @@ export function RemittancePage() {
     staleTime: 5 * 60_000,
   });
 
-
   const networksQuery = useQuery({
     queryKey: ["remittance", "networks", country?.code],
     queryFn: () => listMobileMoneyNetworks(accessToken!, country!.code),
@@ -62,13 +62,23 @@ export function RemittancePage() {
       return verifyRecipient(accessToken, {
         countryCode: country.code,
         countryDialCode: country.dialCode,
-        currency: country.currencyCode,
+        currency: country.currency,
         payoutMethod: "MOBILE_MONEY",
         networkCode: network.code,
         phoneNumber,
       });
     },
     onSuccess: (result) => {
+      if (!result.verified) {
+        setRecipientName(undefined);
+        setRecipientId(undefined);
+        setConfirmedRecipient(false);
+        setVerificationFailure(
+          result.failureReason ?? "The recipient could not be verified.",
+        );
+        return;
+      }
+      setVerificationFailure(undefined);
       setRecipientName(result.verifiedName);
       setRecipientId(result.recipientId);
       setConfirmedRecipient(false);
@@ -78,7 +88,8 @@ export function RemittancePage() {
 
   const payoutMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !fundedRemittanceId) throw new Error("Remittance is not funded.");
+      if (!accessToken || !fundedRemittanceId)
+        throw new Error("Remittance is not funded.");
       return triggerPayout(accessToken, fundedRemittanceId);
     },
   });
@@ -86,15 +97,21 @@ export function RemittancePage() {
   const quoteMutation = useMutation({
     mutationFn: () => {
       const sourceCountry = sendCountriesQuery.data?.[0];
-      if (!accessToken || !recipientId || !country || !sourceCountry || !amount.trim()) {
+      if (
+        !accessToken ||
+        !recipientId ||
+        !country ||
+        !sourceCountry ||
+        !amount.trim()
+      ) {
         throw new Error("Quote details are incomplete.");
       }
 
       return createQuote(accessToken, {
         recipientId,
         sourceCountryCode: sourceCountry.code,
-        sourceCurrency: sourceCountry.currencyCode,
-        destinationCurrency: country.currencyCode,
+        sourceCurrency: sourceCountry.currency,
+        destinationCurrency: country.currency,
         sourceAmount: amount.trim(),
       });
     },
@@ -103,7 +120,6 @@ export function RemittancePage() {
       setFundedRemittanceId(undefined);
     },
   });
-
 
   const quote = quoteMutation.data;
 
@@ -127,13 +143,25 @@ export function RemittancePage() {
     [quote, quoteNow],
   );
 
+  const phoneDigits = phoneNumber.replace(/\D/g, "");
+  const localPhoneDigits = phoneDigits.startsWith("0")
+    ? phoneDigits.slice(1)
+    : phoneDigits;
+  const phoneNumberIsValid =
+    country?.dialCode.replace(/\D/g, "") === "233"
+      ? localPhoneDigits.length === 9
+      : phoneDigits.length >= 6;
+
   const remittanceQuery = useQuery({
     queryKey: ["remittance", "detail", fundedRemittanceId],
     queryFn: () => getRemittance(accessToken!, fundedRemittanceId!),
     enabled: Boolean(accessToken && fundedRemittanceId),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status && ["COMPLETED", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"].includes(status)
+      return status &&
+        ["COMPLETED", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"].includes(
+          status,
+        )
         ? false
         : 3000;
     },
@@ -171,7 +199,9 @@ export function RemittancePage() {
           <div key={item} className="flex flex-1 items-center gap-2">
             <div
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                step === item ? "bg-white text-slate-950" : "bg-slate-800 text-slate-400"
+                step === item
+                  ? "bg-white text-slate-950"
+                  : "bg-slate-800 text-slate-400"
               }`}
             >
               {index + 1}
@@ -216,7 +246,7 @@ export function RemittancePage() {
                   <span>
                     <span className="block font-medium">{item.name}</span>
                     <span className="text-xs text-slate-500">
-                      {item.dialCode} · {item.currencyCode}
+                      {item.dialCode} · {item.currency}
                     </span>
                   </span>
                   <span className="text-sm text-slate-400">{item.code}</span>
@@ -271,14 +301,17 @@ export function RemittancePage() {
                 className="min-w-0 flex-1 rounded-r-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none"
               />
             </div>
+            {country.dialCode.replace(/\D/g, "") === "233" ? (
+              <span className="mt-1 block text-xs text-slate-500">
+                Enter 9 digits after +233. A leading 0 is optional.
+              </span>
+            ) : null}
           </label>
 
           <button
             type="button"
             disabled={
-              !network ||
-              phoneNumber.trim().length < 6 ||
-              verifyMutation.isPending
+              !network || !phoneNumberIsValid || verifyMutation.isPending
             }
             onClick={() => verifyMutation.mutate()}
             className="mt-5 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
@@ -286,9 +319,12 @@ export function RemittancePage() {
             {verifyMutation.isPending ? "Verifying…" : "Verify recipient"}
           </button>
 
-          {verifyMutation.isError ? (
+          {verifyMutation.isError || verificationFailure ? (
             <p className="mt-3 text-sm text-red-300">
-              The recipient could not be verified. Check the network and number.
+              {verificationFailure ??
+                (verifyMutation.error instanceof Error
+                  ? verifyMutation.error.message
+                  : "The recipient could not be verified.")}
             </p>
           ) : null}
 
@@ -336,14 +372,15 @@ export function RemittancePage() {
         <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
           <h2 className="font-medium">Amount</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Enter the amount in your sending currency. RackPay supplies the quote and FX rate.
+            Enter the amount in your sending currency. RackPay supplies the
+            quote and FX rate.
           </p>
 
           <label className="mt-5 block text-sm text-slate-400">
             You send
             <div className="mt-2 flex">
               <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {sendCountriesQuery.data?.[0]?.currencyCode ?? "—"}
+                {sendCountriesQuery.data?.[0]?.currency ?? "—"}
               </span>
               <input
                 value={amount}
@@ -370,7 +407,8 @@ export function RemittancePage() {
 
           {quoteMutation.isError ? (
             <p className="mt-3 text-sm text-red-300">
-              The quote could not be created. Please review the amount and try again.
+              The quote could not be created. Please review the amount and try
+              again.
             </p>
           ) : null}
 
@@ -389,9 +427,18 @@ export function RemittancePage() {
               </div>
 
               <div className="mt-4 grid gap-3 text-sm">
-                <QuoteRow label="You send" value={`${quote.sourceAmount} ${quote.sourceCurrency}`} />
-                <QuoteRow label="Fee" value={`${quote.feeAmount} ${quote.sourceCurrency}`} />
-                <QuoteRow label="Recipient gets" value={`${quote.destinationAmount} ${quote.destinationCurrency}`} />
+                <QuoteRow
+                  label="You send"
+                  value={`${quote.sourceAmount} ${quote.sourceCurrency}`}
+                />
+                <QuoteRow
+                  label="Fee"
+                  value={`${quote.feeAmount} ${quote.sourceCurrency}`}
+                />
+                <QuoteRow
+                  label="Recipient gets"
+                  value={`${quote.destinationAmount} ${quote.destinationCurrency}`}
+                />
                 <QuoteRow label="FX rate" value={quote.fxRate} />
               </div>
 
@@ -401,25 +448,45 @@ export function RemittancePage() {
                 </p>
               ) : fundedRemittanceId ? (
                 <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Remittance</p>
-                  <p className="mt-1 font-medium">{remittanceQuery.data?.status ?? "FUNDS_RESERVED"}</p>
-                  <p className="mt-1 text-xs text-slate-500">The backend is the source of truth for the transfer state.</p>
-                  {!["PAYOUT_PENDING", "PAYOUT_PROCESSING", "COMPLETED"].includes(remittanceQuery.data?.status ?? "") ? (
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Remittance
+                  </p>
+                  <p className="mt-1 font-medium">
+                    {remittanceQuery.data?.status ?? "FUNDS_RESERVED"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    The backend is the source of truth for the transfer state.
+                  </p>
+                  {![
+                    "PAYOUT_PENDING",
+                    "PAYOUT_PROCESSING",
+                    "COMPLETED",
+                  ].includes(remittanceQuery.data?.status ?? "") ? (
                     <button
                       type="button"
-                      disabled={payoutMutation.isPending || !remittanceQuery.data}
+                      disabled={
+                        payoutMutation.isPending || !remittanceQuery.data
+                      }
                       onClick={() => payoutMutation.mutate()}
                       className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
                     >
-                      {payoutMutation.isPending ? "Starting payout…" : "Start payout"}
+                      {payoutMutation.isPending
+                        ? "Starting payout…"
+                        : "Start payout"}
                     </button>
                   ) : null}
-                  {payoutMutation.isError ? <p className="mt-3 text-sm text-red-300">The payout request could not be started.</p> : null}
+                  {payoutMutation.isError ? (
+                    <p className="mt-3 text-sm text-red-300">
+                      The payout request could not be started.
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <>
                   <p className="mt-4 text-xs leading-5 text-slate-500">
-                    Funding and payout are handled by the backend. The app does not choose a payout provider or determine final remittance state.
+                    Funding and payout are handled by the backend. The app does
+                    not choose a payout provider or determine final remittance
+                    state.
                   </p>
                   <button
                     type="button"
@@ -429,7 +496,12 @@ export function RemittancePage() {
                   >
                     {fundMutation.isPending ? "Funding…" : "Fund remittance"}
                   </button>
-                  {fundMutation.isError ? <p className="mt-3 text-sm text-red-300">The remittance could not be funded. Your wallet was not assumed to be debited by the app.</p> : null}
+                  {fundMutation.isError ? (
+                    <p className="mt-3 text-sm text-red-300">
+                      The remittance could not be funded. Your wallet was not
+                      assumed to be debited by the app.
+                    </p>
+                  ) : null}
                 </>
               )}
             </div>

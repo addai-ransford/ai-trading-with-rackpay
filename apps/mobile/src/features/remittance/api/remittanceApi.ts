@@ -4,7 +4,7 @@ export type RemittanceCountry = {
   code: string;
   name: string;
   dialCode: string;
-  currencyCode: string;
+  currency: string;
   sendEnabled: boolean;
   receiveEnabled: boolean;
 };
