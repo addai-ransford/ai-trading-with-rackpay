@@ -81,9 +81,12 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                     .retrieve()
                     .body(JsonNode.class);
         } catch (RestClientResponseException exception) {
+            String providerMessage = providerErrorMessage(exception);
             String failureReason = switch (exception.getStatusCode().value()) {
                 case 400, 422 ->
-                    "The provider rejected this phone number or mobile-money network.";
+                    providerMessage == null
+                            ? "The provider rejected this phone number or mobile-money network."
+                            : "Flutterwave: " + providerMessage;
                 case 401, 403 ->
                     "Recipient verification provider credentials were rejected.";
                 default ->
@@ -235,6 +238,21 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                 },
                 ProviderRetryClassifier::isTransient
         );
+    }
+
+    private String providerErrorMessage(RestClientResponseException exception) {
+        String responseBody = exception.getResponseBodyAsString();
+        if (responseBody == null || responseBody.isBlank()) {
+            return null;
+        }
+
+        try {
+            JsonNode payload = new com.fasterxml.jackson.databind.ObjectMapper().readTree(responseBody);
+            String message = payload.path("message").asText(null);
+            return message == null || message.isBlank() ? null : message.trim();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private boolean supportedNetwork(String countryCode, Currency currency, String networkCode) {
