@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../../shared/api/httpClient";
 import { env } from "../../../shared/config/env";
