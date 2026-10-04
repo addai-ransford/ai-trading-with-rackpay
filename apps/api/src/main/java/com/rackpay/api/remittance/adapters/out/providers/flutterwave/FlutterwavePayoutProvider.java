@@ -3,6 +3,8 @@ package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 import java.math.RoundingMode;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,6 +27,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     private final RestClient client;
     private final String secretKey;
     private final ProviderRetryExecutor retryExecutor;
+    private static final Logger log = LoggerFactory.getLogger(FlutterwavePayoutProvider.class);
 
     public FlutterwavePayoutProvider(
             RestClient.Builder builder,
@@ -68,7 +71,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         Map<String, String> body = Map.of(
                 "account_number", accountNumber,
                 "account_bank", providerNetworkCode(command.networkCode()),
-                "country", command.countryCode()
+                "country", command.countryCode(),
+                "currency", command.currency().name()
         );
 
         JsonNode response;
