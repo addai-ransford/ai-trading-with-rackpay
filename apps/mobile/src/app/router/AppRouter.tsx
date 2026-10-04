@@ -6,6 +6,7 @@ import { ProtectedRoute } from "../../features/auth/routes/ProtectedRoute";
 import { WalletPage } from "../../features/wallet/pages/WalletPage";
 import { RemittancePage } from "../../features/remittance/pages/RemittancePage";
 import { RemittanceHistoryPage } from "../../features/remittance/pages/RemittanceHistoryPage";
+import { PaymentPage } from "../../features/payments/pages/PaymentPage";
 
 export function AppRouter() {
   return (
@@ -15,6 +16,7 @@ export function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route index element={<HomePage />} />
           <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/wallet/add-money" element={<PaymentPage />} />
           <Route path="/remittance" element={<RemittancePage />} />
           <Route path="/remittance/history" element={<RemittanceHistoryPage />} />
           <Route path="/remittance/history/:remittanceId" element={<RemittanceHistoryPage />} />
