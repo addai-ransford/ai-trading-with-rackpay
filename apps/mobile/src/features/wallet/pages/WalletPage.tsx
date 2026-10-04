@@ -154,6 +154,13 @@ export function WalletPage() {
         ) : null}
       </div>
 
+      <Link
+        to="/wallet/add-money"
+        className="flex items-center justify-center rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 transition hover:bg-slate-200"
+      >
+        Add money
+      </Link>
+
       <WalletTransactions accessToken={accessToken} />
     </section>
   );
