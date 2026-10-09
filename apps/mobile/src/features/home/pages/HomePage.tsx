@@ -1,4 +1,4 @@
-import { Bot, LogOut, Send, WalletCards } from "lucide-react";
+import { Bot, LogOut, Send, Settings2, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../../shared/auth/authStore";
 import { logout } from "../../../shared/auth/keycloak";
@@ -37,7 +37,7 @@ export function HomePage() {
         <span><span className="block font-medium">Remittance</span><span className="mt-1 block text-sm text-slate-500">Verify a recipient, get a quote and track transfers.</span></span>
       </Link>
 
-      <Link to="/trading" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
+      <Link to="/admin/payment-providers" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">\n        <span className="rounded-xl bg-slate-800 p-2"><Settings2 size={18} /></span>\n        <span><span className="block font-medium">Platform settings</span><span className="mt-1 block text-sm text-slate-500">Manage payment provider availability and active checkout provider.</span></span>\n      </Link>\n\n      <Link to="/trading" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
         <span className="rounded-xl bg-slate-800 p-2"><Bot size={18} /></span>
         <span><span className="block font-medium">AI Trading</span><span className="mt-1 block text-sm text-slate-500">Set a maximum amount, manage a session and review positions.</span></span>
       </Link>
