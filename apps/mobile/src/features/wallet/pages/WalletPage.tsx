@@ -106,7 +106,7 @@ export function WalletPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-3">
+      <div>
         {wallet.balances.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/60 p-6 text-center">
             <WalletCards className="mx-auto text-slate-500" />
@@ -116,17 +116,42 @@ export function WalletPage() {
             </p>
           </div>
         ) : (
-          wallet.balances.map((balance) => (
-            <div
-              key={balance.balanceId}
-              className="rounded-3xl border border-slate-800 bg-slate-900 p-5"
-            >
-              <p className="text-sm text-slate-500">{balance.currency}</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">
-                {currencyFormatter.format(Number(balance.balance))}
-              </p>
+          <>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-400">Your balances</p>
+              {wallet.balances.length > 1 ? (
+                <p className="text-xs text-slate-500">Swipe to see more <span aria-hidden="true">→</span></p>
+              ) : null}
             </div>
-          ))
+            <div
+              aria-label="Wallet currency balances"
+              className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {wallet.balances.map((balance, index) => (
+                <article
+                  key={balance.balanceId}
+                  aria-label={`${balance.currency} balance, ${index + 1} of ${wallet.balances.length}`}
+                  className="min-w-[84%] snap-center rounded-3xl border border-slate-700 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-5 sm:min-w-[70%]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-slate-400">{balance.currency} balance</p>
+                      <p className="mt-3 text-3xl font-semibold tracking-tight">
+                        {currencyFormatter.format(Number(balance.balance))}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-3">
+                      <WalletCards size={20} className="text-slate-300" />
+                    </div>
+                  </div>
+                  <div className="mt-8 flex items-center justify-between border-t border-slate-700/80 pt-3">
+                    <span className="text-xs text-slate-500">RackPay Wallet</span>
+                    <span className="text-xs text-slate-400">{index + 1} / {wallet.balances.length}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
