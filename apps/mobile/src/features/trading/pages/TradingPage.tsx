@@ -61,7 +61,10 @@ export function TradingPage() {
     queryKey: ["trading", "session", session?.sessionId],
     queryFn: () => getTradingSession(token!, session!.sessionId),
     enabled: Boolean(token && session?.sessionId && activeStatuses.has(session.status)),
-    refetchInterval: 3_000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && !activeStatuses.has(status) ? false : 3_000;
+    },
     retry: false,
   });
 
