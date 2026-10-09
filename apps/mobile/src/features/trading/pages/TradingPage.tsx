@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ArrowLeft, Bot, CircleAlert, ShieldCheck, Square, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../../shared/api/httpClient";
 import { useAuthStore } from "../../../shared/auth/authStore";
@@ -235,6 +236,6 @@ function InlineNotice({ kind, text }: { kind: "warning"; text: string }) {
   return <div className="mt-3 flex gap-2 rounded-xl border border-amber-900/50 bg-amber-950/20 p-3 text-sm leading-5 text-amber-200"><CircleAlert size={17} className="mt-0.5 shrink-0" /><span>{text}</span></div>;
 }
 
-function DataPanel({ title, loading, error, empty, children }: { title: string; loading: boolean; error?: string; empty: boolean; children: React.ReactNode }) {
+function DataPanel({ title, loading, error, empty, children }: { title: string; loading: boolean; error?: string; empty: boolean; children: ReactNode }) {
   return <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">{title}</h2>{loading ? <p className="mt-4 text-sm text-slate-500">Loading…</p> : error ? <p className="mt-4 text-sm leading-6 text-slate-400">{error}</p> : empty ? <p className="mt-4 text-sm text-slate-500">Nothing to show yet.</p> : <div className="mt-2">{children}</div>}</div>;
 }
