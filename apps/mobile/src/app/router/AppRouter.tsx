@@ -7,7 +7,7 @@ import { WalletPage } from "../../features/wallet/pages/WalletPage";
 import { RemittancePage } from "../../features/remittance/pages/RemittancePage";
 import { RemittanceHistoryPage } from "../../features/remittance/pages/RemittanceHistoryPage";
 import { PaymentPage } from "../../features/payments/pages/PaymentPage";
-import { TradingPage } from "../../features/trading/pages/TradingPage";
+import { TradingPage } from "../../features/trading/pages/TradingPage";\nimport { PaymentProviderAdminPage } from "../../features/admin/pages/PaymentProviderAdminPage";
 
 export function AppRouter() {
   return (
@@ -21,7 +21,7 @@ export function AppRouter() {
           <Route path="/remittance" element={<RemittancePage />} />
           <Route path="/remittance/history" element={<RemittanceHistoryPage />} />
           <Route path="/remittance/history/:remittanceId" element={<RemittanceHistoryPage />} />
-          <Route path="/trading" element={<TradingPage />} />
+          <Route path="/trading" element={<TradingPage />} />\n          <Route path="/admin/payment-providers" element={<PaymentProviderAdminPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
