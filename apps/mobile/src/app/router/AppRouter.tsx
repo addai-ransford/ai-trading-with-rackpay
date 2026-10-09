@@ -9,6 +9,7 @@ import { RemittanceHistoryPage } from "../../features/remittance/pages/Remittanc
 import { PaymentPage } from "../../features/payments/pages/PaymentPage";
 import { TradingPage } from "../../features/trading/pages/TradingPage";
 import { PaymentProviderAdminPage } from "../../features/admin/pages/PaymentProviderAdminPage";
+import { AdminUserAdminPage } from "../../features/admin/pages/AdminUserAdminPage";
 
 export function AppRouter() {
   return (
@@ -24,6 +25,7 @@ export function AppRouter() {
           <Route path="/remittance/history/:remittanceId" element={<RemittanceHistoryPage />} />
           <Route path="/trading" element={<TradingPage />} />
           <Route path="/admin/payment-providers" element={<PaymentProviderAdminPage />} />
+          <Route path="/admin/admins/new" element={<AdminUserAdminPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
