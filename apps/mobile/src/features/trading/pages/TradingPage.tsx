@@ -26,8 +26,8 @@ const activeStatuses = new Set(["STARTING", "RUNNING", "STOP_REQUESTED", "RECOVE
 export function TradingPage() {
   const token = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
-  const [maximumAmount, setMaximumAmount] = useState("");
-  const [currency, setCurrency] = useState<Currency>("EUR");
+  const [maximumAmount, setMaximumAmount] = useState<string>();
+  const [currency, setCurrency] = useState<Currency>();
   const [session, setSession] = useState<TradingSession>();
   const [message, setMessage] = useState<{ kind: "error" | "info"; text: string }>();
 
@@ -96,8 +96,8 @@ export function TradingPage() {
   });
 
   const displayedSession = sessionQuery.data ?? session;
-  const amountValue = maximumAmount || String(limitQuery.data?.maximumAmount ?? "");
-  const currencyValue = currency || limitQuery.data?.currency || "EUR";
+  const amountValue = maximumAmount ?? String(limitQuery.data?.maximumAmount ?? "");
+  const currencyValue: Currency = currency ?? limitQuery.data?.currency ?? "EUR";
   const sessionActive = Boolean(displayedSession && activeStatuses.has(displayedSession.status));
   const currencyForAccount = accountQuery.data?.currency ?? currency;
 
