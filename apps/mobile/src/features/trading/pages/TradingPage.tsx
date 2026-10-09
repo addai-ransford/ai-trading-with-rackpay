@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ArrowLeft, Bot, CircleAlert, ShieldCheck, Square, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../../shared/api/httpClient";
@@ -22,7 +22,6 @@ const currencies: Currency[] = ["EUR", "USD", "GBP", "GHS", "KES", "NGN", "XOF",
 const money = (value: string | number, currency: Currency) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(Number(value));
 const activeStatuses = new Set(["STARTING", "RUNNING", "STOP_REQUESTED", "RECOVERY_REQUIRED"]);
-const terminalStatuses = new Set(["STOPPED", "FAILED"]);
 
 export function TradingPage() {
   const token = useAuthStore((state) => state.accessToken);
@@ -66,31 +65,15 @@ export function TradingPage() {
     retry: false,
   });
 
-  useEffect(() => {
-    if (limitQuery.data && !maximumAmount) {
-      setMaximumAmount(String(limitQuery.data.maximumAmount));
-      setCurrency(limitQuery.data.currency);
-    }
-  }, [limitQuery.data, maximumAmount]);
-
-  useEffect(() => {
-    if (sessionQuery.data) {
-      setSession(sessionQuery.data);
-      if (terminalStatuses.has(sessionQuery.data.status)) {
-        void queryClient.invalidateQueries({ queryKey: ["trading"] });
-      }
-    }
-  }, [sessionQuery.data, queryClient]);
-
   const startMutation = useMutation({
     mutationFn: async () => {
       if (!token) throw new Error("Your session has expired. Sign in again.");
-      const amount = Number(maximumAmount);
+      const amount = Number(amountValue);
       if (!Number.isFinite(amount) || amount <= 0) {
         throw new Error("Enter a maximum trading amount greater than zero.");
       }
-      await setTradingRiskLimit(token, maximumAmount, currency);
-      return startTrading(token, maximumAmount, currency);
+      await setTradingRiskLimit(token, amountValue, currencyValue);
+      return startTrading(token, amountValue, currencyValue);
     },
     onSuccess: (result) => {
       setSession(result);
@@ -113,6 +96,8 @@ export function TradingPage() {
   });
 
   const displayedSession = sessionQuery.data ?? session;
+  const amountValue = maximumAmount || String(limitQuery.data?.maximumAmount ?? "");
+  const currencyValue = currency || limitQuery.data?.currency || "EUR";
   const sessionActive = Boolean(displayedSession && activeStatuses.has(displayedSession.status));
   const currencyForAccount = accountQuery.data?.currency ?? currency;
 
@@ -142,7 +127,7 @@ export function TradingPage() {
               step="0.01"
               type="number"
               inputMode="decimal"
-              value={maximumAmount}
+              value={amountValue}
               onChange={(event) => setMaximumAmount(event.target.value)}
               placeholder="250.00"
               disabled={sessionActive || startMutation.isPending}
@@ -151,7 +136,7 @@ export function TradingPage() {
           </label>
           <label className="block">
             <span className="text-sm text-slate-400">Currency</span>
-            <select value={currency} onChange={(event) => setCurrency(event.target.value as Currency)} disabled={sessionActive || startMutation.isPending} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 disabled:opacity-60">
+            <select value={currencyValue} onChange={(event) => setCurrency(event.target.value as Currency)} disabled={sessionActive || startMutation.isPending} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 disabled:opacity-60">
               {currencies.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
