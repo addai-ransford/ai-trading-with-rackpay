@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Plus,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type Currency,
   getWallet,
@@ -35,6 +35,18 @@ export function WalletPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>("EUR");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const returnedFromCheckout = searchParams.get("payment") === "return";
+
+  useEffect(() => {
+    if (!returnedFromCheckout) return;
+    void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    const timeout = window.setTimeout(() => {
+      searchParams.delete("payment");
+      setSearchParams(searchParams, { replace: true });
+    }, 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [queryClient, returnedFromCheckout, searchParams, setSearchParams]);
 
   const walletQuery = useQuery({
     queryKey: ["wallet"],
@@ -87,6 +99,12 @@ export function WalletPage() {
           Home
         </Link>
       </header>
+
+      {returnedFromCheckout ? (
+        <div role="status" className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-sm leading-6 text-slate-300">
+          You returned from checkout. We are refreshing your wallet; funds appear only after the payment provider confirms the payment and RackPay processes its callback. This page does not assume the payment succeeded.
+        </div>
+      ) : null}
 
       <div className="grid gap-3">
         {wallet.balances.length === 0 ? (
