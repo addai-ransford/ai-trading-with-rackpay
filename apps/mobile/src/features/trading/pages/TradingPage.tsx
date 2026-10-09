@@ -102,7 +102,7 @@ export function TradingPage() {
   const amountValue = maximumAmount ?? String(limitQuery.data?.maximumAmount ?? "");
   const currencyValue: Currency = currency ?? limitQuery.data?.currency ?? "EUR";
   const sessionActive = Boolean(displayedSession && activeStatuses.has(displayedSession.status));
-  const currencyForAccount = accountQuery.data?.currency ?? currency;
+  const currencyForAccount: Currency = accountQuery.data?.currency ?? currencyValue;
 
   return (
     <section className="flex min-h-dvh flex-col gap-5 pb-10 pt-4">
@@ -220,7 +220,7 @@ function StatusPill({ value }: { value: string }) {
   return <span className={`rounded-full px-3 py-1 text-xs font-medium ${color}`}>{value.replaceAll("_", " ")}</span>;
 }
 
-function InlineNotice({ kind, text }: { kind: "warning"; text: string }) {
+function InlineNotice({ text }: { kind: "warning"; text: string }) {
   return <div className="mt-3 flex gap-2 rounded-xl border border-amber-900/50 bg-amber-950/20 p-3 text-sm leading-5 text-amber-200"><CircleAlert size={17} className="mt-0.5 shrink-0" /><span>{text}</span></div>;
 }
 
