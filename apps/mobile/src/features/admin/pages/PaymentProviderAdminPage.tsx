@@ -108,6 +108,8 @@ export function PaymentProviderAdminPage() {
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-sm text-slate-400">No payment providers are configured.</div>
       ) : null}
 
+      <Link to="/admin/admins/new" className="inline-flex items-center rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800">Create administrator</Link>
+
       <div className="space-y-3">
         {providers.map((provider) => (
           <article key={provider.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
