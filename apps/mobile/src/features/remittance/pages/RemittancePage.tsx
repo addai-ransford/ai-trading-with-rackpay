@@ -238,6 +238,16 @@ export function RemittancePage() {
                   onClick={() => {
                     setCountry(item);
                     setNetwork(undefined);
+                    setPhoneNumber("");
+                    setRecipientName(undefined);
+                    setRecipientId(undefined);
+                    setVerificationFailure(undefined);
+                    setConfirmedRecipient(false);
+                    setAmount("");
+                    quoteMutation.reset();
+                    fundMutation.reset();
+                    setFundedRemittanceId(undefined);
+                    setFundIdempotencyKey(undefined);
                     setStep("recipient");
                   }}
                   className={`flex items-center justify-between rounded-2xl border p-4 text-left ${
@@ -271,13 +281,22 @@ export function RemittancePage() {
             Network
             <select
               value={network?.code ?? ""}
-              onChange={(event) =>
+              onChange={(event) => {
                 setNetwork(
                   networksQuery.data?.find(
                     (item) => item.code === event.target.value,
                   ),
-                )
-              }
+                );
+                setRecipientName(undefined);
+                setRecipientId(undefined);
+                setVerificationFailure(undefined);
+                setConfirmedRecipient(false);
+                setAmount("");
+                quoteMutation.reset();
+                fundMutation.reset();
+                setFundedRemittanceId(undefined);
+                setFundIdempotencyKey(undefined);
+              }}
               className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"
             >
               <option value="">Select network</option>
@@ -297,7 +316,18 @@ export function RemittancePage() {
               </span>
               <input
                 value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value)}
+                onChange={(event) => {
+                  setPhoneNumber(event.target.value);
+                  setRecipientName(undefined);
+                  setRecipientId(undefined);
+                  setVerificationFailure(undefined);
+                  setConfirmedRecipient(false);
+                  setAmount("");
+                  quoteMutation.reset();
+                  fundMutation.reset();
+                  setFundedRemittanceId(undefined);
+                  setFundIdempotencyKey(undefined);
+                }}
                 inputMode="tel"
                 autoComplete="tel"
                 placeholder="024 123 4567"
@@ -419,7 +449,13 @@ export function RemittancePage() {
               </span>
               <input
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => {
+                  setAmount(event.target.value);
+                  quoteMutation.reset();
+                  fundMutation.reset();
+                  setFundedRemittanceId(undefined);
+                  setFundIdempotencyKey(undefined);
+                }}
                 inputMode="decimal"
                 placeholder="100.00"
                 className="min-w-0 flex-1 rounded-r-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-lg text-white outline-none"
