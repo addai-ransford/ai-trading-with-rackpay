@@ -178,29 +178,19 @@ export function RemittancePage() {
   }
 
   return (
-    <section className="flex min-h-dvh flex-col gap-6 pb-10 pt-4">
-      <header className="flex items-center gap-3">
-        <Link
-          to="/"
-          className="rounded-xl border border-slate-800 p-2 text-slate-300"
-          aria-label="Back home"
-        >
-          <ArrowLeft size={18} />
-        </Link>
+    <section className="space-y-5">
+      <header className="page-heading">
         <div>
-          <p className="text-sm text-slate-500">Send money</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Remittance</h1>
+          <p className="eyebrow">INTERNATIONAL TRANSFERS</p>
+          <h1>Send money</h1>
+          <p className="page-description">Verify the recipient, review RackPay’s exchange rate and fees, then confirm your transfer.</p>
         </div>
-        <Link
-          to="/remittance/history"
-          className="ml-auto rounded-xl border border-slate-800 p-2 text-slate-300"
-          aria-label="Remittance history"
-        >
-          <History size={18} />
+        <Link to="/remittance/history" className="button button-secondary" aria-label="Remittance history">
+          <History size={16} /> History
         </Link>
       </header>
 
-      <div className="flex gap-2">
+      <div className="remittance-steps flex gap-2">
         {(["country", "recipient", "amount"] as Step[]).map((item, index) => (
           <div key={item} className="flex flex-1 items-center gap-2">
             <div
@@ -220,7 +210,7 @@ export function RemittancePage() {
       </div>
 
       {step === "country" ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+        <section className="form-panel">
           <h2 className="font-medium">Where are you sending?</h2>
           <p className="mt-1 text-sm text-slate-500">
             Countries are loaded from RackPay configuration.
@@ -279,7 +269,7 @@ export function RemittancePage() {
       ) : null}
 
       {step === "recipient" && country ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+        <section className="form-panel">
           <h2 className="font-medium">Recipient</h2>
           <p className="mt-1 text-sm text-slate-500">
             Verify the mobile-money account before you fund the transfer.
@@ -305,7 +295,7 @@ export function RemittancePage() {
                 setFundedRemittanceId(undefined);
                 setFundIdempotencyKey(undefined);
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"
+              className="form-control"
             >
               <option value="">Select network</option>
               {networksQuery.data?.map((item) => (
@@ -377,7 +367,7 @@ export function RemittancePage() {
           ) : null}
 
           {recipientName ? (
-            <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950 p-4">
+            <div className="quote-card">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 shrink-0" size={20} />
                 <div>
@@ -417,7 +407,7 @@ export function RemittancePage() {
       ) : null}
 
       {step === "amount" && country && recipientId ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+        <section className="form-panel">
           <h2 className="font-medium">Amount</h2>
           <p className="mt-1 text-sm text-slate-500">
             Enter the amount in your sending currency. RackPay supplies the
@@ -436,7 +426,7 @@ export function RemittancePage() {
                 setFundIdempotencyKey(undefined);
               }}
               disabled={sendCountriesQuery.isPending || sendCountriesQuery.isError}
-              className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white disabled:opacity-50"
+              className="form-control"
             >
               <option value="">
                 {sendCountriesQuery.isPending
@@ -473,7 +463,7 @@ export function RemittancePage() {
                 }}
                 inputMode="decimal"
                 placeholder="100.00"
-                className="min-w-0 flex-1 rounded-r-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-lg text-white outline-none"
+                className="amount-input min-w-0 flex-1"
               />
             </div>
           </label>
