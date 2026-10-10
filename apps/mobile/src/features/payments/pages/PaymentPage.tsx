@@ -151,7 +151,12 @@ export function PaymentPage() {
               <code className="mx-1 rounded bg-slate-950 px-1">
                 VITE_PAYMENT_WEBHOOK_URL
               </code>
-              to the backend webhook URL before testing payments.
+              to a publicly reachable backend callback URL for the active
+              provider, using the route
+              <code className="mx-1 rounded bg-slate-950 px-1">
+                /api/v1/payments/webhooks/{"{provider}"}
+              </code>
+              . A provider cannot call localhost from the public internet.
             </div>
           ) : null}
 
