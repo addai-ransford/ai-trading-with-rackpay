@@ -44,7 +44,8 @@ export function AuthPage() {
     setSubmitting(true);
     setFormError(undefined);
     setNotice(undefined);
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       await apiFetch("/api/v1/auth/register", {
         method: "POST",
@@ -58,7 +59,7 @@ export function AuthPage() {
       });
       setRegistering(false);
       setNotice("Account created. Sign in with your new credentials.");
-      event.currentTarget.reset();
+      form.reset();
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "Account creation failed.");
     } finally {
