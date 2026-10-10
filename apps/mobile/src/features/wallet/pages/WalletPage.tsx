@@ -13,6 +13,7 @@ import {
   listWalletTransactions,
   openWalletBalance,
 } from "../api/walletApi";
+import { ApiError } from "../../../shared/api/httpClient";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
 const currencies: Currency[] = [
@@ -70,7 +71,7 @@ export function WalletPage() {
     return (
       <section className="flex min-h-dvh flex-col justify-center gap-4">
         <p className="text-sm text-red-300">
-          We could not load your wallet.
+          {errorMessage(walletQuery.error, "We could not load your wallet.")}
         </p>
         <button
           type="button"
@@ -204,8 +205,8 @@ export function WalletPage() {
           </p>
         ) : null}
         {openBalanceMutation.isError ? (
-          <p className="mt-3 text-sm text-red-300">
-            The balance could not be opened. Please check the selected currency and try again.
+          <p role="alert" className="mt-3 text-sm text-red-300">
+            {errorMessage(openBalanceMutation.error, "The balance could not be opened. Please check the selected currency and try again.")}
           </p>
         ) : null}
       </div>
@@ -300,4 +301,13 @@ function WalletLoading() {
       <div className="h-28 animate-pulse rounded-3xl bg-slate-900" />
     </section>
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    return error.correlationId
+      ? `${error.message} (Reference: ${error.correlationId})`
+      : error.message;
+  }
+  return error instanceof Error ? error.message : fallback;
 }
