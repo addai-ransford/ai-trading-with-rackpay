@@ -234,7 +234,6 @@ function WalletTransactions({ accessToken }: { accessToken?: string }) {
     <div className="form-panel">
       <div className="section-heading mt-0">
         <div>
-        <div>
           <h2>Recent activity</h2>
           <p>Latest wallet transactions</p>
         </div>
