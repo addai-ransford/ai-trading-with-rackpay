@@ -1,0 +1,108 @@
+/* RackPay branded Keycloak login, registration and password recovery pages. */
+:root {
+  --rackpay-ink: #111827;
+  --rackpay-muted: #667085;
+  --rackpay-green: #0c8a65;
+  --rackpay-green-dark: #06664b;
+  --rackpay-border: #e3e8ef;
+}
+html, body {
+  min-height: 100%;
+  background: #f4f7fb;
+  color: var(--rackpay-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body {
+  background-image: radial-gradient(ellipse at 15% 10%, rgba(12,138,101,.09), transparent 36%),
+                    radial-gradient(ellipse at 90% 90%, rgba(24,76,130,.06), transparent 34%);
+}
+#kc-header, #kc-header-wrapper {
+  color: var(--rackpay-ink);
+  font-size: 0;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+#kc-header-wrapper::before {
+  content: "R";
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-right: 10px;
+  border-radius: 12px;
+  background: var(--rackpay-green);
+  color: #fff;
+  font-size: 21px;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+#kc-header-wrapper::after {
+  content: "rackpay";
+  color: var(--rackpay-ink);
+  font-size: 25px;
+  vertical-align: middle;
+  letter-spacing: -.04em;
+}
+#kc-page-title {
+  color: var(--rackpay-ink);
+  font-size: 1.65rem;
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+#kc-content-wrapper, #kc-form-wrapper {
+  color: var(--rackpay-ink);
+}
+#kc-content-wrapper .instruction, .pf-v5-c-form__helper-text, #kc-info-wrapper {
+  color: var(--rackpay-muted);
+}
+.pf-v5-c-login, .login-pf-page {
+  background: transparent;
+}
+.pf-v5-c-login__main, #kc-content, #kc-form {
+  border-radius: 22px;
+}
+.pf-v5-c-login__main {
+  border: 1px solid rgba(227,232,239,.95);
+  box-shadow: 0 24px 70px rgba(16, 24, 40, .09);
+}
+.pf-v5-c-form-control, input[type="text"], input[type="password"], input[type="email"] {
+  min-height: 48px;
+  border: 1px solid var(--rackpay-border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: none;
+}
+.pf-v5-c-form-control:focus, input:focus {
+  border-color: var(--rackpay-green);
+  box-shadow: 0 0 0 3px rgba(12,138,101,.12);
+}
+.pf-v5-c-button.pf-m-primary, #kc-login, input[type="submit"] {
+  min-height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--rackpay-green);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: none;
+}
+.pf-v5-c-button.pf-m-primary:hover, #kc-login:hover, input[type="submit"]:hover {
+  background: var(--rackpay-green-dark);
+}
+a, #kc-form-options a, #kc-info a {
+  color: var(--rackpay-green-dark);
+  font-weight: 600;
+}
+a:hover { color: var(--rackpay-green); }
+.pf-v5-c-alert, .alert {
+  border-radius: 10px;
+}
+#kc-locale, #kc-locale-wrapper {
+  color: var(--rackpay-muted);
+}
+@media (max-width: 480px) {
+  .pf-v5-c-login__main {
+    margin: 12px;
+    border-radius: 18px;
+  }
+  #kc-page-title { font-size: 1.45rem; }
+}
