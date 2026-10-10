@@ -2,7 +2,7 @@
   "realm": "rackpay",
   "enabled": true,
   "displayName": "RackPay",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -30,6 +30,53 @@
       "directAccessGrantsEnabled": false,
       "publicClient": false,
       "protocol": "openid-connect"
+    },
+    {
+      "clientId": "rackpay-mobile",
+      "name": "RackPay Mobile App",
+      "description": "Public OpenID Connect client for the RackPay React mobile frontend",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": null,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "http://localhost:4173/*",
+        "capacitor://localhost/*",
+        "http://localhost/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "capacitor://localhost",
+        "http://localhost"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://127.0.0.1:5173/*##capacitor://localhost/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access"
+      ]
     }
   ],
   "users": [
@@ -45,5 +92,9 @@
         ]
       }
     }
-  ]
+  ],
+  "loginTheme": "rackpay",
+  "registrationEmailAsUsername": true,
+  "verifyEmail": true,
+  "editUsernameAllowed": false
 }
