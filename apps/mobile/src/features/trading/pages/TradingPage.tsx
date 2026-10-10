@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowLeft, Bot, CircleAlert, ShieldCheck, Square, TrendingUp } from "lucide-react";
+import { Activity, ArrowLeft, CircleAlert, ShieldCheck, Square, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
