@@ -92,17 +92,13 @@ export function WalletPage() {
 
   return (
     <section className="flex min-h-dvh flex-col gap-6 pb-8 pt-4">
-      <header className="flex items-center justify-between">
+      <header className="page-heading">
         <div>
-          <p className="text-sm text-slate-500">Your money</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Wallet</h1>
+          <p className="eyebrow">YOUR FINANCIAL SPACE</p>
+          <h1>Your wallet</h1>
+          <p className="page-description">Swipe between your currency balances and review recent activity.</p>
         </div>
-        <Link
-          to="/"
-          className="rounded-xl border border-slate-800 px-3 py-2 text-sm text-slate-300"
-        >
-          Home
-        </Link>
+        <Link to="/wallet/add-money" className="button button-primary"><Plus size={15}/> Add money</Link>
       </header>
 
       {returnedFromCheckout ? (
@@ -136,7 +132,7 @@ export function WalletPage() {
                 <article
                   key={balance.balanceId}
                   aria-label={`${balance.currency} balance, ${index + 1} of ${wallet.balances.length}`}
-                  className="min-w-[84%] snap-center rounded-3xl border border-slate-700 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-5 sm:min-w-[70%]"
+                  className="wallet-swipe-card min-w-[84%] snap-center sm:min-w-[70%]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -145,13 +141,13 @@ export function WalletPage() {
                         {currencyFormatter.format(Number(balance.balance))}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-3">
-                      <WalletCards size={20} className="text-slate-300" />
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <WalletCards size={20} className="text-lime-200" />
                     </div>
                   </div>
-                  <div className="mt-8 flex items-center justify-between border-t border-slate-700/80 pt-3">
-                    <span className="text-xs text-slate-500">RackPay Wallet</span>
-                    <span className="text-xs text-slate-400">{index + 1} / {wallet.balances.length}</span>
+                  <div className="balance-card-footer mt-8">
+                    <span>RackPay Wallet</span>
+                    <span>{index + 1} / {wallet.balances.length}</span>
                   </div>
                 </article>
               ))}
@@ -160,7 +156,7 @@ export function WalletPage() {
         )}
       </div>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div className="form-panel">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-slate-800 p-2">
             <Plus size={18} />
@@ -213,7 +209,7 @@ export function WalletPage() {
 
       <Link
         to="/wallet/add-money"
-        className="flex items-center justify-center rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 transition hover:bg-slate-200"
+        className="button button-primary full-width"
       >
         Add money
       </Link>
@@ -235,13 +231,14 @@ function WalletTransactions({ accessToken }: { accessToken?: string }) {
   });
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-      <div className="flex items-center justify-between">
+    <div className="form-panel">
+      <div className="section-heading mt-0">
         <div>
-          <p className="font-medium">Recent activity</p>
-          <p className="text-sm text-slate-500">Latest wallet transactions</p>
+        <div>
+          <h2>Recent activity</h2>
+          <p>Latest wallet transactions</p>
         </div>
-        <WalletCards size={18} className="text-slate-500" />
+        <WalletCards size={18} className="text-lime-200" />
       </div>
 
       {transactionsQuery.isPending ? (
