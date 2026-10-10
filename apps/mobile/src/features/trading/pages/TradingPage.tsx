@@ -105,17 +105,17 @@ export function TradingPage() {
   const currencyForAccount: Currency = accountQuery.data?.currency ?? currencyValue;
 
   return (
-    <section className="flex min-h-dvh flex-col gap-5 pb-10 pt-4">
-      <header className="flex items-center gap-3">
-        <Link to="/" aria-label="Back home" className="rounded-xl border border-slate-800 p-2 text-slate-300"><ArrowLeft size={18} /></Link>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-slate-500">Automated strategy</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">AI Trading</h1>
+    <section className="space-y-5">
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">RISK-CONTROLLED STRATEGIES</p>
+          <h1>AI Trading</h1>
+          <p className="page-description">Set the maximum amount the strategy may use, then monitor the server-reported session and positions.</p>
         </div>
-        <div className="rounded-xl border border-slate-800 p-3"><Bot size={20} /></div>
+        <Link to="/" className="button button-secondary"><ArrowLeft size={15}/> Overview</Link>
       </header>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div className="form-panel">
         <div className="flex items-center gap-2 text-sm text-slate-400"><ShieldCheck size={16} /> Risk controls</div>
         <h2 className="mt-2 text-xl font-semibold">Set your maximum</h2>
         <p className="mt-2 text-sm leading-6 text-slate-400">
