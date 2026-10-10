@@ -84,6 +84,10 @@ export function WalletPage() {
   }
 
   const wallet = walletQuery.data;
+  const currencyAlreadyOpen = wallet.balances.some((balance) => balance.currency === currency);
+  const availableCurrencies = currencies.filter(
+    (option) => !wallet.balances.some((balance) => balance.currency === option),
+  );
 
   return (
     <section className="flex min-h-dvh flex-col gap-6 pb-8 pt-4">
@@ -175,14 +179,18 @@ export function WalletPage() {
             className="min-w-0 flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"
           >
             {currencies.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option
+                key={option}
+                value={option}
+                disabled={wallet.balances.some((balance) => balance.currency === option)}
+              >
+                {option}{wallet.balances.some((balance) => balance.currency === option) ? " · already open" : ""}
               </option>
             ))}
           </select>
           <button
             type="button"
-            disabled={openBalanceMutation.isPending}
+            disabled={openBalanceMutation.isPending || currencyAlreadyOpen || availableCurrencies.length === 0}
             onClick={() => openBalanceMutation.mutate()}
             className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
           >
@@ -190,9 +198,14 @@ export function WalletPage() {
           </button>
         </div>
 
+        {availableCurrencies.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">
+            All currently supported currency balances are already open.
+          </p>
+        ) : null}
         {openBalanceMutation.isError ? (
           <p className="mt-3 text-sm text-red-300">
-            The balance could not be opened. It may already exist.
+            The balance could not be opened. Please check the selected currency and try again.
           </p>
         ) : null}
       </div>
