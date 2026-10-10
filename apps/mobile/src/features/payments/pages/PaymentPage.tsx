@@ -88,24 +88,17 @@ export function PaymentPage() {
   }
 
   return (
-    <section className="flex min-h-dvh flex-col gap-6 pb-8 pt-4">
-      <header className="flex items-center gap-3">
-        <Link
-          to="/wallet"
-          aria-label="Back to wallet"
-          className="rounded-xl border border-slate-800 p-2 text-slate-300"
-        >
-          <ArrowLeft size={18} />
-        </Link>
+    <section className="space-y-5">
+      <header className="page-heading">
         <div>
-          <p className="text-sm text-slate-500">Wallet</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-            Add money
-          </h1>
+          <p className="eyebrow">WALLET FUNDING</p>
+          <h1>Add money</h1>
+          <p className="page-description">Start a secure checkout with RackPay’s currently configured payment provider.</p>
         </div>
+        <Link to="/wallet" className="button button-secondary"><ArrowLeft size={15}/> Back to wallet</Link>
       </header>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div className="form-panel">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-slate-800 p-2">
             <CreditCard size={18} />
