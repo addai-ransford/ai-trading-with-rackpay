@@ -146,6 +146,8 @@ export function RemittancePage() {
     () => (quote ? Date.parse(quote.expiresAt) <= quoteNow : false),
     [quote, quoteNow],
   );
+  const numericAmount = Number(amount);
+  const amountIsValid = amount.trim() !== "" && Number.isFinite(numericAmount) && numericAmount > 0;
 
   const phoneDigits = phoneNumber.replace(/\D/g, "");
   const localPhoneDigits = phoneDigits.startsWith("0")
