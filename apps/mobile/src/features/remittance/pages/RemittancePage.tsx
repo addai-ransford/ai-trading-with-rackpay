@@ -260,12 +260,14 @@ export function RemittancePage() {
                   }`}
                 >
                   <span className="flex items-center gap-3">
-                    <span aria-hidden="true" className="text-2xl">{countryFlag(item.code)}</span>
-                    <span>
-                    <span className="block font-medium">{item.name}</span>
-                    <span className="text-xs text-slate-500">
-                      {item.dialCode} · {item.currency}
+                    <span aria-hidden="true" className="text-2xl">
+                      {countryFlag(item.code)}
                     </span>
+                    <span>
+                      <span className="block font-medium">{item.name}</span>
+                      <span className="text-xs text-slate-500">
+                        {item.dialCode} · {item.currency}
+                      </span>
                     </span>
                   </span>
                   <span className="text-sm text-slate-400">{item.code}</span>
