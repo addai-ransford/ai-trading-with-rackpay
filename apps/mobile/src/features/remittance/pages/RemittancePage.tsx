@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, History, Send } from "lucide-react";
+import { CheckCircle2, History, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
@@ -367,7 +367,7 @@ export function RemittancePage() {
           ) : null}
 
           {recipientName ? (
-            <div className="quote-card">
+            <div className="verified-recipient">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 shrink-0" size={20} />
                 <div>
@@ -489,7 +489,7 @@ export function RemittancePage() {
           ) : null}
 
           {quote ? (
-            <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950 p-4">
+            <div className="quote-card">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-slate-800 p-2">
                   <Send size={18} />
