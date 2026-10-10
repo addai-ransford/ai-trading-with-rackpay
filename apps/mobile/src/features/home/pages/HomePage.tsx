@@ -1,51 +1,131 @@
-import { Bot, LogOut, Send, Settings2, WalletCards } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUpRight,
+  Bot,
+  CreditCard,
+  Settings2,
+  ShieldCheck,
+  WalletCards,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../../../shared/api/httpClient";
 import { useAuthStore } from "../../../shared/auth/authStore";
 import { logout } from "../../../shared/auth/keycloak";
 
+type Balance = { balanceId: string; currency: string; balance: string | number };
+type Transaction = {
+  transactionId: string;
+  operationType: string;
+  amount: string | number;
+  currency: string;
+  status: string;
+  createdAt: string;
+};
+type Page<T> = { content: T[]; totalElements: number };
+
+function money(amount: string | number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(Number(amount));
+  } catch {
+    return `${amount} ${currency}`;
+  }
+}
+
 export function HomePage() {
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  const walletQuery = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => apiFetch<{ balances: Balance[] }>("/api/v1/wallet", {}, accessToken),
+    enabled: Boolean(accessToken),
+  });
+  const activityQuery = useQuery({
+    queryKey: ["wallet-transactions"],
+    queryFn: () => apiFetch<Page<Transaction>>("/api/v1/wallet/transactions?page=0&size=5", {}, accessToken),
+    enabled: Boolean(accessToken),
+  });
+
+  const balances = walletQuery.data?.balances ?? [];
+  const activity = activityQuery.data?.content ?? [];
 
   return (
-    <section className="flex min-h-dvh flex-col justify-center gap-6 py-8">
-      <div className="flex items-start justify-between gap-4">
+    <section>
+      <div className="page-heading">
         <div>
-          <p className="text-sm font-medium text-slate-400">Financial platform</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">RackPay</h1>
-          <p className="mt-3 max-w-sm text-base leading-7 text-slate-400">
-            Wallet, international remittance and risk-controlled AI trading in one experience.
-          </p>
+          <p className="eyebrow">YOUR FINANCIAL SPACE</p>
+          <h1>Good to have you here.</h1>
+          <p className="page-description">One place for your money, international transfers and risk-controlled AI trading.</p>
         </div>
-        <button type="button" onClick={() => void logout()} aria-label="Sign out" className="rounded-xl border border-slate-800 p-2 text-slate-400 transition hover:bg-slate-900 hover:text-slate-100">
-          <LogOut size={18} />
+        <button type="button" onClick={() => void logout()} aria-label="Sign out" className="button button-secondary">
+          Sign out
         </button>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Signed in as</p>
-        <p className="mt-1 font-medium">{user?.name ?? user?.username ?? user?.email ?? "RackPay user"}</p>
-        {user?.email ? <p className="mt-1 text-sm text-slate-500">{user.email}</p> : null}
+      <div className="notice-panel">
+        <ShieldCheck size={22} />
+        <div>
+          <strong>Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : user?.username ? `, ${user.username}` : ""}</strong>
+          <p>Your wallet balances and transaction states are loaded from RackPay's backend.</p>
+        </div>
       </div>
 
-      <Link to="/wallet" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
-        <span className="rounded-xl bg-slate-800 p-2"><WalletCards size={18} /></span>
-        <span><span className="block font-medium">Wallet</span><span className="mt-1 block text-sm text-slate-500">View balances, activity and add money.</span></span>
-      </Link>
+      <div className="section-heading">
+        <div><h2>Wallet overview</h2><p>Available currency balances</p></div>
+        <Link className="text-link" to="/wallet">View wallet <ArrowRight size={14}/></Link>
+      </div>
+      {walletQuery.isPending ? <div className="skeleton-card" /> : walletQuery.isError ? (
+        <div className="inline-error">Unable to load wallet.<button onClick={() => void walletQuery.refetch()}>Retry</button></div>
+      ) : balances.length ? (
+        <div className="balance-grid">
+          {balances.slice(0, 3).map((balance) => (
+            <div className="mini-balance" key={balance.balanceId}>
+              <span><WalletCards size={15}/> {balance.currency}</span>
+              <strong>{money(balance.balance, balance.currency)}</strong>
+              <small>Available balance</small>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-inline">No currency balances yet. <Link to="/wallet">Open a balance <ArrowRight size={14}/></Link></div>
+      )}
 
-      <Link to="/remittance" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
-        <span className="rounded-xl bg-slate-800 p-2"><Send size={18} /></span>
-        <span><span className="block font-medium">Remittance</span><span className="mt-1 block text-sm text-slate-500">Verify a recipient, get a quote and track transfers.</span></span>
-      </Link>
+      <div className="section-heading"><div><h2>Quick actions</h2><p>Choose what you want to do next</p></div></div>
+      <div className="action-grid">
+        <Link to="/wallet" className="action-card"><span className="action-icon"><WalletCards size={19}/></span><strong>Manage wallet</strong><p>Swipe through balances and view transaction history</p><ArrowRight className="action-arrow" size={16}/></Link>
+        <Link to="/wallet/add-money" className="action-card"><span className="action-icon"><CreditCard size={19}/></span><strong>Add money</strong><p>Start a secure provider-hosted checkout</p><ArrowRight className="action-arrow" size={16}/></Link>
+        <Link to="/remittance" className="action-card"><span className="action-icon"><ArrowLeftRight size={19}/></span><strong>Send money</strong><p>Review exchange rates and send internationally</p><ArrowRight className="action-arrow" size={16}/></Link>
+        <Link to="/trading" className="action-card"><span className="action-icon"><Bot size={19}/></span><strong>AI Trading</strong><p>Trading sessions and risk controls</p><ArrowRight className="action-arrow" size={16}/></Link>
+        <Link to="/admin/payment-providers" className="action-card"><span className="action-icon"><Settings2 size={19}/></span><strong>Platform settings</strong><p>Manage configured payment providers</p><ArrowRight className="action-arrow" size={16}/></Link>
+      </div>
 
-      <Link to="/admin/payment-providers" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
-        <span className="rounded-xl bg-slate-800 p-2"><Settings2 size={18} /></span>
-        <span><span className="block font-medium">Platform settings</span><span className="mt-1 block text-sm text-slate-500">Manage payment provider availability and active checkout provider.</span></span>
-      </Link>
-
-      <Link to="/trading" className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:bg-slate-800">
-        <span className="rounded-xl bg-slate-800 p-2"><Bot size={18} /></span>
-        <span><span className="block font-medium">AI Trading</span><span className="mt-1 block text-sm text-slate-500">Set a maximum amount, manage a session and review positions.</span></span>
-      </Link>
+      <div className="section-heading">
+        <div><h2>Recent activity</h2><p>Latest wallet transactions</p></div>
+        <Link className="text-link" to="/wallet">Full history <ArrowRight size={14}/></Link>
+      </div>
+      {activityQuery.isPending ? <div className="skeleton-list" /> : activityQuery.isError ? (
+        <div className="inline-error">Unable to load activity.<button onClick={() => void activityQuery.refetch()}>Retry</button></div>
+      ) : activity.length ? (
+        <div className="transaction-list">
+          {activity.map((transaction) => (
+            <div className="transaction-row" key={transaction.transactionId}>
+              <div className="transaction-icon">{transaction.operationType.toLowerCase().includes("credit") ? <ArrowDownLeft size={18}/> : <ArrowUpRight size={18}/>}</div>
+              <div className="transaction-info"><strong>{transaction.operationType.replaceAll("_", " ")}</strong><span>{new Date(transaction.createdAt).toLocaleDateString()}</span></div>
+              <div className="transaction-value"><strong>{money(transaction.amount, transaction.currency)}</strong><span className={`state-pill state-${transaction.status.toLowerCase()}`}>{transaction.status.replaceAll("_", " ")}</span></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state"><strong>No transactions yet</strong><p>Your latest wallet activity will appear here.</p><Link to="/remittance" className="text-link">Start a transfer <ArrowRight size={14}/></Link></div>
+      )}
+      <p className="compliance-note"><ShieldCheck size={14}/> RackPay's backend is authoritative for balances, payments and transfer status.</p>
     </section>
   );
 }
