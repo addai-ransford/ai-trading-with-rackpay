@@ -13,6 +13,7 @@ import {
   type MobileMoneyNetwork,
   type RemittanceCountry,
 } from "../api/remittanceApi";
+import { ApiError } from "../../../shared/api/httpClient";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
 type Step = "country" | "recipient" | "amount";
@@ -488,9 +489,8 @@ export function RemittancePage() {
           </button>
 
           {quoteMutation.isError ? (
-            <p className="mt-3 text-sm text-red-300">
-              The quote could not be created. Please review the amount and try
-              again.
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {errorMessage(quoteMutation.error, "The quote could not be created. Review the details and try again.")}
             </p>
           ) : null}
 
@@ -558,8 +558,8 @@ export function RemittancePage() {
                     </button>
                   ) : null}
                   {payoutMutation.isError ? (
-                    <p className="mt-3 text-sm text-red-300">
-                      The payout request could not be started.
+                    <p role="alert" className="mt-3 text-sm text-red-300">
+                      {errorMessage(payoutMutation.error, "The payout request could not be started.")}
                     </p>
                   ) : null}
                 </div>
@@ -579,9 +579,8 @@ export function RemittancePage() {
                     {fundMutation.isPending ? "Funding…" : "Fund remittance"}
                   </button>
                   {fundMutation.isError ? (
-                    <p className="mt-3 text-sm text-red-300">
-                      The remittance could not be funded. Your wallet was not
-                      assumed to be debited by the app.
+                    <p role="alert" className="mt-3 text-sm text-red-300">
+                      {errorMessage(fundMutation.error, "The remittance could not be funded. Your wallet was not assumed to be debited by the app.")}
                     </p>
                   ) : null}
                 </>
@@ -609,4 +608,13 @@ function countryFlag(countryCode: string) {
   return String.fromCodePoint(
     ...[...normalized].map((character) => 127397 + character.charCodeAt(0)),
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    return error.correlationId
+      ? `${error.message} (Reference: ${error.correlationId})`
+      : error.message;
+  }
+  return error instanceof Error ? error.message : fallback;
 }
