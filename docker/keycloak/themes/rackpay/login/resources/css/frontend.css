@@ -1,0 +1,129 @@
+:root {
+  --pf-v5-global--primary-color--100: #ffffff;
+  --pf-v5-global--primary-color--200: #e2e8f0;
+  --pf-v5-global--link--Color: #cbd5e1;
+  --pf-v5-global--link--Color--hover: #ffffff;
+  --pf-v5-global--BackgroundColor--dark-100: #020617;
+  --pf-v5-global--BackgroundColor--dark-200: #0f172a;
+}
+
+body,
+.pf-v5-c-login {
+  background-color: #020617;
+  color: #f8fafc;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pf-v5-c-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 32px 20px;
+}
+
+.pf-v5-c-login__container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 536px;
+  min-height: calc(100vh - 64px);
+}
+
+.pf-v5-c-login__header {
+  display: none;
+}
+
+#kc-registration,
+#kc-registration-container,
+.pf-v5-c-login__main-footer {
+  display: none;
+}
+
+.rackpay-registration-switch {
+  margin: 24px 0 0;
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: center;
+}
+
+.rackpay-registration-switch a {
+  color: #f8fafc;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#kc-header-wrapper {
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pf-v5-c-login__main {
+  width: min(536px, calc(100vw - 32px));
+  max-width: none;
+  margin: 0;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background-color: rgb(15 23 42 / 70%);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 20%);
+}
+
+.pf-v5-c-login__main-header {
+  padding: 32px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 24px 32px 32px;
+}
+
+.pf-v5-c-login__main-header .pf-v5-c-title,
+#kc-page-title {
+  color: #f8fafc;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.pf-v5-c-form-control input {
+  min-height: 48px;
+  padding: 0 12px;
+  border-color: #334155;
+  border-radius: 6px;
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+.pf-v5-c-form-control input:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 2px rgb(148 163 184 / 22%);
+}
+
+.pf-v5-c-button.pf-m-primary {
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #020617;
+  font-weight: 700;
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+  background-color: #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .pf-v5-c-login {
+    padding: 24px 16px;
+  }
+
+  .pf-v5-c-login__container {
+    gap: 24px;
+    min-height: calc(100vh - 48px);
+  }
+
+  .pf-v5-c-login__main {
+    width: 100%;
+  }
+}
