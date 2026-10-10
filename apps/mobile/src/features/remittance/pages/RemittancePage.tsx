@@ -256,10 +256,13 @@ export function RemittancePage() {
                       : "border-slate-800 bg-slate-950"
                   }`}
                 >
-                  <span>
+                  <span className="flex items-center gap-3">
+                    <span aria-hidden="true" className="text-2xl">{countryFlag(item.code)}</span>
+                    <span>
                     <span className="block font-medium">{item.name}</span>
                     <span className="text-xs text-slate-500">
                       {item.dialCode} · {item.currency}
+                    </span>
                     </span>
                   </span>
                   <span className="text-sm text-slate-400">{item.code}</span>
@@ -306,6 +309,13 @@ export function RemittancePage() {
                 </option>
               ))}
             </select>
+            {networksQuery.isPending ? (
+              <span className="mt-2 block text-xs text-slate-500">Loading available networks…</span>
+            ) : networksQuery.isError ? (
+              <span className="mt-2 block text-xs text-red-300">Networks could not be loaded. Try again in a moment.</span>
+            ) : networksQuery.data?.length === 0 ? (
+              <span className="mt-2 block text-xs text-amber-300">No enabled mobile-money networks are configured for this country.</span>
+            ) : null}
           </label>
 
           <label className="mt-4 block text-sm text-slate-400">
@@ -562,7 +572,7 @@ export function RemittancePage() {
                   </p>
                   <button
                     type="button"
-                    disabled={fundMutation.isPending || !fundIdempotencyKey}
+                    disabled={fundMutation.isPending || !fundIdempotencyKey || quoteExpired}
                     onClick={() => fundMutation.mutate()}
                     className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
                   >
@@ -590,5 +600,13 @@ function QuoteRow({ label, value }: { label: string; value: string }) {
       <span className="text-slate-500">{label}</span>
       <span className="text-right font-medium">{value}</span>
     </div>
+  );
+}
+
+function countryFlag(countryCode: string) {
+  const normalized = countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return "🌐";
+  return String.fromCodePoint(
+    ...[...normalized].map((character) => 127397 + character.charCodeAt(0)),
   );
 }
