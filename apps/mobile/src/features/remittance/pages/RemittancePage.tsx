@@ -20,6 +20,7 @@ type Step = "country" | "recipient" | "amount";
 export function RemittancePage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [country, setCountry] = useState<RemittanceCountry>();
+  const [sourceCountryCode, setSourceCountryCode] = useState("");
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationFailure, setVerificationFailure] = useState<string>();
@@ -96,7 +97,9 @@ export function RemittancePage() {
 
   const quoteMutation = useMutation({
     mutationFn: () => {
-      const sourceCountry = sendCountriesQuery.data?.[0];
+      const sourceCountry = sendCountriesQuery.data?.find(
+        (item) => item.code === sourceCountryCode,
+      );
       if (
         !accessToken ||
         !recipientId ||
@@ -377,10 +380,42 @@ export function RemittancePage() {
           </p>
 
           <label className="mt-5 block text-sm text-slate-400">
+            Sending country
+            <select
+              value={sourceCountryCode}
+              onChange={(event) => {
+                setSourceCountryCode(event.target.value);
+                quoteMutation.reset();
+                fundMutation.reset();
+                setFundedRemittanceId(undefined);
+                setFundIdempotencyKey(undefined);
+              }}
+              disabled={sendCountriesQuery.isPending || sendCountriesQuery.isError}
+              className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white disabled:opacity-50"
+            >
+              <option value="">
+                {sendCountriesQuery.isPending
+                  ? "Loading sending countries…"
+                  : "Select sending country"}
+              </option>
+              {sendCountriesQuery.data?.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name} · {item.currency}
+                </option>
+              ))}
+            </select>
+            {sendCountriesQuery.isError ? (
+              <span className="mt-2 block text-xs text-red-300">
+                Sending countries could not be loaded. Retry by reopening this page.
+              </span>
+            ) : null}
+          </label>
+
+          <label className="mt-4 block text-sm text-slate-400">
             You send
             <div className="mt-2 flex">
               <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {sendCountriesQuery.data?.[0]?.currency ?? "—"}
+                {sendCountriesQuery.data?.find((item) => item.code === sourceCountryCode)?.currency ?? "—"}
               </span>
               <input
                 value={amount}
@@ -396,7 +431,8 @@ export function RemittancePage() {
             type="button"
             disabled={
               !amount.trim() ||
-              !sendCountriesQuery.data?.[0] ||
+              !sourceCountryCode ||
+              !sendCountriesQuery.data?.some((item) => item.code === sourceCountryCode) ||
               quoteMutation.isPending
             }
             onClick={() => quoteMutation.mutate()}
