@@ -479,7 +479,7 @@ export function RemittancePage() {
           <button
             type="button"
             disabled={
-              !amount.trim() ||
+              !amountIsValid ||
               !sourceCountryCode ||
               !sendCountriesQuery.data?.some((item) => item.code === sourceCountryCode) ||
               quoteMutation.isPending
