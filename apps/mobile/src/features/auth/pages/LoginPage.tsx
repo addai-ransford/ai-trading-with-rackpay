@@ -177,8 +177,8 @@ export function LoginPage() {
         )}
 
         <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-          Authentication is handled by Keycloak. RackPay never receives your
-          password.
+          Sign-in is handled by Keycloak. Registration details are securely
+          processed to create your RackPay account.
         </p>
       </div>
     </section>
