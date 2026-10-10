@@ -512,6 +512,21 @@ export function RemittancePage() {
                 </div>
               </div>
 
+              <div className="quote-rate" aria-label="Quoted exchange rate">
+                <div>
+                  <p className="quote-rate-label">
+                    <span aria-hidden="true">↔</span>
+                    Exchange rate
+                  </p>
+                  <p className="quote-rate-note">
+                    Rate returned by RackPay for this quote
+                  </p>
+                </div>
+                <p className="quote-rate-value">
+                  1 {quote.sourceCurrency} = {quote.fxRate} {quote.destinationCurrency}
+                </p>
+              </div>
+
               <div className="mt-4 grid gap-3 text-sm">
                 <QuoteRow
                   label="You send"
@@ -525,7 +540,6 @@ export function RemittancePage() {
                   label="Recipient gets"
                   value={`${quote.destinationAmount} ${quote.destinationCurrency}`}
                 />
-                <QuoteRow label="FX rate" value={quote.fxRate} />
               </div>
 
               {quoteExpired ? (
