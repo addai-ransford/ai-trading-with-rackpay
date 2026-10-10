@@ -35,15 +35,14 @@ export function RemittanceHistoryPage() {
   }
 
   return (
-    <section className="flex min-h-dvh flex-col gap-6 pb-10 pt-4">
-      <header className="flex items-center gap-3">
-        <Link to="/" className="rounded-xl border border-slate-800 p-2 text-slate-300" aria-label="Back home">
-          <ArrowLeft size={18} />
-        </Link>
+    <section className="space-y-5">
+      <header className="page-heading">
         <div>
-          <p className="text-sm text-slate-500">Activity</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Remittance history</h1>
+          <p className="eyebrow">TRANSFER ACTIVITY</p>
+          <h1>Remittance history</h1>
+          <p className="page-description">Review the latest backend-reported state of your transfers.</p>
         </div>
+        <Link to="/remittance" className="button button-secondary"><ArrowLeft size={15}/> Send money</Link>
       </header>
 
       {listQuery.isPending ? <p className="text-sm text-slate-500">Loading transfers…</p> : null}
