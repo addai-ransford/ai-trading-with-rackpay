@@ -2,7 +2,7 @@
   "realm": "rackpay",
   "enabled": true,
   "displayName": "RackPay",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
