@@ -258,7 +258,7 @@ export function RemittancePage() {
             </div>
           ) : (
             <>
-              <div className="country-picker-results"><span>{filteredCountries.length} {filteredCountries.length === 1 ? "destination" : "destinations"}</span><span>Mobile money supported</span></div>
+              <div className="country-picker-results"><span>{filteredCountries.length} {filteredCountries.length === 1 ? "destination" : "destinations"}</span><span>Enabled corridors</span></div>
               <div className="country-picker-grid">
                 {filteredCountries.map((item) => (
                   <button
