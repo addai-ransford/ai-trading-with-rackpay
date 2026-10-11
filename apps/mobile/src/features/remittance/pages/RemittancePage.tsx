@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { CheckCircle2, History, Send } from "lucide-react";
+import { ArrowRight, CheckCircle2, History, Search, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
@@ -21,6 +21,7 @@ type Step = "country" | "recipient" | "amount";
 export function RemittancePage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [country, setCountry] = useState<RemittanceCountry>();
+  const [countrySearch, setCountrySearch] = useState("");
   const [sourceCountryCode, setSourceCountryCode] = useState("");
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -46,6 +47,11 @@ export function RemittancePage() {
     queryFn: () => listRemittanceCountries(accessToken!, "SEND"),
     enabled: Boolean(accessToken),
     staleTime: 5 * 60_000,
+  });
+
+  const filteredCountries = (countriesQuery.data ?? []).filter((item) => {
+    const term = countrySearch.trim().toLocaleLowerCase();
+    return !term || [item.name, item.code, item.dialCode, item.currency].some((value) => value.toLocaleLowerCase().includes(term));
   });
 
   const networksQuery = useQuery({
@@ -210,61 +216,85 @@ export function RemittancePage() {
       </div>
 
       {step === "country" ? (
-        <section className="form-panel">
-          <h2 className="font-medium">Where are you sending?</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Countries are loaded from RackPay configuration.
-          </p>
+        <section className="country-picker-panel">
+          <div className="country-picker-heading">
+            <div>
+              <p className="eyebrow">CHOOSE DESTINATION</p>
+              <h2>Where are you sending?</h2>
+              <p>Choose a country where RackPay has enabled receiving transfers.</p>
+            </div>
+            <span className="country-picker-icon"><ArrowRight size={20}/></span>
+          </div>
+
+          <div className="country-picker-search">
+            <Search size={17} aria-hidden="true" />
+            <input
+              value={countrySearch}
+              onChange={(event) => setCountrySearch(event.target.value)}
+              placeholder="Search country, code or currency"
+              aria-label="Search receiving countries"
+            />
+            {countrySearch ? <button type="button" onClick={() => setCountrySearch("")} aria-label="Clear country search">Clear</button> : null}
+          </div>
 
           {countriesQuery.isPending ? (
-            <p className="mt-5 text-sm text-slate-500">Loading countries…</p>
+            <div className="country-picker-loading" role="status"><span className="country-loading-dot" /> Loading available destinations…</div>
           ) : countriesQuery.isError ? (
-            <p className="mt-5 text-sm text-red-300">
-              We could not load receiving countries.
-            </p>
-          ) : (
-            <div className="mt-4 grid gap-2">
-              {countriesQuery.data.map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  onClick={() => {
-                    setCountry(item);
-                    setNetwork(undefined);
-                    setPhoneNumber("");
-                    setRecipientName(undefined);
-                    setRecipientId(undefined);
-                    setVerificationFailure(undefined);
-                    setConfirmedRecipient(false);
-                    setAmount("");
-                    quoteMutation.reset();
-                    fundMutation.reset();
-                    setFundedRemittanceId(undefined);
-                    setFundIdempotencyKey(undefined);
-                    setStep("recipient");
-                  }}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-left ${
-                    country?.code === item.code
-                      ? "border-white bg-slate-800"
-                      : "border-slate-800 bg-slate-950"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span aria-hidden="true" className="text-2xl">
-                      {countryFlag(item.code)}
-                    </span>
-                    <span>
-                      <span className="block font-medium">{item.name}</span>
-                      <span className="text-xs text-slate-500">
-                        {item.dialCode} · {item.currency}
-                      </span>
-                    </span>
-                  </span>
-                  <span className="text-sm text-slate-400">{item.code}</span>
-                </button>
-              ))}
+            <div className="country-picker-empty">
+              <strong>Destinations are temporarily unavailable</strong>
+              <p>We could not load the current receiving-country configuration.</p>
+              <button type="button" className="button button-secondary" onClick={() => void countriesQuery.refetch()}>Try again</button>
             </div>
+          ) : countriesQuery.data.length === 0 ? (
+            <div className="country-picker-empty">
+              <strong>No receiving destinations are enabled yet</strong>
+              <p>RackPay will show destinations here once they are enabled by the platform.</p>
+            </div>
+          ) : filteredCountries.length === 0 ? (
+            <div className="country-picker-empty">
+              <strong>No countries match “{countrySearch}”</strong>
+              <p>Try a country name, two-letter country code, calling code or currency.</p>
+              <button type="button" className="button button-secondary" onClick={() => setCountrySearch("")}>Clear search</button>
+            </div>
+          ) : (
+            <>
+              <div className="country-picker-results"><span>{filteredCountries.length} {filteredCountries.length === 1 ? "destination" : "destinations"}</span><span>Mobile money supported</span></div>
+              <div className="country-picker-grid">
+                {filteredCountries.map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => {
+                      setCountry(item);
+                      setNetwork(undefined);
+                      setPhoneNumber("");
+                      setRecipientName(undefined);
+                      setRecipientId(undefined);
+                      setVerificationFailure(undefined);
+                      setConfirmedRecipient(false);
+                      setAmount("");
+                      quoteMutation.reset();
+                      fundMutation.reset();
+                      setFundedRemittanceId(undefined);
+                      setFundIdempotencyKey(undefined);
+                      setStep("recipient");
+                    }}
+                    className={`country-option ${country?.code === item.code ? "selected" : ""}`}
+                    aria-pressed={country?.code === item.code}
+                  >
+                    <span className="country-option-flag" aria-hidden="true">{countryFlag(item.code)}</span>
+                    <span className="country-option-copy">
+                      <strong>{item.name}</strong>
+                      <small>{item.dialCode} <span aria-hidden="true">·</span> {item.currency}</small>
+                    </span>
+                    <span className="country-option-code">{item.code}</span>
+                    <ArrowRight className="country-option-arrow" size={16} aria-hidden="true"/>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
+          <p className="country-picker-footnote"><ShieldCheck size={14}/> Destinations and available networks come from RackPay configuration.</p>
         </section>
       ) : null}
 
