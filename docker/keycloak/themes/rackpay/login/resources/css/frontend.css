@@ -129,7 +129,7 @@ body, .pf-v5-c-login, .login-pf-page {
 #kc-locale, #kc-locale-wrapper {
   display: none !important;
 }
-.pf-v5-c-login__main, #kc-content, #kc-form {
+.pf-v5-c-login__main, #kc-content {
   width: 100%;
   max-width: 435px;
   margin: 0;
