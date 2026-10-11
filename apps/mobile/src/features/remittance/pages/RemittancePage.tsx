@@ -42,9 +42,12 @@ export function RemittancePage() {
   const [amount, setAmount] = useState("100");
   const [now, setNow] = useState(0);
   useEffect(() => {
-    setNow(Date.now());
+    const initialTick = window.setTimeout(() => setNow(Date.now()), 0);
     const timer = window.setInterval(() => setNow(Date.now()), 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialTick);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const [recipient, setRecipient] = useState<{
@@ -59,7 +62,8 @@ export function RemittancePage() {
     enabled: Boolean(accessToken),
   });
   const countries = countriesQuery.data ?? EMPTY_COUNTRIES;
-  const selectedCountry = countries.find((country) => country.code === countryCode);
+  const effectiveCountryCode = countryCode || countries[0]?.code || "";
+  const selectedCountry = countries.find((country) => country.code === effectiveCountryCode);
 
   const filteredCountries = useMemo(() => {
     const term = countrySearch.trim().toLocaleLowerCase();
@@ -71,24 +75,15 @@ export function RemittancePage() {
     );
   }, [countries, countrySearch]);
 
-  useEffect(() => {
-    if (!countryCode && countries.length) {
-      setCountryCode(countries[0].code);
-    }
-  }, [countries, countryCode]);
-
   const networksQuery = useQuery({
-    queryKey: ["remittance-networks", countryCode],
-    queryFn: () => listMobileMoneyNetworks(accessToken!, countryCode),
-    enabled: Boolean(accessToken && countryCode),
+    queryKey: ["remittance-networks", effectiveCountryCode],
+    queryFn: () => listMobileMoneyNetworks(accessToken!, effectiveCountryCode),
+    enabled: Boolean(accessToken && effectiveCountryCode),
   });
   const networks = networksQuery.data ?? EMPTY_NETWORKS;
-
-  useEffect(() => {
-    if (networks.length && !networks.some((network) => network.code === networkCode)) {
-      setNetworkCode(networks[0].code);
-    }
-  }, [networks, networkCode]);
+  const effectiveNetworkCode = networks.some((network) => network.code === networkCode)
+    ? networkCode
+    : networks[0]?.code ?? "";
 
   const verifyMutation = useMutation({
     mutationFn: () => {
@@ -100,7 +95,7 @@ export function RemittancePage() {
         countryDialCode: selectedCountry.dialCode,
         currency: selectedCountry.currencyCode,
         payoutMethod: "MOBILE_MONEY",
-        networkCode,
+        networkCode: effectiveNetworkCode,
         phoneNumber: phoneNumber.trim(),
       });
     },
@@ -234,7 +229,7 @@ export function RemittancePage() {
                   type="button"
                   key={country.code}
                   role="option"
-                  aria-selected={country.code === countryCode}
+                  aria-selected={country.code === effectiveCountryCode}
                   onClick={() => chooseCountry(country)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-800 ${country.code === countryCode ? "bg-slate-800/70" : ""}`}
                 >
@@ -243,7 +238,7 @@ export function RemittancePage() {
                     <span className="block text-sm font-medium">{country.name}</span>
                     <span className="block text-xs text-slate-500">{country.dialCode} · {country.currencyCode}</span>
                   </span>
-                  {country.code === countryCode && <span className="text-xs text-emerald-300">Selected</span>}
+                  {country.code === effectiveCountryCode && <span className="text-xs text-emerald-300">Selected</span>}
                 </button>
               ))}
               {!filteredCountries.length && <p className="px-4 py-5 text-sm text-slate-400">No matching countries found.</p>}
@@ -257,7 +252,7 @@ export function RemittancePage() {
         <label htmlFor="network" className="text-sm font-medium text-slate-300">Mobile money network</label>
         <select
           id="network"
-          value={networkCode}
+          value={effectiveNetworkCode}
           onChange={(event) => {
             setNetworkCode(event.target.value);
             setRecipient(null);
@@ -291,7 +286,7 @@ export function RemittancePage() {
         </div>
         <button
           type="button"
-          disabled={!selectedCountry || !networkCode || !phoneNumber.trim() || verifyMutation.isPending}
+          disabled={!selectedCountry || !effectiveNetworkCode || !phoneNumber.trim() || verifyMutation.isPending}
           onClick={() => verifyMutation.mutate()}
           className="w-full rounded-2xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
