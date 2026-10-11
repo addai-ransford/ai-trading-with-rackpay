@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, History, Search, Send, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, History, Search, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
@@ -305,6 +305,13 @@ export function RemittancePage() {
 
       {step === "recipient" && country ? (
         <section className="form-panel">
+          <button
+            type="button"
+            onClick={() => setStep("country")}
+            className="button button-secondary mb-4"
+          >
+            <ArrowLeft size={16} /> Back to destinations
+          </button>
           <h2 className="font-medium">Recipient</h2>
           <p className="mt-1 text-sm text-slate-500">
             Verify the mobile-money account before you fund the transfer.
@@ -443,6 +450,13 @@ export function RemittancePage() {
 
       {step === "amount" && country && recipientId ? (
         <section className="form-panel">
+          <button
+            type="button"
+            onClick={() => setStep("recipient")}
+            className="button button-secondary mb-4"
+          >
+            <ArrowLeft size={16} /> Back to recipient
+          </button>
           <h2 className="font-medium">Amount</h2>
           <p className="mt-1 text-sm text-slate-500">
             Enter the amount in your sending currency. RackPay supplies the
