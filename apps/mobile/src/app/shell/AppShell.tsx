@@ -1,8 +1,10 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuthStore } from "../../shared/auth/authStore";
 import {
   ArrowLeftRight,
   ChartNoAxesCombined,
   CircleHelp,
+  CircleUserRound,
   LayoutDashboard,
   Settings2,
   WalletCards,
@@ -18,7 +20,9 @@ const links = [
 
 export function AppShell() {
   const { pathname } = useLocation();
+  const authenticated = useAuthStore((state) => state.authenticated);
   const isLoginRoute = pathname === "/login";
+  const isGuestHome = pathname === "/" && !authenticated;
   return (
     <div className="app-frame">
       {!isLoginRoute ? (
@@ -27,14 +31,25 @@ export function AppShell() {
             <span className="brand-mark">R</span>
             <span>rack<span className="brand-light">pay</span></span>
           </NavLink>
-          <p className="nav-caption">WORKSPACE</p>
-          <nav className="side-nav" aria-label="Main navigation">
-            {links.map(({ to, label, icon: Icon, end }) => (
-              <NavLink key={to} to={to} end={end} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-                <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
-              </NavLink>
-            ))}
-          </nav>
+          {isGuestHome ? (
+            <div className="guest-sidebar-note">
+              <span className="secure-dot" />
+              <strong>Your money, connected.</strong>
+              <p>Wallets, international transfers and risk-controlled trading in one secure space.</p>
+              <Link to="/login" className="button button-primary full-width">Sign in or create account</Link>
+            </div>
+          ) : (
+            <>
+              <p className="nav-caption">WORKSPACE</p>
+              <nav className="side-nav" aria-label="Main navigation">
+                {links.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink key={to} to={to} end={end} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+                    <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </>
+          )}
           <div className="sidebar-bottom">
             <div className="help-card"><CircleHelp size={18}/><div><strong>Need help?</strong><span>Contact RackPay support</span></div></div>
             <div className="secure-note"><span className="secure-dot"/> Secure financial workspace</div>
@@ -46,11 +61,19 @@ export function AppShell() {
           <header className="topbar">
             <NavLink to="/" className="mobile-brand"><span className="brand-mark">R</span> rack<span className="brand-light">pay</span></NavLink>
             <span className="topbar-label">PERSONAL WORKSPACE</span>
-            <div className="topbar-right"><span className="status-dot"/> <span>Secure session</span></div>
+            <div className="topbar-right">
+              {authenticated ? (
+                <><span className="status-dot"/> <span>Secure session</span></>
+              ) : (
+                <Link to="/login" className="account-entry" aria-label="Sign in or create account">
+                  <CircleUserRound size={19} /><span>Sign in</span>
+                </Link>
+              )}
+            </div>
           </header>
         ) : null}
         <div className={isLoginRoute ? "login-content" : "page-content"}><Outlet /></div>
-        {!isLoginRoute ? (
+        {!isLoginRoute && !isGuestHome ? (
           <nav className="mobile-nav" aria-label="Mobile navigation">
             {links.slice(0, 4).map(({ to, label, icon: Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `mobile-nav-link ${isActive ? "active" : ""}`}>
