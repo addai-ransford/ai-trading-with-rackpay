@@ -231,7 +231,7 @@ export function RemittancePage() {
                   role="option"
                   aria-selected={country.code === effectiveCountryCode}
                   onClick={() => chooseCountry(country)}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-800 ${country.code === countryCode ? "bg-slate-800/70" : ""}`}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-800 ${country.code === effectiveCountryCode ? "bg-slate-800/70" : ""}`}
                 >
                   <span className="text-xl" aria-hidden="true">{countryFlag(country.code)}</span>
                   <span className="min-w-0 flex-1">
