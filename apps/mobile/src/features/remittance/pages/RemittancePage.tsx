@@ -37,6 +37,12 @@ export function RemittancePage() {
   const [networkCode, setNetworkCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [amount, setAmount] = useState("100");
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 5000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const [recipient, setRecipient] = useState<{
     recipientId: string;
     verifiedName: string;
@@ -140,7 +146,7 @@ export function RemittancePage() {
   }
 
   const quote = quoteMutation.data;
-  const quoteExpired = Boolean(quote && new Date(quote.expiresAt).getTime() <= Date.now());
+  const quoteExpired = Boolean(quote && new Date(quote.expiresAt).getTime() <= now);
 
   return (
     <section className="flex min-h-dvh flex-col gap-5 pb-10">
@@ -319,7 +325,7 @@ export function RemittancePage() {
 
       <button
         type="button"
-        disabled={!recipient || !selectedCountry || !Number.isFinite(Number(amount)) || Number(amount) <= 0 || quoteMutation.isPending || quoteExpired}
+        disabled={!recipient || !selectedCountry || !Number.isFinite(Number(amount)) || Number(amount) <= 0 || quoteMutation.isPending}
         onClick={() => quoteMutation.mutate()}
         className="w-full rounded-2xl bg-emerald-400 px-4 py-4 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
       >
