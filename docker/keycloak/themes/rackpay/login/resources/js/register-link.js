@@ -1,11 +1,10 @@
 function initializeRackPayLogin() {
     const page = document.querySelector(".pf-v5-c-login") || document.querySelector(".login-pf-page");
-    const keycloakContainer = document.querySelector(".pf-v5-c-login__container");
     const card = document.querySelector(".pf-v5-c-login__main");
     const formBody = document.querySelector(".pf-v5-c-login__main-body");
     const loginForm = document.querySelector("#kc-form-login");
 
-    if (!page || !keycloakContainer || !card || !formBody || !loginForm ||
+    if (!page || !card || !formBody || !loginForm ||
         document.querySelector(".rackpay-auth-layout")) return;
 
     const layout = document.createElement("div");
@@ -41,20 +40,9 @@ function initializeRackPayLogin() {
       <p class="rackpay-entry-note">Bootstrap administrator? Use the bootstrap email and password configured for your environment, then choose Continue to secure sign in.</p>
       <a class="rackpay-home-link" href="http://localhost:4000/">Back to RackPay home</a>`;
 
-    // Hide only the form region. Do not hide its ancestor card/body, because
-    // the landing actions live in that same card and must remain visible.
-    const formWrapper = loginForm.closest("#kc-form-wrapper") ||
-        loginForm.closest("#kc-form") || loginForm;
-    const hiddenElements = [formWrapper];
-    const options = document.querySelector("#kc-form-options");
-    const buttons = document.querySelector("#kc-form-buttons");
-    if (options && !hiddenElements.some(element => element.contains(options))) hiddenElements.push(options);
-    if (buttons && !hiddenElements.some(element => element.contains(buttons))) hiddenElements.push(buttons);
-
-    hiddenElements.forEach(element => {
-        element.dataset.rackpayDisplay = element.style.display || "";
-        element.style.display = "none";
-    });
+    // Hide only the actual form element. Hiding #kc-form-wrapper or #kc-form
+    // can hide the entire card/form body on different Keycloak templates.
+    loginForm.hidden = true;
 
     const registrationUrl = () => {
         const redirectUri = new URLSearchParams(window.location.search).get("redirect_uri");
@@ -62,7 +50,6 @@ function initializeRackPayLogin() {
         try {
             if (redirectUri && /^https?:\/\//i.test(redirectUri)) {
                 const redirectOrigin = new URL(redirectUri).origin;
-                // Keep registration on the RackPay app origin, not the Keycloak origin.
                 if (redirectOrigin !== window.location.origin) origin = redirectOrigin;
             }
         } catch (_) {}
@@ -71,10 +58,8 @@ function initializeRackPayLogin() {
 
     actions.querySelector(".rackpay-continue").addEventListener("click", () => {
         actions.remove();
-        hiddenElements.forEach(element => {
-            element.style.display = element.dataset.rackpayDisplay || "";
-        });
-        const username = document.querySelector("#username, input[name='username'], input[name='email']");
+        loginForm.hidden = false;
+        const username = loginForm.querySelector("#username, input[name='username'], input[name='email']");
         if (username) username.focus();
     });
     actions.querySelector(".rackpay-create").addEventListener("click", () => {
@@ -83,8 +68,7 @@ function initializeRackPayLogin() {
 
     formBody.append(actions);
 
-    // Place the hero and the existing Keycloak card inside the layout.
-    // Moving the container itself caused a parent/child cycle in the DOM.
+    // Move the card (not its containing wrapper) into the custom two-column layout.
     page.appendChild(layout);
     layout.append(hero, card);
 
