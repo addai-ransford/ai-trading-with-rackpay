@@ -6,7 +6,7 @@ import {
   ArrowUpRight,
   Bot,
   CreditCard,
-  Settings2,
+  LockKeyhole,
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
@@ -56,6 +56,48 @@ export function HomePage() {
   const balances = walletQuery.data?.balances ?? [];
   const activity = activityQuery.data?.content ?? [];
 
+  if (!accessToken) {
+    return (
+      <section className="public-home">
+        <div className="public-hero">
+          <div className="public-hero-copy">
+            <p className="eyebrow"><span className="hero-status-dot" /> MONEY MOVES WITH YOU</p>
+            <h1>One secure place for everything your money can do.</h1>
+            <p className="page-description">
+              Manage multi-currency balances, send money internationally and explore AI-assisted trading with risk limits you control.
+            </p>
+            <div className="public-hero-actions">
+              <Link to="/login?mode=register" className="button button-primary">
+                Create your account <ArrowRight size={16} />
+              </Link>
+              <Link to="/login" className="button button-secondary">
+                Sign in
+              </Link>
+            </div>
+            <div className="public-trust-note"><LockKeyhole size={15} /> Secure sign-in powered by RackPay and Keycloak</div>
+          </div>
+          <div className="hero-preview" aria-label="RackPay feature preview">
+            <div className="hero-preview-top"><span className="brand-mark">R</span><span>YOUR FINANCIAL SPACE</span><span className="preview-status">READY</span></div>
+            <div className="hero-preview-balance"><span>Multi-currency wallet</span><strong>One home for your balances</strong><small>Keep currencies organised in one place.</small></div>
+            <div className="hero-preview-feature"><span className="action-icon"><ArrowLeftRight size={18}/></span><div><strong>International transfers</strong><p>Review rates and fees before confirming.</p></div><ArrowRight size={16}/></div>
+            <div className="hero-preview-feature"><span className="action-icon"><Bot size={18}/></span><div><strong>AI trading controls</strong><p>Choose your own trading risk limits.</p></div><ArrowRight size={16}/></div>
+          </div>
+        </div>
+
+        <div className="public-section-heading">
+          <div><p className="eyebrow">BUILT AROUND YOU</p><h2>Your money. Your decisions.</h2></div>
+          <p>Start with an account when you're ready. You can explore RackPay first.</p>
+        </div>
+        <div className="public-feature-grid">
+          <article className="public-feature-card"><span className="action-icon"><WalletCards size={20}/></span><h3>Multi-currency wallet</h3><p>Keep your currency balances and transaction history together.</p></article>
+          <article className="public-feature-card"><span className="action-icon"><ArrowLeftRight size={20}/></span><h3>Clear remittance quotes</h3><p>See the exchange rate, fees and recipient amount before funding a transfer.</p></article>
+          <article className="public-feature-card"><span className="action-icon"><Bot size={20}/></span><h3>Risk-controlled trading</h3><p>Set a maximum amount or range that the trading system must respect.</p></article>
+        </div>
+        <p className="compliance-note"><ShieldCheck size={14}/> Financial balances, rates, fees and transfer status are determined by RackPay's backend.</p>
+      </section>
+    );
+  }
+
   return (
     <section>
       <div className="page-heading">
@@ -103,7 +145,6 @@ export function HomePage() {
         <Link to="/wallet/add-money" className="action-card"><span className="action-icon"><CreditCard size={19}/></span><strong>Add money</strong><p>Start a secure provider-hosted checkout</p><ArrowRight className="action-arrow" size={16}/></Link>
         <Link to="/remittance" className="action-card"><span className="action-icon"><ArrowLeftRight size={19}/></span><strong>Send money</strong><p>Review exchange rates and send internationally</p><ArrowRight className="action-arrow" size={16}/></Link>
         <Link to="/trading" className="action-card"><span className="action-icon"><Bot size={19}/></span><strong>AI Trading</strong><p>Trading sessions and risk controls</p><ArrowRight className="action-arrow" size={16}/></Link>
-        <Link to="/admin/payment-providers" className="action-card"><span className="action-icon"><Settings2 size={19}/></span><strong>Platform settings</strong><p>Manage configured payment providers</p><ArrowRight className="action-arrow" size={16}/></Link>
       </div>
 
       <div className="section-heading">
