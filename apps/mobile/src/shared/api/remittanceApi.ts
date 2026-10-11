@@ -1,4 +1,5 @@
 import { apiFetch } from "./httpClient";
+
 export type Remittance = {
   remittanceId: string;
   recipientName: string;
@@ -69,3 +70,62 @@ export async function listMobileMoneyNetworks(
   );
 }
 
+export type RecipientVerification = {
+  verified: boolean;
+  recipientId: string;
+  countryCode: string;
+  currency: string;
+  payoutMethod: "MOBILE_MONEY";
+  networkCode: string;
+  normalizedPhoneNumber: string;
+  verifiedName: string;
+};
+
+export async function verifyRemittanceRecipient(
+  accessToken: string,
+  request: {
+    countryCode: string;
+    countryDialCode: string;
+    currency: string;
+    payoutMethod: "MOBILE_MONEY";
+    networkCode: string;
+    phoneNumber: string;
+  },
+): Promise<RecipientVerification> {
+  return apiFetch<RecipientVerification>(
+    "/api/v1/remittances/recipients/verify",
+    { method: "POST", body: JSON.stringify(request) },
+    accessToken,
+  );
+}
+
+export type RemittanceQuote = {
+  quoteId: string;
+  recipientId: string;
+  sourceCountryCode: string;
+  destinationCountryCode: string;
+  sourceCurrency: string;
+  sourceAmount: number;
+  destinationCurrency: string;
+  destinationAmount: number;
+  feeAmount: number;
+  fxRate: number;
+  expiresAt: string;
+};
+
+export async function createRemittanceQuote(
+  accessToken: string,
+  request: {
+    recipientId: string;
+    sourceCountryCode: string;
+    sourceCurrency: string;
+    destinationCurrency: string;
+    sourceAmount: number;
+  },
+): Promise<RemittanceQuote> {
+  return apiFetch<RemittanceQuote>(
+    "/api/v1/remittances/quotes",
+    { method: "POST", body: JSON.stringify(request) },
+    accessToken,
+  );
+}
