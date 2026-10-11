@@ -5,13 +5,28 @@
   --pf-v5-global--link--Color--hover: #ffffff;
   --pf-v5-global--BackgroundColor--dark-100: #020617;
   --pf-v5-global--BackgroundColor--dark-200: #0f172a;
+  --rackpay-page: #020617;
+  --rackpay-surface: rgba(15, 23, 42, .85);
+  --rackpay-border: #1e293b;
+  --rackpay-input: #0f172a;
+  --rackpay-text: #f8fafc;
+  --rackpay-muted: #94a3b8;
+}
+
+/* Keep Keycloak's real authentication form, while matching RackPay's app
+   registration card: dark navy surface, rounded corners, and white actions. */
+html,
+body {
+  min-height: 100%;
+  background: var(--rackpay-page);
+  color: var(--rackpay-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body,
 .pf-v5-c-login {
-  background-color: #020617;
-  color: #f8fafc;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--rackpay-page);
+  color: var(--rackpay-text);
 }
 
 .pf-v5-c-login {
@@ -19,7 +34,7 @@ body,
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 32px 20px;
+  padding: 32px 16px;
 }
 
 .pf-v5-c-login__container {
@@ -36,9 +51,183 @@ body,
   display: none;
 }
 
+.pf-v5-c-login__main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 536px;
+  margin: 0 auto;
+  border: 1px solid var(--rackpay-border);
+  border-radius: 12px;
+  background: var(--rackpay-surface);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+  color: var(--rackpay-text);
+}
+
+.pf-v5-c-login__main-header {
+  padding: 28px 28px 0;
+  border: 0;
+  background: transparent;
+}
+
+.pf-v5-c-login__main-header::before {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--rackpay-muted);
+  content: "RACKPAY ACCOUNT";
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.pf-v5-c-login__main-header .pf-v5-c-title,
+#kc-page-title {
+  margin: 0;
+  color: var(--rackpay-text);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 20px 28px 28px;
+}
+
+.pf-v5-c-login__main-footer,
+.pf-v5-c-login__main-footer-band {
+  display: none;
+}
+
+.pf-v5-c-form__group,
+.pf-v5-c-form__group-control,
+.form-group,
+#kc-form-options {
+  margin-bottom: 16px;
+}
+
+.pf-v5-c-form__label,
+.pf-v5-c-form label,
+.form-group label,
+.control-label,
+label {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pf-v5-c-form-control,
+.pf-v5-c-form-control input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+input[type="url"],
+input[type="search"],
+select,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: var(--rackpay-input);
+  color: var(--rackpay-text);
+  font: inherit;
+  box-shadow: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.pf-v5-c-form-control:hover,
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #475569;
+}
+
+.pf-v5-c-form-control:focus,
+.pf-v5-c-form-control input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, .22);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #ffffff;
+}
+
+.pf-v5-c-check__label,
+.checkbox label,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.pf-v5-c-button,
+button,
+input[type="submit"],
+#kc-login {
+  min-height: 46px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pf-v5-c-button.pf-m-primary,
+.pf-v5-c-button.pf-m-primary:hover,
+#kc-login,
+input[type="submit"] {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #ffffff;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #020617;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+#kc-login:hover,
+input[type="submit"]:hover {
+  background: #e2e8f0;
+  border-color: #e2e8f0;
+}
+
+.pf-v5-c-button:focus-visible,
+button:focus-visible,
+input[type="submit"]:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(148, 163, 184, .35);
+  outline-offset: 2px;
+}
+
+a,
+#kc-form-options a,
+#kc-info a,
+#kc-registration a {
+  color: #f8fafc;
+  font-weight: 600;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: #cbd5e1;
+}
+
 #kc-registration,
-#kc-registration-container,
-.pf-v5-c-login__main-footer {
+#kc-registration-container {
   display: none;
 }
 
@@ -62,55 +251,10 @@ body,
   font-weight: 600;
 }
 
-.pf-v5-c-login__main {
-  width: min(536px, calc(100vw - 32px));
-  max-width: none;
-  margin: 0;
-  border: 1px solid #1e293b;
+.pf-v5-c-alert,
+.alert,
+.pf-v5-c-form__helper-text {
   border-radius: 8px;
-  background-color: rgb(15 23 42 / 70%);
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 20%);
-}
-
-.pf-v5-c-login__main-header {
-  padding: 32px;
-  border-bottom: 1px solid #1e293b;
-}
-
-.pf-v5-c-login__main-body {
-  padding: 24px 32px 32px;
-}
-
-.pf-v5-c-login__main-header .pf-v5-c-title,
-#kc-page-title {
-  color: #f8fafc;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.pf-v5-c-form-control input {
-  min-height: 48px;
-  padding: 0 12px;
-  border-color: #334155;
-  border-radius: 6px;
-  background-color: #020617;
-  color: #f8fafc;
-}
-
-.pf-v5-c-form-control input:focus {
-  border-color: #94a3b8;
-  box-shadow: 0 0 0 2px rgb(148 163 184 / 22%);
-}
-
-.pf-v5-c-button.pf-m-primary {
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #020617;
-  font-weight: 700;
-}
-
-.pf-v5-c-button.pf-m-primary:hover {
-  background-color: #e2e8f0;
 }
 
 @media (max-width: 720px) {
@@ -125,5 +269,27 @@ body,
 
   .pf-v5-c-login__main {
     width: 100%;
+  }
+
+  .pf-v5-c-login__main-header {
+    padding: 24px 20px 0;
+  }
+
+  .pf-v5-c-login__main-body {
+    padding: 20px;
+  }
+
+  .pf-v5-c-login__main-header .pf-v5-c-title,
+  #kc-page-title {
+    font-size: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
   }
 }
