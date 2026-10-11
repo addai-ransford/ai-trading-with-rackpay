@@ -15,20 +15,11 @@ export type Remittance = {
   updatedAt: string;
 };
 
-export async function getRemittance(
-  remittanceId: string,
-  accessToken: string,
-): Promise<Remittance> {
-  return apiFetch<Remittance>(
-    `/api/v1/remittances/${encodeURIComponent(remittanceId)}`,
-    {},
-    accessToken,
-  );
+export async function getRemittance(remittanceId: string, accessToken: string): Promise<Remittance> {
+  return apiFetch<Remittance>(`/api/v1/remittances/${encodeURIComponent(remittanceId)}`, {}, accessToken);
 }
 
-export async function listRemittances(
-  accessToken: string,
-): Promise<Remittance[]> {
+export async function listRemittances(accessToken: string): Promise<Remittance[]> {
   return apiFetch<Remittance[]>("/api/v1/remittances", {}, accessToken);
 }
 
@@ -39,6 +30,11 @@ export type RemittanceCountry = {
   currencyCode: string;
   sendEnabled: boolean;
   receiveEnabled: boolean;
+};
+
+type RemittanceCountryResponse = Omit<RemittanceCountry, "currencyCode"> & {
+  currency?: string;
+  currencyCode?: string;
 };
 
 export type MobileMoneyNetwork = {
@@ -52,17 +48,18 @@ export async function listRemittanceCountries(
   accessToken: string,
   direction: "SEND" | "RECEIVE" = "RECEIVE",
 ): Promise<RemittanceCountry[]> {
-  return apiFetch<RemittanceCountry[]>(
+  const countries = await apiFetch<RemittanceCountryResponse[]>(
     `/api/v1/remittances/config/countries?direction=${direction}`,
     {},
     accessToken,
   );
+  return countries.map(({ currency, currencyCode, ...country }) => ({
+    ...country,
+    currencyCode: currencyCode ?? currency ?? "",
+  }));
 }
 
-export async function listMobileMoneyNetworks(
-  accessToken: string,
-  countryCode: string,
-): Promise<MobileMoneyNetwork[]> {
+export async function listMobileMoneyNetworks(accessToken: string, countryCode: string): Promise<MobileMoneyNetwork[]> {
   return apiFetch<MobileMoneyNetwork[]>(
     `/api/v1/remittances/config/countries/${encodeURIComponent(countryCode)}/networks`,
     {},
