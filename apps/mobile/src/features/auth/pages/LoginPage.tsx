@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../shared/api/httpClient";
 import { login } from "../../../shared/auth/keycloak";
@@ -52,10 +54,19 @@ export function LoginPage() {
   }
 
   return (
-    <section className="mx-auto flex min-h-dvh w-full max-w-[536px] flex-col justify-center px-4 py-8 text-slate-100 sm:px-0">
-      <div className="w-full rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/20 sm:p-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-50">
+    <section className="auth-page">
+      <div className="auth-intro">
+        <Link to="/" className="auth-brand" aria-label="Back to RackPay home"><span className="brand-mark">R</span> rack<span className="brand-light">pay</span></Link>
+        <p className="eyebrow">YOUR FINANCIAL SPACE</p>
+        <h1>Money management that moves with you.</h1>
+        <p>Access your wallet, international transfers and trading controls from one secure workspace.</p>
+        <div className="auth-promise"><span><ShieldCheck size={17}/></span><div><strong>Designed around security</strong><small>Authentication and permissions are verified by RackPay and Keycloak.</small></div></div>
+        <div className="auth-promise"><span><LockKeyhole size={17}/></span><div><strong>One account, one workspace</strong><small>Your account and wallet are created together during registration.</small></div></div>
+      </div>
+      <div className="auth-card">
+        <div className="auth-card-heading">
+          <p className="eyebrow">{registering ? "GET STARTED" : "WELCOME BACK"}</p>
+          <h2 className="text-2xl font-semibold text-slate-50">
             {registering ? "Create account" : "Sign in"}
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -85,7 +96,7 @@ export function LoginPage() {
 
         {registering ? (
           <form
-            className="mt-6 grid gap-4"
+            className="auth-form mt-6 grid gap-4"
             onSubmit={(event) => void handleRegister(event)}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -158,13 +169,13 @@ export function LoginPage() {
             </button>
           </form>
         ) : (
-          <div className="mt-6 grid gap-3">
+          <div className="auth-actions mt-6 grid gap-3">
             <button
               type="button"
               onClick={() => void login()}
               className="rounded-md bg-white px-4 py-3 font-semibold text-slate-950 transition hover:bg-slate-200"
             >
-              Sign in
+              Continue to secure sign in <ArrowRight size={16}/>
             </button>
             <button
               type="button"
@@ -176,10 +187,12 @@ export function LoginPage() {
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-          Sign-in is handled by Keycloak. Registration details are securely
-          processed to create your RackPay account.
+        <p className="auth-footnote">
+          {registering
+            ? "Your password is set securely through RackPay's identity service."
+            : "Bootstrap administrator? Use the bootstrap email and password configured for your environment, then choose Continue to secure sign in."}
         </p>
+        <Link to="/" className="auth-back-home">Back to RackPay home</Link>
       </div>
     </section>
   );
