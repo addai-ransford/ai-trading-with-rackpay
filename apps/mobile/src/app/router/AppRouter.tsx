@@ -17,8 +17,8 @@ export function AppRouter() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route index element={<HomePage />} />
         <Route element={<ProtectedRoute />}>
-          <Route index element={<HomePage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/wallet/add-money" element={<PaymentPage />} />
           <Route path="/remittance" element={<RemittancePage />} />
