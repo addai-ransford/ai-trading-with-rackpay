@@ -7,12 +7,15 @@ import {
   listMobileMoneyNetworks,
   listRemittanceCountries,
   verifyRemittanceRecipient,
+  type MobileMoneyNetwork,
   type RemittanceCountry,
 } from "../../../shared/api/remittanceApi";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
 const SOURCE_COUNTRY = "BE";
 const SOURCE_CURRENCY = "EUR";
+const EMPTY_COUNTRIES: RemittanceCountry[] = [];
+const EMPTY_NETWORKS: MobileMoneyNetwork[] = [];
 
 function countryFlag(code: string) {
   return code
@@ -37,8 +40,9 @@ export function RemittancePage() {
   const [networkCode, setNetworkCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [amount, setAmount] = useState("100");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   useEffect(() => {
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 5000);
     return () => window.clearInterval(timer);
   }, []);
@@ -54,7 +58,7 @@ export function RemittancePage() {
     queryFn: () => listRemittanceCountries(accessToken!, "RECEIVE"),
     enabled: Boolean(accessToken),
   });
-  const countries = countriesQuery.data ?? [];
+  const countries = countriesQuery.data ?? EMPTY_COUNTRIES;
   const selectedCountry = countries.find((country) => country.code === countryCode);
 
   const filteredCountries = useMemo(() => {
@@ -78,7 +82,7 @@ export function RemittancePage() {
     queryFn: () => listMobileMoneyNetworks(accessToken!, countryCode),
     enabled: Boolean(accessToken && countryCode),
   });
-  const networks = networksQuery.data ?? [];
+  const networks = networksQuery.data ?? EMPTY_NETWORKS;
 
   useEffect(() => {
     if (networks.length && !networks.some((network) => network.code === networkCode)) {
