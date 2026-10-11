@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../shared/api/httpClient";
 import { login } from "../../../shared/auth/keycloak";
 import { useAuthStore } from "../../../shared/auth/authStore";
@@ -68,7 +67,7 @@ export function LoginPage() {
           <p className="eyebrow">{registering ? "GET STARTED" : "WELCOME BACK"}</p>
           <h2 className="text-2xl font-semibold text-slate-50">
             {registering ? "Create account" : "Sign in"}
-          </h1>
+          </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             {registering
               ? "Create your account and wallet securely."
