@@ -14,6 +14,12 @@ import {
   type RemittanceCountry,
 } from "../api/remittanceApi";
 import { ApiError } from "../../../shared/api/httpClient";
+import {
+  countryFlag,
+  isQuoteExpired,
+  isValidAmount,
+  isValidRecipientPhone,
+} from "../utils/remittanceUtils";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
 type Step = "country" | "recipient" | "amount";
@@ -32,7 +38,7 @@ export function RemittancePage() {
   const [step, setStep] = useState<Step>("country");
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
-  const [quoteNow, setQuoteNow] = useState(() => Date.now());
+  const [quoteNow, setQuoteNow] = useState(0);
   const [fundIdempotencyKey, setFundIdempotencyKey] = useState<string>();
 
   const countriesQuery = useQuery({
@@ -144,25 +150,24 @@ export function RemittancePage() {
 
   useEffect(() => {
     if (!quote) return;
+    const initialTick = window.setTimeout(() => setQuoteNow(Date.now()), 0);
     const timer = window.setInterval(() => setQuoteNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialTick);
+      window.clearInterval(timer);
+    };
   }, [quote]);
 
   const quoteExpired = useMemo(
-    () => (quote ? Date.parse(quote.expiresAt) <= quoteNow : false),
+    () => (quote ? isQuoteExpired(quote.expiresAt, quoteNow) : false),
     [quote, quoteNow],
   );
-  const numericAmount = Number(amount);
-  const amountIsValid = amount.trim() !== "" && Number.isFinite(numericAmount) && numericAmount > 0;
+  const amountIsValid = isValidAmount(amount);
 
-  const phoneDigits = phoneNumber.replace(/\D/g, "");
-  const localPhoneDigits = phoneDigits.startsWith("0")
-    ? phoneDigits.slice(1)
-    : phoneDigits;
-  const phoneNumberIsValid =
-    country?.dialCode.replace(/\D/g, "") === "233"
-      ? localPhoneDigits.length === 9
-      : phoneDigits.length >= 6;
+  const phoneNumberIsValid = isValidRecipientPhone(
+    phoneNumber,
+    country?.dialCode ?? "",
+  );
 
   const remittanceQuery = useQuery({
     queryKey: ["remittance", "detail", fundedRemittanceId],
@@ -640,13 +645,6 @@ function QuoteRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function countryFlag(countryCode: string) {
-  const normalized = countryCode.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(normalized)) return "🌐";
-  return String.fromCodePoint(
-    ...[...normalized].map((character) => 127397 + character.charCodeAt(0)),
-  );
-}
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
