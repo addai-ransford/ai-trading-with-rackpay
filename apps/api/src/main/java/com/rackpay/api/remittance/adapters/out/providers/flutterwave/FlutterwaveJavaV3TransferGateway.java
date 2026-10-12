@@ -68,7 +68,7 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                         ? null
                         : response.getData().getStatus();
 
-                return new TransferResponse(providerId, status, response.getMessage());
+                return new TransferResponse(providerId, response.getStatus(), status, response.getMessage());
             } catch (RuntimeException exception) {
                 // Do not turn transport/SDK exceptions into a failed payout:
                 // the provider may have accepted the transfer before the error.
