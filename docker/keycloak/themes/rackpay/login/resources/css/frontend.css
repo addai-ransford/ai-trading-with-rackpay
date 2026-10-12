@@ -1,389 +1,458 @@
-:root {
-  color-scheme: dark;
-  --rp-bg: #020617;
-  --rp-card: rgba(15, 23, 42, .85);
-  --rp-card-border: #1e293b;
-  --rp-field: #0f172a;
-  --rp-field-border: #334155;
-  --rp-white: #f8fafc;
-  --rp-muted: #94a3b8;
-}
-* { box-sizing: border-box; }
+/* --- Global Reset & Page Layout --- */
 html, body {
-  width: 100% !important;
-  min-width: 320px;
-  min-height: 100% !important;
-  margin: 0 !important;
-  background: var(--rp-bg) !important;
-  color: var(--rp-white) !important;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-}
-body { min-height: 100vh !important; }
-.pf-v5-c-login, .login-pf-page {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  max-width: none !important;
-  min-height: 100vh !important;
-  margin: 0 !important;
-  padding: 32px 16px !important;
-  background: var(--rp-bg) !important;
-}
-.rackpay-auth-layout {
-  display: block !important;
-  width: 100% !important;
-  max-width: 536px !important;
-  margin: 0 auto !important;
-}
-.rackpay-hero { display: none !important; }
-.pf-v5-c-login__container {
-  display: block !important;
-  width: 100% !important;
-  max-width: 536px !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
-}
-.pf-v5-c-login__header, #kc-header, #kc-header-wrapper,
-.pf-v5-c-login__main-footer, .pf-v5-c-login__main-footer-band,
-#kc-locale, #kc-locale-wrapper { display: none !important; }
-.pf-v5-c-login__main, #kc-content {
-  display: block !important;
-  width: 100% !important;
-  max-width: 536px !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 28px !important;
-  overflow: visible !important;
-  border: 1px solid var(--rp-card-border) !important;
-  border-radius: 12px !important;
-  background: var(--rp-card) !important;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,.25) !important;
-  color: var(--rp-white) !important;
-}
-.pf-v5-c-login__main-header {
-  display: block !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-}
-.pf-v5-c-login__main-header::before {
-  display: block;
-  margin: 0 0 8px;
-  color: var(--rp-muted);
-  content: "RACKPAY ACCOUNT";
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-.pf-v5-c-login__main-header .pf-v5-c-title, #kc-page-title {
-  margin: 0 !important;
-  color: var(--rp-white) !important;
-  font-size: 28px !important;
-  font-weight: 700 !important;
-  line-height: 1.25 !important;
-  letter-spacing: 0 !important;
-}
-.pf-v5-c-login__main-header::after {
-  display: block;
-  margin-top: 12px;
-  color: var(--rp-muted);
-  content: "Continue securely with your RackPay account.";
-  font-size: 14px;
-  line-height: 1.6;
-}
-.pf-v5-c-login__main-body {
-  display: block !important;
-  margin: 0 !important;
-  padding: 24px 0 0 !important;
-  color: var(--rp-white) !important;
-}
-#kc-content-wrapper, #kc-form-wrapper, #kc-form, #kc-form-login {
-  width: 100% !important;
-  max-width: none !important;
-  color: var(--rp-white) !important;
-}
-.pf-v5-c-form__group, .pf-v5-c-form__group-control, .form-group, #kc-form-options {
-  margin-bottom: 16px !important;
-}
-.pf-v5-c-form__label, .pf-v5-c-form label, .form-group label, .control-label, label {
-  display: block;
-  margin-bottom: 7px;
-  color: #cbd5e1 !important;
-  font-size: 14px;
-  font-weight: 600;
-}
-.pf-v5-c-form-control, .pf-v5-c-form-control input,
-input[type="text"], input[type="email"], input[type="password"], input[type="tel"],
-input[type="number"], input[type="url"], input[type="search"], select, textarea {
-  display: block !important;
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  min-height: 46px !important;
-  padding: 12px 14px !important;
-  border: 1px solid var(--rp-field-border) !important;
-  border-radius: 10px !important;
-  background: var(--rp-field) !important;
-  color: var(--rp-white) !important;
-  font-family: inherit !important;
-  font-size: 14px !important;
-  box-shadow: none !important;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-input:hover, select:hover, textarea:hover { border-color: #64748b !important; }
-input:focus, select:focus, textarea:focus {
-  outline: none !important;
-  border-color: #64748b !important;
-  box-shadow: 0 0 0 3px rgba(148,163,184,.14) !important;
-}
-input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--rp-white);
-  box-shadow: 0 0 0 1000px var(--rp-field) inset !important;
-}
-input[type="checkbox"], input[type="radio"] {
-  width: 16px !important; height: 16px; min-height: 16px !important;
-  padding: 0 !important; accent-color: #f8fafc; vertical-align: middle;
-}
-.pf-v5-c-check__label, .checkbox label, label:has(input[type="checkbox"]), label:has(input[type="radio"]) {
-  color: var(--rp-muted) !important;
-  font-weight: 500;
-}
-#kc-form-options, #kc-form-options .checkbox { color: var(--rp-muted); font-size: 12px; }
-.pf-v5-c-button, button, input[type="submit"], #kc-login {
-  min-height: 46px;
-  border-radius: 10px !important;
-  font-family: inherit !important;
-  font-weight: 700;
-  cursor: pointer;
-}
-.pf-v5-c-button.pf-m-primary, #kc-login, input[type="submit"] {
-  display: block !important;
-  width: 100% !important;
-  min-height: 46px !important;
-  padding: 12px 16px !important;
-  border: 1px solid #fff !important;
-  border-radius: 10px !important;
-  background: #fff !important;
-  color: #020617 !important;
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
-}
-.pf-v5-c-button.pf-m-primary:hover, #kc-login:hover, input[type="submit"]:hover {
-  background: #e2e8f0 !important;
-  border-color: #e2e8f0 !important;
-}
-button:focus-visible, input[type="submit"]:focus-visible, a:focus-visible {
-  outline: 3px solid rgba(248,250,252,.45);
-  outline-offset: 3px;
-}
-a, #kc-form-options a, #kc-info a, #kc-registration a {
+  background-color: #07161b !important;
   color: #f8fafc !important;
-  font-weight: 650;
-  text-underline-offset: 3px;
-}
-a:hover { color: #cbd5e1 !important; }
-#kc-registration, #kc-registration-container { display: none !important; }
-.rackpay-entry-actions { display: grid; gap: 12px; margin-top: 12px; }
-.rackpay-entry-actions button {
-  width: 100%; min-height: 46px; padding: 12px 16px;
-  border-radius: 10px; font-size: 14px; font-weight: 700;
-}
-.rackpay-create {
-  border: 1px solid var(--rp-field-border);
-  background: transparent;
-  color: var(--rp-white);
-}
-.rackpay-create:hover { background: #1e293b; }
-.rackpay-entry-note {
-  margin: 24px 0 0;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
-  text-align: center;
-}
-.rackpay-home-link { display: none !important; }
-.pf-v5-c-alert, .alert, .pf-v5-c-form__helper-text, #input-error, .instruction {
-  border-radius: 8px;
-  line-height: 1.5;
-}
-.pf-v5-c-alert, .alert { color: var(--rp-white); }
-.pf-v5-c-form__helper-text, .instruction, .subtitle { color: var(--rp-muted); }
-@media (max-width: 480px) {
-  .pf-v5-c-login, .login-pf-page { padding: 24px 16px !important; }
-  .pf-v5-c-login__main, #kc-content { padding: 24px !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; }
-}
-/* Auth mode switch mirrors the RackPay app's sign-in/create-account flow. */
-.rackpay-auth-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  width: 100%;
-  margin: 0 0 24px;
-  padding: 4px;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  background: #020617;
-}
-.rackpay-auth-toggle a {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  min-height: 100vh !important;
+  width: 100vw !important;
+  overflow-x: hidden !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 9px 12px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  color: #94a3b8 !important;
-  font-size: 13px;
-  font-weight: 650;
-  text-align: center;
-  text-decoration: none;
-}
-.rackpay-auth-toggle a[aria-current="page"] {
-  border-color: #334155;
-  background: #0f172a;
-  color: #f8fafc !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,.2);
-}
-.rackpay-auth-toggle a:not([aria-current="page"]):hover {
-  background: #0f172a;
-  color: #f8fafc !important;
 }
 
+/* Completely reset PatternFly container artifacts */
+.pf-v5-c-login, 
+.login-pf-page, 
+.pf-v5-c-login__container,
+.pf-v5-c-form-group,
+.pf-v5-c-input-group {
+  display: contents !important;
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
 
-/* Wide landing layout: RackPay introduction beside the matching account form. */
-.pf-v5-c-login, .login-pf-page {
-  justify-content: center !important;
+.pf-v5-c-form-control::after,
+.pf-v5-c-form-control::before,
+.pf-v5-c-input-group::after,
+.pf-v5-c-input-group::before {
+  display: none !important;
+  content: none !important;
 }
-.rackpay-auth-layout {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 536px) !important;
-  align-items: center !important;
-  gap: clamp(40px, 7vw, 104px) !important;
-  width: min(100%, 1160px) !important;
-  max-width: 1160px !important;
-  margin: 0 auto !important;
-}
-.rackpay-hero {
-  display: flex !important;
-  flex-direction: column;
-  align-items: flex-start;
+
+.rackpay-auth-page {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  align-items: center;
   justify-content: center;
-  max-width: 500px;
-  padding: 24px 0;
+  padding: 2rem;
+  box-sizing: border-box;
+  gap: 5rem;
+  margin: 0 auto;
 }
-.rackpay-hero-eyebrow {
+
+/* --- Left Intro Section --- */
+.auth-intro {
+  flex: 1;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 22px;
-  color: #cbd5e1;
-  font-size: 12px;
+  gap: 0.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: .16em;
+  color: #ffffff;
+  text-decoration: none;
+  margin-bottom: 2rem;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #bef264;
+  color: #07161b;
+  font-weight: 800;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  margin-right: 0.25rem;
+}
+
+.brand-light {
+  color: #bef264;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #bef264;
   text-transform: uppercase;
+  margin: 0 0 0.5rem 0;
 }
-.rackpay-hero-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  background: #0f172a;
+
+.auth-intro h1 {
+  font-size: 2.5rem;
+  line-height: 1.15;
+  font-weight: 800;
   color: #f8fafc;
-  font-size: 15px;
-  letter-spacing: 0;
+  margin: 0 0 1rem 0;
+  letter-spacing: -0.025em;
 }
-.rackpay-hero h1 {
-  max-width: 540px;
-  margin: 0;
-  color: #f8fafc;
-  font-size: clamp(38px, 4.4vw, 60px);
-  font-weight: 750;
-  letter-spacing: -.045em;
-  line-height: 1.06;
-}
-.rackpay-hero h1 span { color: #a3e635; }
-.rackpay-hero-copy {
-  max-width: 460px;
-  margin: 24px 0 0;
+
+.auth-intro p {
+  font-size: 0.95rem;
+  line-height: 1.6;
   color: #94a3b8;
-  font-size: 16px;
-  line-height: 1.8;
+  margin: 0 0 2rem 0;
 }
-.rackpay-hero-points {
-  display: grid;
-  gap: 16px;
-  margin: 32px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.rackpay-hero-points li {
+
+.auth-promise {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  color: #cbd5e1;
-  font-size: 14px;
-  line-height: 1.6;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
-.rackpay-hero-check {
-  display: inline-grid;
-  flex: 0 0 22px;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-  border: 1px solid #3f6212;
-  border-radius: 50%;
-  background: rgba(132,204,22,.1);
-  color: #a3e635;
-  font-size: 12px;
-  font-weight: 800;
+
+.brand-light-bg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: rgba(190, 242, 100, 0.1);
+  color: #bef264;
+  flex-shrink: 0;
 }
-.rackpay-hero-footnote {
-  margin: 34px 0 0;
+
+.auth-promise strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.auth-promise small {
+  display: block;
+  font-size: 0.8125rem;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  margin-top: 0.15rem;
+  line-height: 1.4;
 }
-.rackpay-auth-layout > .pf-v5-c-login__main,
-.rackpay-auth-layout > #kc-content {
+
+/* --- Right Auth Card --- */
+.auth-card {
+  flex: 1;
+  max-width: 440px !important;
   width: 100% !important;
-  max-width: 536px !important;
-  justify-self: end;
+  background-color: #07161b !important;
+  background-image: 
+    linear-gradient(rgba(40, 50, 54, 0.92), rgba(7, 22, 27, 0.96)),
+    repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(16, 185, 129, 0.03) 20px, rgba(16, 185, 129, 0.03) 21px),
+    repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(16, 185, 129, 0.03) 20px, rgba(16, 185, 129, 0.03) 21px) !important;
+  border: 1px solid #133842 !important;
+  border-radius: 16px !important;
+  padding: 2.25rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column;
 }
-@media (max-width: 820px) {
-  .pf-v5-c-login, .login-pf-page {
-    align-items: flex-start !important;
-    padding: 36px 20px !important;
-  }
-  .rackpay-auth-layout {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 28px !important;
-    max-width: 536px !important;
-  }
-  .rackpay-hero {
-    max-width: 536px;
-    padding: 0;
-  }
-  .rackpay-hero h1 {
-    max-width: 520px;
-    font-size: clamp(34px, 8vw, 48px);
-  }
-  .rackpay-hero-copy { margin-top: 16px; font-size: 14px; }
-  .rackpay-hero-points { gap: 10px; margin-top: 20px; }
-  .rackpay-hero-footnote { display: none; }
-  .rackpay-auth-layout > .pf-v5-c-login__main,
-  .rackpay-auth-layout > #kc-content { justify-self: stretch; }
+
+.auth-card-heading h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0.25rem 0 0 0;
 }
-@media (max-width: 480px) {
-  .rackpay-hero-eyebrow { margin-bottom: 16px; }
-  .rackpay-hero-points { display: none; }
-  .rackpay-auth-layout { gap: 22px !important; }
+
+.auth-card-sub {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #94a3b8 !important;
+  margin: 0.35rem 0 1.25rem 0 !important;
+}
+
+/* --- Form Labels --- */
+#kc-form-login label,
+.auth-card label {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.35rem !important;
+  display: block;
+}
+
+/* --- Input Fields --- */
+#kc-form-login input,
+.auth-card input[type="text"],
+.auth-card input[type="password"],
+.auth-card input[type="email"],
+.auth-card input[type="tel"] {
+  background-color: #0b1f26 !important;
+  border: 1px solid #164250 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.95rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 0.5rem !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease !important;
+  height: 44px !important;
+}
+
+#kc-form-login input:hover,
+.auth-card input:hover {
+  border-color: #22586b !important;
+}
+
+#kc-form-login input:focus,
+.auth-card input:focus {
+  border-color: #bef264 !important;
+  background-color: #0d252e !important;
+  box-shadow: 0 0 0 2px rgba(190, 242, 100, 0.15) !important;
+}
+
+/* --- Custom Wrapper for Seamless Password + Eye Button --- */
+.custom-password-wrap {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.custom-password-wrap input {
+  padding-right: 2.75rem !important;
+  margin-bottom: 0 !important;
+}
+
+.custom-password-wrap button,
+.custom-password-wrap .pf-v5-c-button {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  height: 32px !important;
+  width: 32px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 6px !important;
+}
+
+.custom-password-wrap button:hover {
+  color: #bef264 !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* --- Forgot Password Link --- */
+.auth-card a[href*="reset-credentials"] {
+  font-size: 0.8125rem;
+  color: #38bdf8 !important;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 0.25rem;
+  margin-bottom: 1.25rem;
+  font-weight: 500;
+}
+
+.auth-card a[href*="reset-credentials"]:hover {
+  text-decoration: underline;
+}
+
+/* --- Action Buttons --- */
+.toggle-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.auth-btn-primary {
+  width: 100% !important;
+  background-color: #bef264 !important;
+  color: #07161b !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 8px !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 44px !important;
+  transition: background-color 0.15s ease;
+}
+
+.auth-btn-primary:hover {
+  background-color: #a3e635 !important;
+}
+
+.auth-btn-secondary {
+  width: 100% !important;
+  background-color: transparent !important;
+  color: #f8fafc !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 8px !important;
+  border: 1px solid #164250 !important;
+  cursor: pointer !important;
+  height: 44px !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-btn-secondary:hover {
+  background-color: #0b1f26 !important;
+  border-color: #1f576a !important;
+}
+
+/* --- Footnote & Back Home Links --- */
+.auth-footnote {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.auth-back-home {
+  display: inline-block;
+  font-size: 0.875rem;
+  color: #bef264;
+  text-decoration: none;
+  font-weight: 500;
+  text-align: left;
+}
+
+.auth-back-home:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .rackpay-auth-page {
+    flex-direction: column;
+    gap: 2.5rem;
+    padding: 1.5rem;
+  }
+  .auth-intro, .auth-card {
+    max-width: 100% !important;
+  }
+}
+
+/* --- Strip PatternFly Input Wrapper Backgrounds & Outlines --- */
+.pf-v5-c-form-control,
+.pf-v5-c-form-control__input,
+.pf-v5-c-form__group,
+.pf-v5-c-form__group-control,
+.pf-v5-c-input-group,
+div[class*="input"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* Remove PatternFly pseudo-elements (underlines/shadow bars) */
+.pf-v5-c-form-control::after,
+.pf-v5-c-form-control::before,
+.pf-v5-c-input-group::after,
+.pf-v5-c-input-group::before {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+  background: none !important;
+}
+
+/* --- Clean, Direct Input Styling --- */
+#kc-form-login input.pf-v5-c-form-control,
+#kc-form-login input,
+.auth-card input[type="text"],
+.auth-card input[type="password"],
+.auth-card input[type="email"],
+.auth-card input[type="tel"] {
+  background-color: #0b1f26 !important;
+  border: 1px solid #164250 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.95rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 0.5rem !important;
+  outline: none !important;
+  box-shadow: none !important;
+  height: 44px !important;
+  display: block !important;
+}
+
+#kc-form-login input:hover,
+.auth-card input:hover {
+  border-color: #22586b !important;
+}
+
+#kc-form-login input:focus,
+.auth-card input:focus {
+  border-color: #bef264 !important;
+  background-color: #0d252e !important;
+  box-shadow: 0 0 0 2px rgba(190, 242, 100, 0.15) !important;
+}
+
+/* Fix Password Wrapper and Eye Icon Position */
+.custom-password-wrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.custom-password-wrap input {
+  padding-right: 2.75rem !important;
+  margin-bottom: 0 !important;
+}
+
+.custom-password-wrap button,
+.custom-password-wrap .pf-v5-c-button {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  height: 32px !important;
+  width: 32px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 10 !important;
+}
+
+.custom-password-wrap button:hover {
+  color: #bef264 !important;
 }

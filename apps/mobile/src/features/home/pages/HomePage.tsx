@@ -70,9 +70,6 @@ export function HomePage() {
               <Link to="/login?mode=register" className="button button-primary">
                 Create your account <ArrowRight size={16} />
               </Link>
-              <Link to="/login" className="button button-secondary">
-                Sign in
-              </Link>
             </div>
             <div className="public-trust-note"><LockKeyhole size={15} /> Secure sign-in powered by RackPay and Keycloak</div>
           </div>

@@ -1,82 +1,136 @@
 function initializeRackPayLogin() {
-  const page = document.querySelector(".pf-v5-c-login") || document.querySelector(".login-pf-page");
-  const container = document.querySelector(".pf-v5-c-login__container");
-  const card = document.querySelector(".pf-v5-c-login__main") || document.querySelector("#kc-content");
-  const body = document.querySelector(".pf-v5-c-login__main-body") || document.querySelector("#kc-content-wrapper");
-  const form = document.querySelector("#kc-form-login");
-  const header = document.querySelector(".pf-v5-c-login__main-header") || card?.querySelector("#kc-page-title")?.parentElement;
+  if (document.querySelector(".rackpay-auth-page")) return;
 
-  if (!page || !card || !body || !form || document.querySelector(".rackpay-auth-layout")) return;
+  const card = document.querySelector(".pf-v5-c-login__main") || document.querySelector("#kc-content") || document.querySelector(".login-pf-page") || document.querySelector("form");
+  if (!card) return;
 
-  // Keep the same centered account card and input styling as the RackPay app.
+  const appUrl = window.RACKPAY_APP_URL || (window.location.origin.includes("auth") ? window.location.origin.replace("auth", "app") : window.location.origin);
+  const isRegistering = window.location.search.includes("mode=register") || window.location.pathname.includes("register");
+
+  document.body.innerHTML = "";
+  
   const layout = document.createElement("main");
-  layout.className = "rackpay-auth-layout";
+  layout.className = "rackpay-auth-page";
 
-  const toggle = document.createElement("nav");
-  toggle.className = "rackpay-auth-toggle";
-  toggle.setAttribute("aria-label", "Account access");
-  const signIn = document.createElement("a");
-  signIn.href = window.location.href;
-  signIn.textContent = "Sign in";
-  signIn.setAttribute("aria-current", "page");
-  const createAccount = document.createElement("a");
-  createAccount.href = getRegistrationUrl();
-  createAccount.textContent = "Create account";
-  toggle.append(signIn, createAccount);
-
-  function getRegistrationUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const redirectUri = params.get("redirect_uri");
-    let targetOrigin = window.location.origin;
-    try {
-      if (redirectUri && /^https?:\/\//i.test(redirectUri)) {
-        targetOrigin = new URL(redirectUri).origin;
-      }
-    } catch (_) {}
-    return new URL("/login?mode=register", targetOrigin).toString();
-  }
-
-  const title = document.querySelector("#kc-page-title");
-  if (title) title.textContent = "Sign in to RackPay";
-  const username = form.querySelector("#username, input[name='username'], input[name='email']");
-  if (username) username.setAttribute("autocomplete", "username");
-  const password = form.querySelector("#password");
-  if (password) password.setAttribute("autocomplete", "current-password");
-
-  // Brand the left side while preserving Keycloak's native form, errors and submission.
-  const hero = document.createElement("section");
-  hero.className = "rackpay-hero";
-  hero.setAttribute("aria-label", "About RackPay");
-  hero.innerHTML = `
-    <p class="rackpay-hero-eyebrow"><span class="rackpay-hero-mark" aria-hidden="true">R</span> One account. More possibilities.</p>
-    <h1>Your money, moving with <span>purpose.</span></h1>
-    <p class="rackpay-hero-copy">A clearer way to manage your money. Keep track of your wallet, send funds across borders, and explore AI-assisted trading with limits you control.</p>
-    <ul class="rackpay-hero-points">
-      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Wallet in one place</strong><br>Keep your money and currency balances organized.</span></li>
-      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Transfers made simpler</strong><br>Send money internationally with a clear, guided flow.</span></li>
-      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Trading with boundaries</strong><br>Set the maximum amount your AI-assisted strategy can use.</span></li>
-    </ul>
-    <p class="rackpay-hero-footnote">Built to help you stay in control of your financial choices.</p>
+  const intro = document.createElement("div");
+  intro.className = "auth-intro";
+  intro.innerHTML = `
+    <a href="${appUrl}" class="auth-brand" aria-label="Back to RackPay home">
+      <span class="brand-mark">R</span> rack<span class="brand-light">pay</span>
+    </a>
+    <p class="eyebrow">YOUR FINANCIAL SPACE</p>
+    <h1>Money management that moves with you.</h1>
+    <p>Access your wallet, international transfers and trading controls from one secure workspace.</p>
+    <div class="auth-promise">
+      <span class="brand-light-bg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+      </span>
+      <div>
+        <strong>Designed around security</strong>
+        <small>Authentication and permissions are verified by RackPay and Keycloak.</small>
+      </div>
+    </div>
+    <div class="auth-promise">
+      <span class="brand-light-bg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
+      </span>
+      <div>
+        <strong>One account, one workspace</strong>
+        <small>Your account and wallet are created together during registration.</small>
+      </div>
+    </div>
   `;
 
-  // Move only the Keycloak card; keep its native form, errors and submission.
-  const originalParent = card.parentElement;
-  page.appendChild(layout);
-  layout.appendChild(hero);
-  layout.appendChild(card);
-  if (originalParent && originalParent !== card && originalParent !== page &&
-      originalParent !== container && !originalParent.contains(layout)) {
-    originalParent.style.display = "none";
+  card.className = "auth-card";
+
+  const nativeTitle = card.querySelector("#kc-page-title");
+  if (nativeTitle) nativeTitle.style.display = "none";
+  const nativeHeader = card.querySelector(".pf-v5-c-login__main-header");
+  if (nativeHeader) nativeHeader.style.display = "none";
+
+  let cardHeading = card.querySelector(".auth-card-heading");
+  if (!cardHeading) {
+    cardHeading = document.createElement("div");
+    cardHeading.className = "auth-card-heading";
+    cardHeading.innerHTML = `
+      <p class="eyebrow">${isRegistering ? "GET STARTED" : "WELCOME BACK"}</p>
+      <p class="auth-card-sub">${isRegistering ? "Create your account and wallet securely." : "Sign in to continue to your account."}</p>
+    `;
+    card.insertBefore(cardHeading, card.firstChild);
   }
 
-  // The switch sits above the card heading, just like a mode toggle.
-  if (header) header.insertBefore(toggle, header.firstChild);
-  else card.insertBefore(toggle, card.firstChild);
+  // Modernize password field structure by wrapping password input + toggle button together
+  const passwordInput = card.querySelector("input[type='password']");
+  if (passwordInput) {
+    const parentGroup = passwordInput.closest(".pf-v5-c-form-group") || passwordInput.parentElement;
+    const toggleBtn = card.querySelector("button[aria-label*='password']") || card.querySelector(".pf-v5-c-button.pf-m-control") || card.querySelector("button.pf-v5-c-button");
+    
+    if (toggleBtn && parentGroup) {
+      let customWrap = parentGroup.querySelector(".custom-password-wrap");
+      if (!customWrap) {
+        customWrap = document.createElement("div");
+        customWrap.className = "custom-password-wrap";
+        passwordInput.parentNode.insertBefore(customWrap, passwordInput);
+        customWrap.appendChild(passwordInput);
+        customWrap.appendChild(toggleBtn);
+      }
+    }
+  }
 
-  const note = document.createElement("p");
-  note.className = "rackpay-entry-note";
-  note.textContent = "Sign-in is handled securely by Keycloak. Registration is completed on RackPay.";
-  body.appendChild(note);
+  const formArea = card.querySelector("form") || card.querySelector("#kc-form-login");
+  let actionsArea = card.querySelector(".auth-actions");
+  
+  if (!actionsArea && formArea) {
+    actionsArea = document.createElement("div");
+    actionsArea.className = "auth-actions toggle-buttons";
+
+    const submitBtn = card.querySelector("#kc-login") || card.querySelector("input[type='submit']") || card.querySelector("button[type='submit']");
+    if(submitBtn) {
+      submitBtn.className = "auth-btn-primary";
+      if (!isRegistering) {
+        submitBtn.value = "";
+        submitBtn.innerHTML = `Submit<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+      } 
+      actionsArea.appendChild(submitBtn);
+    }
+
+    const secondaryBtn = document.createElement("button");
+    secondaryBtn.type = "button";
+    secondaryBtn.className = "auth-btn-secondary";
+    if (isRegistering) {
+      secondaryBtn.textContent = "Back to sign in";
+      secondaryBtn.addEventListener("click", () => {
+        window.location.href = window.location.pathname;
+      });
+    }
+
+    formArea.appendChild(actionsArea);
+  }
+
+  const footnoteText = isRegistering 
+    ? "Your password is set securely through RackPay's identity service." 
+    : "Bootstrap administrator? Use the bootstrap email and password configured for your environment, then choose Log in to secure your session.";
+  
+  let footnote = card.querySelector(".auth-footnote");
+  if (!footnote) {
+    footnote = document.createElement("p");
+    footnote.className = "auth-footnote";
+    card.appendChild(footnote);
+  }
+  footnote.textContent = footnoteText;
+
+  let createAccountLink = card.querySelector(".auth-back-home");
+  if (!createAccountLink) {
+    createAccountLink = document.createElement("a");
+    createAccountLink.className = "auth-back-home";
+    card.appendChild(createAccountLink);
+  }
+  createAccountLink.href = appUrl;
+  createAccountLink.textContent = "create account";
+
+  document.body.appendChild(layout);
+  layout.appendChild(intro);
+  layout.appendChild(card);
 }
 
 if (document.readyState === "loading") {

@@ -60,7 +60,7 @@ body {
 #kc-content-wrapper .instruction, .pf-v5-c-form__helper-text, #kc-info-wrapper,
 .subtitle, .pf-v5-c-form__helper-text { color: var(--rackpay-muted); }
 .pf-v5-c-login, .login-pf-page { background: transparent; }
-.pf-v5-c-login__main, #kc-content, #kc-form { border-radius: 22px; }
+/* .pf-v5-c-login__main, #kc-content, #kc-form { border-radius: 22px; } */
 .pf-v5-c-login__main {
   border: 1px solid rgba(217,226,234,.95);
   background: var(--rackpay-surface);
