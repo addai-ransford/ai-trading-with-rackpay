@@ -254,3 +254,136 @@ a:hover { color: #cbd5e1 !important; }
   background: #0f172a;
   color: #f8fafc !important;
 }
+
+
+/* Wide landing layout: RackPay introduction beside the matching account form. */
+.pf-v5-c-login, .login-pf-page {
+  justify-content: center !important;
+}
+.rackpay-auth-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 536px) !important;
+  align-items: center !important;
+  gap: clamp(40px, 7vw, 104px) !important;
+  width: min(100%, 1160px) !important;
+  max-width: 1160px !important;
+  margin: 0 auto !important;
+}
+.rackpay-hero {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 500px;
+  padding: 24px 0;
+}
+.rackpay-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 22px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.rackpay-hero-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.rackpay-hero h1 {
+  max-width: 540px;
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(38px, 4.4vw, 60px);
+  font-weight: 750;
+  letter-spacing: -.045em;
+  line-height: 1.06;
+}
+.rackpay-hero h1 span { color: #a3e635; }
+.rackpay-hero-copy {
+  max-width: 460px;
+  margin: 24px 0 0;
+  color: #94a3b8;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.rackpay-hero-points {
+  display: grid;
+  gap: 16px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rackpay-hero-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.rackpay-hero-check {
+  display: inline-grid;
+  flex: 0 0 22px;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border: 1px solid #3f6212;
+  border-radius: 50%;
+  background: rgba(132,204,22,.1);
+  color: #a3e635;
+  font-size: 12px;
+  font-weight: 800;
+}
+.rackpay-hero-footnote {
+  margin: 34px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rackpay-auth-layout > .pf-v5-c-login__main,
+.rackpay-auth-layout > #kc-content {
+  width: 100% !important;
+  max-width: 536px !important;
+  justify-self: end;
+}
+@media (max-width: 820px) {
+  .pf-v5-c-login, .login-pf-page {
+    align-items: flex-start !important;
+    padding: 36px 20px !important;
+  }
+  .rackpay-auth-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 28px !important;
+    max-width: 536px !important;
+  }
+  .rackpay-hero {
+    max-width: 536px;
+    padding: 0;
+  }
+  .rackpay-hero h1 {
+    max-width: 520px;
+    font-size: clamp(34px, 8vw, 48px);
+  }
+  .rackpay-hero-copy { margin-top: 16px; font-size: 14px; }
+  .rackpay-hero-points { gap: 10px; margin-top: 20px; }
+  .rackpay-hero-footnote { display: none; }
+  .rackpay-auth-layout > .pf-v5-c-login__main,
+  .rackpay-auth-layout > #kc-content { justify-self: stretch; }
+}
+@media (max-width: 480px) {
+  .rackpay-hero-eyebrow { margin-bottom: 16px; }
+  .rackpay-hero-points { display: none; }
+  .rackpay-auth-layout { gap: 22px !important; }
+}
