@@ -1,6 +1,7 @@
 package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -105,6 +106,44 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
+    void treatsSuccessfulResponseWithoutTransferIdAsUncertain() {
+        FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
+        when(gateway.createTransfer(any())).thenReturn(
+                new FlutterwaveTransferGateway.TransferResponse(null, "success", "NEW", "Transfer initiated")
+        );
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                RestClient.builder(),
+                "http://flutterwave.test/v3",
+                "test-secret",
+                mock(ProviderRetryExecutor.class),
+                gateway
+        );
+
+        assertThatThrownBy(() -> provider.createPayout(validCommand()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reconcile by reference before retrying");
+    }
+
+    @Test
+    void treatsTransferIdWithUnsuccessfulResponseAsUncertain() {
+        FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
+        when(gateway.createTransfer(any())).thenReturn(
+                new FlutterwaveTransferGateway.TransferResponse("12345", "error", null, "Unexpected response")
+        );
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                RestClient.builder(),
+                "http://flutterwave.test/v3",
+                "test-secret",
+                mock(ProviderRetryExecutor.class),
+                gateway
+        );
+
+        assertThatThrownBy(() -> provider.createPayout(validCommand()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reconcile by reference before retrying");
+    }
+
+    @Test
     void createsPayoutThroughSdkGatewayWithNormalizedTransferDetails() {
         RestClient.Builder builder = RestClient.builder();
         FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
@@ -119,17 +158,7 @@ class FlutterwavePayoutProviderTest {
                 gateway
         );
 
-        var result = provider.createPayout(new CreatePayoutCommand(
-                "rackpay-remit-001",
-                new BigDecimal("25"),
-                Currency.GHS,
-                Currency.GHS,
-                "GH",
-                PayoutMethod.MOBILE_MONEY,
-                "MTN",
-                "+233241234567",
-                "Recipient Name"
-        ));
+        var result = provider.createPayout(validCommand());
 
         assertThat(result.providerTransferId()).isEqualTo("12345");
         assertThat(result.status()).isEqualTo("NEW");
@@ -143,6 +172,20 @@ class FlutterwavePayoutProviderTest {
         assertThat(captor.getValue().debitCurrency()).isEqualTo("GHS");
         assertThat(captor.getValue().bankCode()).isEqualTo("MTN");
         assertThat(captor.getValue().accountNumber()).isEqualTo("233241234567");
+    }
+
+    private CreatePayoutCommand validCommand() {
+        return new CreatePayoutCommand(
+                "rackpay-remit-001",
+                new BigDecimal("25"),
+                Currency.GHS,
+                Currency.GHS,
+                "GH",
+                PayoutMethod.MOBILE_MONEY,
+                "MTN",
+                "+233241234567",
+                "Recipient Name"
+        );
     }
 
 }
