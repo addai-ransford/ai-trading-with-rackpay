@@ -1,17 +1,24 @@
 package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.rackpay.api.remittance.core.model.PayoutMethod;
+import com.rackpay.api.remittance.ports.out.PayoutProvider.CreatePayoutCommand;
 import com.rackpay.api.remittance.ports.out.PayoutProvider.VerifyRecipientCommand;
 import com.rackpay.api.remittance.ports.out.PayoutProvider.RecipientVerification;
 import com.rackpay.api.shared.core.money.Currency;
@@ -28,7 +35,8 @@ class FlutterwavePayoutProviderTest {
                 builder,
                 "http://flutterwave.test/v3",
                 "test-secret",
-                mock(ProviderRetryExecutor.class)
+                mock(ProviderRetryExecutor.class),
+                mock(FlutterwaveTransferGateway.class)
         );
 
         server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
@@ -94,4 +102,46 @@ class FlutterwavePayoutProviderTest {
 
         server.verify();
     }
+
+    @Test
+    void createsPayoutThroughSdkGatewayWithNormalizedTransferDetails() {
+        RestClient.Builder builder = RestClient.builder();
+        FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
+        when(gateway.createTransfer(any())).thenReturn(
+                new FlutterwaveTransferGateway.TransferResponse("12345", "success", "NEW", "Transfer initiated")
+        );
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                builder,
+                "http://flutterwave.test/v3",
+                "test-secret",
+                mock(ProviderRetryExecutor.class),
+                gateway
+        );
+
+        var result = provider.createPayout(new CreatePayoutCommand(
+                "rackpay-remit-001",
+                new BigDecimal("25"),
+                Currency.GHS,
+                Currency.GHS,
+                "GH",
+                PayoutMethod.MOBILE_MONEY,
+                "MTN",
+                "+233241234567",
+                "Recipient Name"
+        ));
+
+        assertThat(result.providerTransferId()).isEqualTo("12345");
+        assertThat(result.status()).isEqualTo("NEW");
+
+        ArgumentCaptor<FlutterwaveTransferGateway.TransferCommand> captor =
+                ArgumentCaptor.forClass(FlutterwaveTransferGateway.TransferCommand.class);
+        verify(gateway).createTransfer(captor.capture());
+        assertThat(captor.getValue().reference()).isEqualTo("rackpay-remit-001");
+        assertThat(captor.getValue().amount()).isEqualByComparingTo("25");
+        assertThat(captor.getValue().currency()).isEqualTo("GHS");
+        assertThat(captor.getValue().debitCurrency()).isEqualTo("GHS");
+        assertThat(captor.getValue().bankCode()).isEqualTo("MTN");
+        assertThat(captor.getValue().accountNumber()).isEqualTo("233241234567");
+    }
+
 }
