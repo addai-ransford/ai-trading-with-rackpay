@@ -177,16 +177,13 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
 
         String providerId = response.providerTransferId();
         if (!"success".equalsIgnoreCase(response.responseStatus())) {
-            if (providerId != null && !providerId.isBlank()) {
-                throw new IllegalStateException(
-                        "Flutterwave returned a transfer ID with an unsuccessful response; "
-                                + "reconcile by reference before retrying"
-                );
-            }
-            String message = response.message() == null || response.message().isBlank()
-                    ? "Flutterwave payout creation failed"
-                    : response.message();
-            return new PayoutResult(null, "FAILED:" + message);
+            // The SDK does not expose the HTTP status code. A non-success payload
+            // could represent a definitive validation rejection or an upstream
+            // error after the provider accepted the transfer, so do not fail over.
+            throw new IllegalStateException(
+                    "Flutterwave returned a non-success transfer response; "
+                            + "reconcile by reference before retrying"
+            );
         }
 
         if (providerId == null || providerId.isBlank()) {
