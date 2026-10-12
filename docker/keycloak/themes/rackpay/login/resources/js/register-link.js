@@ -4,8 +4,39 @@ function initializeRackPayLogin() {
   const card = document.querySelector(".pf-v5-c-login__main") || document.querySelector("#kc-content") || document.querySelector(".login-pf-page") || document.querySelector("form");
   if (!card) return;
 
-  const appUrl = window.RACKPAY_APP_URL || (window.location.origin.includes("auth") ? window.location.origin.replace("auth", "app") : window.location.origin);
-  const isRegistering = window.location.search.includes("mode=register") || window.location.pathname.includes("register");
+  // Prefer the app origin carried in Keycloak's registered redirect_uri.
+  // This avoids guessing production hostnames (for example, auth -> app).
+  function getAppUrl() {
+    if (typeof window.RACKPAY_APP_URL === "string" && /^https?:\/\//i.test(window.RACKPAY_APP_URL)) {
+      return new URL(window.RACKPAY_APP_URL).origin;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const redirectUri = params.get("redirect_uri");
+    if (redirectUri) {
+      try {
+        const candidate = new URL(redirectUri);
+        if (candidate.protocol === "http:" || candidate.protocol === "https:") {
+          return candidate.origin;
+        }
+      } catch (_) {
+        // Ignore malformed redirect_uri and use the safe fallback below.
+      }
+    }
+
+    // Local development uses the Vite app on port 4000 while Keycloak has
+    // its own origin. In production, configure RACKPAY_APP_URL or pass
+    // redirect_uri from the client.
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return window.location.protocol + "//" + window.location.hostname + ":4000";
+    }
+    return window.location.origin;
+  }
+
+  const appUrl = getAppUrl();
+  const signInUrl = new URL("/login", appUrl).toString();
+  const registerUrl = new URL("/login?mode=register", appUrl).toString();
+  const isRegistering = false;
 
   document.body.innerHTML = "";
   
@@ -100,7 +131,7 @@ function initializeRackPayLogin() {
     if (isRegistering) {
       secondaryBtn.textContent = "Back to sign in";
       secondaryBtn.addEventListener("click", () => {
-        window.location.href = window.location.pathname;
+        window.location.href = signInUrl;
       });
     }
 
@@ -125,8 +156,8 @@ function initializeRackPayLogin() {
     createAccountLink.className = "auth-back-home";
     card.appendChild(createAccountLink);
   }
-  createAccountLink.href = appUrl;
-  createAccountLink.textContent = "create account";
+  createAccountLink.href = registerUrl;
+  createAccountLink.textContent = "Create account";
 
   document.body.appendChild(layout);
   layout.appendChild(intro);
