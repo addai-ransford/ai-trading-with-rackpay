@@ -1,6 +1,5 @@
 package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
-import java.math.RoundingMode;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -27,17 +26,20 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
     private final RestClient client;
     private final String secretKey;
     private final ProviderRetryExecutor retryExecutor;
+    private final FlutterwaveTransferGateway transferGateway;
     private static final Logger log = LoggerFactory.getLogger(FlutterwavePayoutProvider.class);
 
     public FlutterwavePayoutProvider(
             RestClient.Builder builder,
             @Value("${rackpay.payout.flutterwave.base-url:https://api.flutterwave.com/v3}") String baseUrl,
             @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey,
-            ProviderRetryExecutor retryExecutor
+            ProviderRetryExecutor retryExecutor,
+            FlutterwaveTransferGateway transferGateway
     ) {
         this.client = builder.baseUrl(baseUrl).build();
         this.secretKey = secretKey;
         this.retryExecutor = retryExecutor;
+        this.transferGateway = transferGateway;
     }
 
     @Override
@@ -150,45 +152,44 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
             throw new IllegalArgumentException("verified recipient name is required");
         }
 
-        Map<String, Object> body = new java.util.HashMap<>();
-        body.put("account_bank", providerNetworkCode(command.networkCode()));
-        body.put("account_number", command.normalizedPhoneNumber().replace("+", ""));
-        long transferAmount = command.amount().setScale(0, RoundingMode.UNNECESSARY).longValueExact();
-        body.put("amount", transferAmount);
-        body.put("currency", command.currency().name());
-        body.put("beneficiary_name", command.recipientName());
-        body.put("reference", command.reference());
-        body.put("narration", "RackPay remittance " + command.reference());
-        if (command.sourceCurrency() != null && command.sourceCurrency() != command.currency()) {
-            body.put("debit_currency", command.sourceCurrency().name());
-        }
+        long transferAmount = command.amount().setScale(0, java.math.RoundingMode.UNNECESSARY).longValueExact();
+        String debitCurrency = command.sourceCurrency() == null
+                ? command.currency().name()
+                : command.sourceCurrency().name();
 
-        JsonNode response = client.post()
-                .uri("/transfers")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + secretKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(JsonNode.class);
+        FlutterwaveTransferGateway.TransferResponse response = transferGateway.createTransfer(
+                new FlutterwaveTransferGateway.TransferCommand(
+                        command.reference(),
+                        java.math.BigDecimal.valueOf(transferAmount),
+                        command.currency().name(),
+                        debitCurrency,
+                        providerNetworkCode(command.networkCode()),
+                        command.normalizedPhoneNumber().replace("+", ""),
+                        "RackPay remittance " + command.reference()
+                )
+        );
 
         if (response == null) {
-            throw new IllegalStateException("Flutterwave returned an empty payout response");
+            throw new IllegalStateException(
+                    "Flutterwave returned no transfer response; reconcile by reference before retrying"
+            );
         }
 
-        JsonNode data = response.path("data");
-        String providerId = data.path("id").isNumber()
-                ? data.path("id").asText()
-                : data.path("id").asText(null);
-        String status = data.path("status").asText(null);
-
-        if (!"success".equalsIgnoreCase(response.path("status").asText())
+        String providerId = response.providerTransferId();
+        if (!"success".equalsIgnoreCase(response.status())
                 || providerId == null || providerId.isBlank()) {
-            String message = response.path("message").asText("Flutterwave payout creation failed");
+            String message = response.message() == null || response.message().isBlank()
+                    ? "Flutterwave payout creation failed"
+                    : response.message();
             return new PayoutResult(providerId, "FAILED:" + message);
         }
 
-        return new PayoutResult(providerId, status == null ? "NEW" : status);
+        return new PayoutResult(
+                providerId,
+                response.status() == null || response.status().isBlank()
+                        ? "NEW"
+                        : response.status()
+        );
     }
 
     @Override
