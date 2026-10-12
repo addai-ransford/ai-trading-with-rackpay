@@ -247,6 +247,39 @@ class RemittancePayoutServiceTest {
     }
 
     @Test
+    void existingCreatedAttemptWithNoReconciliationMatchIsNotSubmittedAgain() {
+        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, response.status());
+        assertEquals("PAYOUT_RETRY_REQUIRED", response.providerStatus());
+
+        verify(flutterwave).findPayoutByReference("rp-existing");
+        verify(flutterwave, never()).createPayout(any());
+        verify(paystack, never()).createPayout(any());
+        verify(providers, never()).nextEligible(any(), any(), any());
+    }
+
+    @Test
+    void unknownAttemptWithNoReconciliationMatchIsNotSubmittedAgain() {
+        RemittancePayoutAttemptEntity existing = attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing");
+        existing.record(null, RemittancePayoutAttemptEntity.Status.UNKNOWN, "provider timeout",
+            Instant.parse("2026-09-28T08:05:00Z"));
+        history.add(existing);
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, response.status());
+        assertEquals("PAYOUT_RETRY_REQUIRED", response.providerStatus());
+
+        verify(flutterwave).findPayoutByReference("rp-existing");
+        verify(flutterwave, never()).createPayout(any());
+        verify(paystack, never()).createPayout(any());
+        verify(providers, never()).nextEligible(any(), any(), any());
+    }
+
+    @Test
     void existingProviderTransferIsReconciledBeforeAnotherPayout() {
         RemittancePayoutAttemptEntity existing = attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing");
         existing.record("fw-transfer-1", RemittancePayoutAttemptEntity.Status.UNKNOWN, "timeout", Instant.parse("2026-09-28T08:05:00Z"));
