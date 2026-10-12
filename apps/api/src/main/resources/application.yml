@@ -76,6 +76,7 @@ rackpay:
     flutterwave:
       base-url: ${RACKPAY_FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
       secret-key: ${RACKPAY_FLUTTERWAVE_SECRET_KEY:}
+      callback-url: ${RACKPAY_FLUTTERWAVE_CALLBACK_URL:}
     paystack:
       base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
       secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
