@@ -1,87 +1,89 @@
 import { useEffect, type PropsWithChildren } from "react";
-import { keycloak } from "./keycloak";
-import { useAuthStore } from "./authStore";
+import { getKeycloak, initializeKeycloak } from "./keycloak";
+import { useAuthStore, type AuthUser } from "./authStore";
 
-// React StrictMode can mount effects twice in development. Keep Keycloak's
-// one-time initialization outside the component lifecycle.
-let initialization: Promise<boolean> | undefined;
+function readUser(): AuthUser | undefined {
+  const parsed = getKeycloak().tokenParsed;
+  if (!parsed) return undefined;
 
-function initializeKeycloak(): Promise<boolean> {
-  initialization ??= keycloak.init({
-    onLoad: "check-sso",
-    pkceMethod: "S256",
-    checkLoginIframe: false,
-  });
-  return initialization;
+  return {
+    subject: parsed.sub,
+    username: parsed.preferred_username,
+    name: parsed.name,
+    email: parsed.email,
+  };
 }
 
 export function AuthBootstrap({ children }: PropsWithChildren) {
-  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const initialized = useAuthStore((state) => state.initialized);
+  const setSession = useAuthStore((state) => state.setSession);
   const setInitialized = useAuthStore((state) => state.setInitialized);
   const setError = useAuthStore((state) => state.setError);
+  const clearSession = useAuthStore((state) => state.clearSession);
 
   useEffect(() => {
     let active = true;
+    const keycloak = getKeycloak();
 
-    keycloak.onAuthSuccess = () => {
+    const syncSession = () => {
       if (!active) return;
-      setAccessToken(keycloak.token);
-      setError(undefined);
+      setSession(keycloak.token, readUser());
     };
 
-    keycloak.onAuthLogout = () => {
-      if (!active) return;
-      setAccessToken(undefined);
-    };
-
-    keycloak.onAuthRefreshSuccess = () => {
-      if (!active) return;
-      setAccessToken(keycloak.token);
-      setError(undefined);
-    };
-
-    keycloak.onAuthRefreshError = () => {
-      if (!active) return;
-      setAccessToken(undefined);
-      setError("Your session could not be refreshed. Please sign in again.");
-    };
-
+    keycloak.onAuthSuccess = syncSession;
+    keycloak.onAuthRefreshSuccess = syncSession;
+    keycloak.onAuthLogout = clearSession;
     keycloak.onTokenExpired = () => {
-      void keycloak.updateToken(30)
-        .then((refreshed) => {
-          if (!active) return;
-          if (refreshed || keycloak.authenticated) {
-            setAccessToken(keycloak.token);
-            setError(undefined);
-          } else {
-            setAccessToken(undefined);
-          }
-        })
-        .catch(() => {
-          if (!active) return;
-          setAccessToken(undefined);
-          setError("Your session expired. Please sign in again.");
-        });
+      void keycloak.updateToken(30).then(syncSession).catch(() => {
+        clearSession();
+      });
     };
 
     void initializeKeycloak()
       .then((authenticated) => {
         if (!active) return;
-        setAccessToken(authenticated ? keycloak.token : undefined);
-        setError(undefined);
+        if (authenticated) {
+          syncSession();
+        } else {
+          clearSession();
+        }
         setInitialized(true);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!active) return;
-        setAccessToken(undefined);
-        setError("Unable to initialize secure sign-in. Check the Keycloak configuration and try again.");
+        clearSession();
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Authentication could not be initialized.",
+        );
         setInitialized(true);
       });
 
+    const refreshTimer = window.setInterval(() => {
+      if (!active || !keycloak.authenticated) return;
+      void keycloak.updateToken(30).then(syncSession).catch(() => {
+        clearSession();
+      });
+    }, 20_000);
+
     return () => {
       active = false;
+      window.clearInterval(refreshTimer);
+      keycloak.onAuthSuccess = undefined;
+      keycloak.onAuthRefreshSuccess = undefined;
+      keycloak.onAuthLogout = undefined;
+      keycloak.onTokenExpired = undefined;
     };
-  }, [setAccessToken, setInitialized, setError]);
+  }, [clearSession, setError, setInitialized, setSession]);
+
+  if (!initialized) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-950 text-slate-300">
+        <p className="text-sm">Starting RackPay…</p>
+      </div>
+    );
+  }
 
   return children;
 }
