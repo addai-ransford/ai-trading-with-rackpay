@@ -4,29 +4,37 @@ function initializeRackPayLogin() {
   const card = document.querySelector(".pf-v5-c-login__main") || document.querySelector("#kc-content");
   const body = document.querySelector(".pf-v5-c-login__main-body") || document.querySelector("#kc-content-wrapper");
   const form = document.querySelector("#kc-form-login");
+  const header = document.querySelector(".pf-v5-c-login__main-header") || card?.querySelector("#kc-page-title")?.parentElement;
 
   if (!page || !card || !body || !form || document.querySelector(".rackpay-auth-layout")) return;
 
-  // Match apps/mobile/src/features/auth/pages/AuthPage.tsx: one centered,
-  // 536px account card with the same dark palette, spacing, and white actions.
+  // Keep the same centered account card and input styling as the RackPay app.
   const layout = document.createElement("main");
   layout.className = "rackpay-auth-layout";
-  const actions = document.createElement("div");
-  actions.className = "rackpay-entry-actions";
-  actions.innerHTML = `
-    <button type="button" class="rackpay-create">Create account</button>
-    <p class="rackpay-entry-note">Sign-in is handled securely by Keycloak. Registration is completed on RackPay.</p>`;
 
-  const createButton = actions.querySelector(".rackpay-create");
-  createButton.addEventListener("click", () => {
+  const toggle = document.createElement("nav");
+  toggle.className = "rackpay-auth-toggle";
+  toggle.setAttribute("aria-label", "Account access");
+  const signIn = document.createElement("a");
+  signIn.href = window.location.href;
+  signIn.textContent = "Sign in";
+  signIn.setAttribute("aria-current", "page");
+  const createAccount = document.createElement("a");
+  createAccount.href = getRegistrationUrl();
+  createAccount.textContent = "Create account";
+  toggle.append(signIn, createAccount);
+
+  function getRegistrationUrl() {
     const params = new URLSearchParams(window.location.search);
     const redirectUri = params.get("redirect_uri");
     let targetOrigin = window.location.origin;
     try {
-      if (redirectUri && /^https?:\\/\\//i.test(redirectUri)) targetOrigin = new URL(redirectUri).origin;
+      if (redirectUri && /^https?:\/\//i.test(redirectUri)) {
+        targetOrigin = new URL(redirectUri).origin;
+      }
     } catch (_) {}
-    window.location.assign(new URL("/login?mode=register", targetOrigin).toString());
-  });
+    return new URL("/login?mode=register", targetOrigin).toString();
+  }
 
   const title = document.querySelector("#kc-page-title");
   if (title) title.textContent = "Sign in to RackPay";
@@ -35,8 +43,7 @@ function initializeRackPayLogin() {
   const password = form.querySelector("#password");
   if (password) password.setAttribute("autocomplete", "current-password");
 
-  // Put the actual Keycloak card directly inside the centered layout. Keep
-  // the existing form visible and native so validation and submission work.
+  // Move only the Keycloak card; keep its native form, errors and submission.
   const originalParent = card.parentElement;
   page.appendChild(layout);
   layout.appendChild(card);
@@ -45,8 +52,14 @@ function initializeRackPayLogin() {
     originalParent.style.display = "none";
   }
 
-  // Append account links/footnote after the form to mirror the app login card.
-  body.appendChild(actions);
+  // The switch sits above the card heading, just like a mode toggle.
+  if (header) header.insertBefore(toggle, header.firstChild);
+  else card.insertBefore(toggle, card.firstChild);
+
+  const note = document.createElement("p");
+  note.className = "rackpay-entry-note";
+  note.textContent = "Sign-in is handled securely by Keycloak. Registration is completed on RackPay.";
+  body.appendChild(note);
 }
 
 if (document.readyState === "loading") {
