@@ -125,6 +125,25 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
+    void treatsNonSuccessResponseWithoutTransferIdAsUncertain() {
+        FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
+        when(gateway.createTransfer(any())).thenReturn(
+                new FlutterwaveTransferGateway.TransferResponse(null, "error", null, "Provider error")
+        );
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                RestClient.builder(),
+                "http://flutterwave.test/v3",
+                "test-secret",
+                mock(ProviderRetryExecutor.class),
+                gateway
+        );
+
+        assertThatThrownBy(() -> provider.createPayout(validCommand()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reconcile by reference before retrying");
+    }
+
+    @Test
     void treatsTransferIdWithUnsuccessfulResponseAsUncertain() {
         FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
         when(gateway.createTransfer(any())).thenReturn(
