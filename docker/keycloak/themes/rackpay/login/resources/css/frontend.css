@@ -218,3 +218,39 @@ a:hover { color: #cbd5e1 !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+/* Auth mode switch mirrors the RackPay app's sign-in/create-account flow. */
+.rackpay-auth-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 4px;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  background: #020617;
+}
+.rackpay-auth-toggle a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #94a3b8 !important;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+  text-decoration: none;
+}
+.rackpay-auth-toggle a[aria-current="page"] {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f8fafc !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.rackpay-auth-toggle a:not([aria-current="page"]):hover {
+  background: #0f172a;
+  color: #f8fafc !important;
+}
