@@ -135,8 +135,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void failedFlutterwavePayoutFailsOverToPaystackAndCompletes() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);
@@ -162,8 +160,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void concurrentPayoutExecutionAllowsOnlyOneProviderCall() throws Exception {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         AtomicBoolean claimActive = new AtomicBoolean(false);
         CountDownLatch providerStarted = new CountDownLatch(1);
         CountDownLatch releaseProvider = new CountDownLatch(1);
@@ -213,8 +209,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void stalePayoutExecutionCannotOverwriteNewerExecution() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("fw-stale-transfer", "SUCCESSFUL"));
         when(remittance.ownsPayoutExecutionClaim(any())).thenReturn(false);
@@ -231,8 +225,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void providerTimeoutReturnsRetryRequiredWithoutFailover() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenThrow(new RuntimeException("provider timeout"));
 
@@ -302,8 +294,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void pendingFlutterwavePayoutDoesNotCallPaystack() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("fw-transfer-1", "PENDING"));
 
@@ -320,8 +310,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void bothProvidersFailCreditWalletBackExactlyOnce() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);
@@ -354,8 +342,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void payoutRecoveryFailureLeavesRemittanceInRecoveryRequired() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);
