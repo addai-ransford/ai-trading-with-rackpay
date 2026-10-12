@@ -294,15 +294,8 @@ public class RemittancePayoutService {
             );
         }
 
-        RemittancePayoutAttemptEntity nextAttempt =
-            createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
-
-        remittance.beginPayoutAttempt(
-            next.type().name(),
-            nextAttempt.getPayoutReference(),
-            Instant.now()
-        );
-
+        // Let the next execution-loop iteration create the attempt. This keeps
+        // the "newly created" marker scoped to the execution that may submit it.
         return new PayoutResponse(
             remittance.getId(),
             RemittanceEntity.Status.PAYOUT_PENDING,
