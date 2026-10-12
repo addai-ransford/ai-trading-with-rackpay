@@ -24,7 +24,8 @@ public record PreparedPayout(
         String recipientName,
         RemittanceEntity.Status status,
         boolean executionClaimed,
-        UUID executionClaimToken
+        UUID executionClaimToken,
+        boolean newlyCreatedAttempt
         ) {
 
 }
