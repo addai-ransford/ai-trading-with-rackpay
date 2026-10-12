@@ -1,25 +1,23 @@
 package com.rackpay.api.remittance.core.service;
 
-import com.rackpay.api.remittance.core.model.MobileMoneyNetwork;
-import com.rackpay.api.remittance.core.model.PayoutMethod;
-import com.rackpay.api.remittance.core.model.PayoutProviderType;
-import com.rackpay.api.remittance.ports.out.PayoutProvider;
-import com.rackpay.api.shared.core.money.Money;
+import java.time.Instant;
+import java.util.Locale;
 
-import com.rackpay.api.shared.core.money.Currency;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkJpaRepository;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientJpaRepository;
+import com.rackpay.api.remittance.core.model.PayoutMethod;
+import com.rackpay.api.remittance.core.model.PayoutProviderType;
+import com.rackpay.api.remittance.ports.out.PayoutProvider;
+import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.user.adapters.out.persistence.CurrentUserService;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
-import java.util.Locale;
 
 @Service
 public class RemittanceRecipientVerificationService {

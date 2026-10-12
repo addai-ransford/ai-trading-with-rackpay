@@ -1,18 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Plus,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type Currency,
   getWallet,
   listWalletTransactions,
   openWalletBalance,
 } from "../api/walletApi";
+import { ApiError } from "../../../shared/api/httpClient";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
 const currencies: Currency[] = [
@@ -35,6 +36,18 @@ export function WalletPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>("EUR");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const returnedFromCheckout = searchParams.get("payment") === "return";
+
+  useEffect(() => {
+    if (!returnedFromCheckout) return;
+    void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    const timeout = window.setTimeout(() => {
+      searchParams.delete("payment");
+      setSearchParams(searchParams, { replace: true });
+    }, 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [queryClient, returnedFromCheckout, searchParams, setSearchParams]);
 
   const walletQuery = useQuery({
     queryKey: ["wallet"],
@@ -58,7 +71,7 @@ export function WalletPage() {
     return (
       <section className="flex min-h-dvh flex-col justify-center gap-4">
         <p className="text-sm text-red-300">
-          We could not load your wallet.
+          {errorMessage(walletQuery.error, "We could not load your wallet.")}
         </p>
         <button
           type="button"
@@ -72,23 +85,29 @@ export function WalletPage() {
   }
 
   const wallet = walletQuery.data;
+  const currencyAlreadyOpen = wallet.balances.some((balance) => balance.currency === currency);
+  const availableCurrencies = currencies.filter(
+    (option) => !wallet.balances.some((balance) => balance.currency === option),
+  );
 
   return (
     <section className="flex min-h-dvh flex-col gap-6 pb-8 pt-4">
-      <header className="flex items-center justify-between">
+      <header className="page-heading">
         <div>
-          <p className="text-sm text-slate-500">Your money</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Wallet</h1>
+          <p className="eyebrow">YOUR FINANCIAL SPACE</p>
+          <h1>Your wallet</h1>
+          <p className="page-description">Swipe between your currency balances and review recent activity.</p>
         </div>
-        <Link
-          to="/"
-          className="rounded-xl border border-slate-800 px-3 py-2 text-sm text-slate-300"
-        >
-          Home
-        </Link>
+        <Link to="/wallet/add-money" className="button button-primary"><Plus size={15}/> Add money</Link>
       </header>
 
-      <div className="grid gap-3">
+      {returnedFromCheckout ? (
+        <div role="status" className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-sm leading-6 text-slate-300">
+          You returned from checkout. We are refreshing your wallet; funds appear only after the payment provider confirms the payment and RackPay processes its callback. This page does not assume the payment succeeded.
+        </div>
+      ) : null}
+
+      <div>
         {wallet.balances.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/60 p-6 text-center">
             <WalletCards className="mx-auto text-slate-500" />
@@ -98,21 +117,46 @@ export function WalletPage() {
             </p>
           </div>
         ) : (
-          wallet.balances.map((balance) => (
-            <div
-              key={balance.balanceId}
-              className="rounded-3xl border border-slate-800 bg-slate-900 p-5"
-            >
-              <p className="text-sm text-slate-500">{balance.currency}</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">
-                {currencyFormatter.format(Number(balance.balance))}
-              </p>
+          <>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-400">Your balances</p>
+              {wallet.balances.length > 1 ? (
+                <p className="text-xs text-slate-500">Swipe to see more <span aria-hidden="true">→</span></p>
+              ) : null}
             </div>
-          ))
+            <div
+              aria-label="Wallet currency balances"
+              className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {wallet.balances.map((balance, index) => (
+                <article
+                  key={balance.balanceId}
+                  aria-label={`${balance.currency} balance, ${index + 1} of ${wallet.balances.length}`}
+                  className="wallet-swipe-card min-w-[84%] snap-center sm:min-w-[70%]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-slate-400">{balance.currency} balance</p>
+                      <p className="mt-3 text-3xl font-semibold tracking-tight">
+                        {currencyFormatter.format(Number(balance.balance))}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <WalletCards size={20} className="text-lime-200" />
+                    </div>
+                  </div>
+                  <div className="balance-card-footer mt-8">
+                    <span>RackPay Wallet</span>
+                    <span>{index + 1} / {wallet.balances.length}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div className="form-panel">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-slate-800 p-2">
             <Plus size={18} />
@@ -132,14 +176,18 @@ export function WalletPage() {
             className="min-w-0 flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"
           >
             {currencies.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option
+                key={option}
+                value={option}
+                disabled={wallet.balances.some((balance) => balance.currency === option)}
+              >
+                {option}{wallet.balances.some((balance) => balance.currency === option) ? " · already open" : ""}
               </option>
             ))}
           </select>
           <button
             type="button"
-            disabled={openBalanceMutation.isPending}
+            disabled={openBalanceMutation.isPending || currencyAlreadyOpen || availableCurrencies.length === 0}
             onClick={() => openBalanceMutation.mutate()}
             className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
           >
@@ -147,12 +195,24 @@ export function WalletPage() {
           </button>
         </div>
 
+        {availableCurrencies.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">
+            All currently supported currency balances are already open.
+          </p>
+        ) : null}
         {openBalanceMutation.isError ? (
-          <p className="mt-3 text-sm text-red-300">
-            The balance could not be opened. It may already exist.
+          <p role="alert" className="mt-3 text-sm text-red-300">
+            {errorMessage(openBalanceMutation.error, "The balance could not be opened. Please check the selected currency and try again.")}
           </p>
         ) : null}
       </div>
+
+      <Link
+        to="/wallet/add-money"
+        className="button button-primary full-width"
+      >
+        Add money
+      </Link>
 
       <WalletTransactions accessToken={accessToken} />
     </section>
@@ -171,13 +231,13 @@ function WalletTransactions({ accessToken }: { accessToken?: string }) {
   });
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-      <div className="flex items-center justify-between">
+    <div className="form-panel">
+      <div className="section-heading mt-0">
         <div>
-          <p className="font-medium">Recent activity</p>
-          <p className="text-sm text-slate-500">Latest wallet transactions</p>
+          <h2>Recent activity</h2>
+          <p>Latest wallet transactions</p>
         </div>
-        <WalletCards size={18} className="text-slate-500" />
+        <WalletCards size={18} className="text-lime-200" />
       </div>
 
       {transactionsQuery.isPending ? (
@@ -237,4 +297,13 @@ function WalletLoading() {
       <div className="h-28 animate-pulse rounded-3xl bg-slate-900" />
     </section>
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    return error.correlationId
+      ? `${error.message} (Reference: ${error.correlationId})`
+      : error.message;
+  }
+  return error instanceof Error ? error.message : fallback;
 }

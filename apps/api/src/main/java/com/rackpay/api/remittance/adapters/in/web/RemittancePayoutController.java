@@ -1,13 +1,14 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import com.rackpay.api.remittance.core.service.RemittancePayoutService;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.rackpay.api.remittance.core.service.RemittancePayoutService;
 
 @RestController
 @RequestMapping("/api/v1/remittances")

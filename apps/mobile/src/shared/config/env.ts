@@ -18,4 +18,5 @@ export const env = {
     clientId: required("VITE_KEYCLOAK_CLIENT_ID"),
     redirectUri: optional("VITE_KEYCLOAK_REDIRECT_URI"),
   },
+  paymentWebhookUrl: optional("VITE_PAYMENT_WEBHOOK_URL"),
 } as const;
