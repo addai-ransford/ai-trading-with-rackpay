@@ -20,5 +20,5 @@ public interface FlutterwaveTransferGateway {
             String narration
     ) {}
 
-    record TransferResponse(String providerTransferId, String status, String message) {}
+    record TransferResponse(String providerTransferId, String responseStatus, String status, String message) {}
 }
