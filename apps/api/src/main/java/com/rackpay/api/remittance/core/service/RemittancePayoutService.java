@@ -106,6 +106,12 @@ public class RemittancePayoutService {
                     result = new PayoutProvider.PayoutResult(payout.providerTransferId(), status.name());
                 } else {
                     result = provider.findPayoutByReference(payout.payoutReference());
+                    if (result == null && !payout.newlyCreatedAttempt()) {
+                        // This attempt may have reached the provider before RackPay lost the response
+                        // (including a process crash while the attempt was still CREATED). An empty
+                        // lookup is not proof of rejection, so never submit it a second time.
+                        return markRetryRequired(payout);
+                    }
                     if (result == null) {
                         result = provider.createPayout(new PayoutProvider.CreatePayoutCommand(
                             payout.payoutReference(),
@@ -192,14 +198,16 @@ public class RemittancePayoutService {
         var command = commandFor(remittance, recipient, network);
         var history = attempts.findAllByRemittanceIdForUpdate(remittanceId);
         RemittancePayoutAttemptEntity attempt = history.isEmpty() ? null : history.get(0);
+        boolean newlyCreatedAttempt = false;
 
         if (attempt != null && remittance.hasActivePayoutExecutionClaim(Instant.now())) {
-            return prepared(remittance, attempt, recipient, network, false);
+            return prepared(remittance, attempt, recipient, network, false, false);
         }
 
         if (attempt == null) {
             PayoutProvider provider = initialProvider(command);
             attempt = createAttempt(remittance, provider.type(), 1);
+            newlyCreatedAttempt = true;
         } else if (attempt.getStatus() == RemittancePayoutAttemptEntity.Status.FAILED
             || attempt.getStatus() == RemittancePayoutAttemptEntity.Status.CANCELLED) {
             Set<PayoutProviderType> attemptedProviders = attemptedProviders(history);
@@ -211,6 +219,7 @@ public class RemittancePayoutService {
                 return new PreparedPayoutMapper().toPreparedPayout(remittance, attempt.getProvider(), response);
             }
             attempt = createAttempt(remittance, next.type(), attempt.getAttemptNumber() + 1);
+            newlyCreatedAttempt = true;
         }
 
         Instant now = Instant.now();
@@ -220,7 +229,7 @@ public class RemittancePayoutService {
             remittance.beginPayoutAttempt(attempt.getProvider().name(), attempt.getPayoutReference(), now);
         }
         remittance.claimPayoutExecution(UUID.randomUUID(), now.plus(PAYOUT_EXECUTION_CLAIM_TTL), now);
-        return prepared(remittance, attempt, recipient, network, true);
+        return prepared(remittance, attempt, recipient, network, true, newlyCreatedAttempt);
     }
 
     private PayoutProvider initialProvider(PayoutProvider.CreatePayoutCommand command) {
@@ -413,7 +422,8 @@ public class RemittancePayoutService {
         RemittancePayoutAttemptEntity attempt,
         RemittanceRecipientEntity recipient,
         MobileMoneyNetworkEntity network,
-        boolean executionClaimed
+        boolean executionClaimed,
+        boolean newlyCreatedAttempt
     ) {
         return new PreparedPayout(
             remittance.getId(),
@@ -431,7 +441,8 @@ public class RemittancePayoutService {
             recipient.getVerifiedName(),
             remittance.getStatus(),
             executionClaimed,
-            executionClaimed ? remittance.getPayoutExecutionClaimToken() : null
+            executionClaimed ? remittance.getPayoutExecutionClaimToken() : null,
+            newlyCreatedAttempt
         );
     }
 
@@ -444,7 +455,7 @@ public class RemittancePayoutService {
             remittance.getId(), null, provider, remittance.getProviderTransferId(),
             remittance.getPayoutReference(), remittance.getSourceCurrency(),
             remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
-            null, null, null, null, null, remittance.getStatus(), false, null
+            null, null, null, null, null, remittance.getStatus(), false, null, false
         );
     }
 
