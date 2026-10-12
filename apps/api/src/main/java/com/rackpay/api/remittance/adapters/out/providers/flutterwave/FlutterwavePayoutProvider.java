@@ -176,7 +176,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         String providerId = response.providerTransferId();
-        if (!"success".equalsIgnoreCase(response.status())
+        if (!"success".equalsIgnoreCase(response.responseStatus())
                 || providerId == null || providerId.isBlank()) {
             String message = response.message() == null || response.message().isBlank()
                     ? "Flutterwave payout creation failed"
