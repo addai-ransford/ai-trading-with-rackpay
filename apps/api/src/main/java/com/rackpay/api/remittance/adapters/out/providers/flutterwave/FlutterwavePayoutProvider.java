@@ -176,12 +176,24 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         String providerId = response.providerTransferId();
-        if (!"success".equalsIgnoreCase(response.responseStatus())
-                || providerId == null || providerId.isBlank()) {
+        if (!"success".equalsIgnoreCase(response.responseStatus())) {
+            if (providerId != null && !providerId.isBlank()) {
+                throw new IllegalStateException(
+                        "Flutterwave returned a transfer ID with an unsuccessful response; "
+                                + "reconcile by reference before retrying"
+                );
+            }
             String message = response.message() == null || response.message().isBlank()
                     ? "Flutterwave payout creation failed"
                     : response.message();
-            return new PayoutResult(providerId, "FAILED:" + message);
+            return new PayoutResult(null, "FAILED:" + message);
+        }
+
+        if (providerId == null || providerId.isBlank()) {
+            throw new IllegalStateException(
+                    "Flutterwave accepted the transfer request without returning a transfer ID; "
+                            + "reconcile by reference before retrying"
+            );
         }
 
         return new PayoutResult(
