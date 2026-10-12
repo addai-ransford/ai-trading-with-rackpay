@@ -75,7 +75,8 @@ class FlutterwavePayoutProviderTest {
                 builder,
                 "http://flutterwave.test/v3",
                 "test-secret",
-                mock(ProviderRetryExecutor.class)
+                mock(ProviderRetryExecutor.class),
+                mock(FlutterwaveTransferGateway.class)
         );
 
         server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
