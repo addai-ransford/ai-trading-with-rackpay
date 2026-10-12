@@ -1,12 +1,8 @@
 package com.rackpay.api.remittance.adapters.in.web;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.rackpay.api.remittance.core.service.RemittanceRecipientVerificationService;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/remittances/recipients")
