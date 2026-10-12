@@ -43,9 +43,26 @@ function initializeRackPayLogin() {
   const password = form.querySelector("#password");
   if (password) password.setAttribute("autocomplete", "current-password");
 
+  // Brand the left side while preserving Keycloak's native form, errors and submission.
+  const hero = document.createElement("section");
+  hero.className = "rackpay-hero";
+  hero.setAttribute("aria-label", "About RackPay");
+  hero.innerHTML = `
+    <p class="rackpay-hero-eyebrow"><span class="rackpay-hero-mark" aria-hidden="true">R</span> One account. More possibilities.</p>
+    <h1>Your money, moving with <span>purpose.</span></h1>
+    <p class="rackpay-hero-copy">A clearer way to manage your money. Keep track of your wallet, send funds across borders, and explore AI-assisted trading with limits you control.</p>
+    <ul class="rackpay-hero-points">
+      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Wallet in one place</strong><br>Keep your money and currency balances organized.</span></li>
+      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Transfers made simpler</strong><br>Send money internationally with a clear, guided flow.</span></li>
+      <li><span class="rackpay-hero-check" aria-hidden="true">✓</span><span><strong>Trading with boundaries</strong><br>Set the maximum amount your AI-assisted strategy can use.</span></li>
+    </ul>
+    <p class="rackpay-hero-footnote">Built to help you stay in control of your financial choices.</p>
+  `;
+
   // Move only the Keycloak card; keep its native form, errors and submission.
   const originalParent = card.parentElement;
   page.appendChild(layout);
+  layout.appendChild(hero);
   layout.appendChild(card);
   if (originalParent && originalParent !== card && originalParent !== page &&
       originalParent !== container && !originalParent.contains(layout)) {
