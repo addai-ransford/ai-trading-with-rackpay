@@ -115,6 +115,8 @@ class RemittancePayoutServiceTest {
 
         when(flutterwave.type()).thenReturn(PayoutProviderType.FLUTTERWAVE);
         when(paystack.type()).thenReturn(PayoutProviderType.PAYSTACK);
+        when(flutterwave.supportsPayout(any())).thenReturn(true);
+        when(paystack.supportsPayout(any())).thenReturn(true);
         when(providers.require(PayoutProviderType.FLUTTERWAVE)).thenReturn(flutterwave);
         when(providers.require(PayoutProviderType.PAYSTACK)).thenReturn(paystack);
 
