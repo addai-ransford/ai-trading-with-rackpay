@@ -1,14 +1,12 @@
 :root {
   color-scheme: dark;
   --rp-bg: #020617;
-  --rp-card: #0d151a;
-  --rp-card-border: #263730;
-  --rp-field: #101c1d;
-  --rp-field-border: #2a3a37;
+  --rp-card: rgba(15, 23, 42, .85);
+  --rp-card-border: #1e293b;
+  --rp-field: #0f172a;
+  --rp-field-border: #334155;
   --rp-white: #f8fafc;
-  --rp-muted: #87969d;
-  --rp-lime: #b4f36a;
-  --rp-lime-hover: #c3fa82;
+  --rp-muted: #94a3b8;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -22,111 +20,201 @@ html, body {
 }
 body { min-height: 100vh !important; }
 .pf-v5-c-login, .login-pf-page {
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 100% !important;
   max-width: none !important;
   min-height: 100vh !important;
   margin: 0 !important;
-  padding: 40px clamp(24px, 5vw, 80px) !important;
+  padding: 32px 16px !important;
   background: var(--rp-bg) !important;
 }
 .rackpay-auth-layout {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(440px, 520px) !important;
-  align-items: center !important;
-  column-gap: clamp(56px, 7vw, 112px) !important;
+  display: block !important;
   width: 100% !important;
-  max-width: 1320px !important;
-  min-height: calc(100vh - 80px) !important;
+  max-width: 536px !important;
   margin: 0 auto !important;
 }
-.rackpay-hero { display: block !important; width: 100% !important; max-width: 600px !important; }
-.rackpay-brand { display:flex; align-items:center; gap:10px; margin:0 0 50px; color:var(--rp-white); font-size:21px; font-weight:800; letter-spacing:-.05em; }
-.rackpay-brand-mark { display:inline-grid; place-items:center; width:36px; height:36px; border-radius:12px; background:var(--rp-lime); color:#081109; font-size:22px; letter-spacing:0; }
-.rackpay-brand-name span { color:var(--rp-lime); }
-.rackpay-eyebrow { margin:0 0 16px; color:var(--rp-lime); font-size:11px; font-weight:800; letter-spacing:.22em; }
-.rackpay-hero h1 { max-width:600px; margin:0; color:var(--rp-white); font-size:clamp(40px, 3.7vw, 56px); font-weight:760; line-height:1.08; letter-spacing:-.055em; }
-.rackpay-hero-copy { max-width:500px; margin:20px 0 28px; color:var(--rp-muted); font-size:14px; line-height:1.9; }
-.rackpay-feature-list { display:grid; gap:18px; }
-.rackpay-feature { display:grid; grid-template-columns:36px minmax(0,1fr); align-items:start; gap:12px; }
-.rackpay-feature-icon { display:grid; place-items:center; width:36px; height:36px; border:1px solid #314333; border-radius:11px; background:#142319; color:var(--rp-lime); font-size:17px; }
-.rackpay-feature strong { display:block; margin:2px 0 5px; color:#f1f5f9; font-size:12px; font-weight:750; }
-.rackpay-feature p { margin:0; color:#87969d; font-size:11px; line-height:1.7; }
-
-.pf-v5-c-login__container { display:contents !important; width:auto !important; max-width:none !important; margin:0 !important; padding:0 !important; }
+.rackpay-hero { display: none !important; }
+.pf-v5-c-login__container {
+  display: block !important;
+  width: 100% !important;
+  max-width: 536px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
 .pf-v5-c-login__header, #kc-header, #kc-header-wrapper,
 .pf-v5-c-login__main-footer, .pf-v5-c-login__main-footer-band,
-#kc-locale, #kc-locale-wrapper { display:none !important; }
+#kc-locale, #kc-locale-wrapper { display: none !important; }
 .pf-v5-c-login__main, #kc-content {
-  display:block !important;
-  width:100% !important;
-  max-width:520px !important;
-  min-width:0 !important;
-  margin:0 !important;
-  padding:0 !important;
-  overflow:hidden;
-  border:1px solid var(--rp-card-border) !important;
-  border-radius:18px !important;
-  background:linear-gradient(145deg,#10191d 0%,var(--rp-card) 100%) !important;
-  box-shadow:none !important;
-  color:var(--rp-white) !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 536px !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 28px !important;
+  overflow: visible !important;
+  border: 1px solid var(--rp-card-border) !important;
+  border-radius: 12px !important;
+  background: var(--rp-card) !important;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.25) !important;
+  color: var(--rp-white) !important;
 }
-.pf-v5-c-login__main-header { display:block !important; margin:0 !important; padding:30px 28px 0 !important; border:0 !important; background:transparent !important; }
-.pf-v5-c-login__main-header::before { display:block; margin:0 0 13px; color:var(--rp-lime); content:"WELCOME BACK"; font-size:10px; font-weight:800; letter-spacing:.22em; }
-.pf-v5-c-login__main-header .pf-v5-c-title, #kc-page-title { margin:0 !important; color:var(--rp-white) !important; font-size:26px !important; font-weight:700 !important; line-height:1.25 !important; letter-spacing:-.035em; }
-.pf-v5-c-login__main-header::after { display:block; margin-top:10px; color:var(--rp-muted); content:"Sign in to continue to your account."; font-size:12px; line-height:1.7; }
-.pf-v5-c-login__main-body { display:block !important; margin:0 !important; padding:25px 28px 28px !important; color:var(--rp-white) !important; }
-#kc-content-wrapper, #kc-form-wrapper, #kc-form, #kc-form-login { width:100% !important; max-width:none !important; color:var(--rp-white) !important; }
-.pf-v5-c-form__group, .pf-v5-c-form__group-control, .form-group, #kc-form-options { margin-bottom:16px !important; }
-.pf-v5-c-form__label, .pf-v5-c-form label, .form-group label, .control-label, label { display:block; margin-bottom:8px; color:#d4dde0 !important; font-size:13px; font-weight:600; }
+.pf-v5-c-login__main-header {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.pf-v5-c-login__main-header::before {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--rp-muted);
+  content: "RACKPAY ACCOUNT";
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.pf-v5-c-login__main-header .pf-v5-c-title, #kc-page-title {
+  margin: 0 !important;
+  color: var(--rp-white) !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+}
+.pf-v5-c-login__main-header::after {
+  display: block;
+  margin-top: 12px;
+  color: var(--rp-muted);
+  content: "Continue securely with your RackPay account.";
+  font-size: 14px;
+  line-height: 1.6;
+}
+.pf-v5-c-login__main-body {
+  display: block !important;
+  margin: 0 !important;
+  padding: 24px 0 0 !important;
+  color: var(--rp-white) !important;
+}
+#kc-content-wrapper, #kc-form-wrapper, #kc-form, #kc-form-login {
+  width: 100% !important;
+  max-width: none !important;
+  color: var(--rp-white) !important;
+}
+.pf-v5-c-form__group, .pf-v5-c-form__group-control, .form-group, #kc-form-options {
+  margin-bottom: 16px !important;
+}
+.pf-v5-c-form__label, .pf-v5-c-form label, .form-group label, .control-label, label {
+  display: block;
+  margin-bottom: 7px;
+  color: #cbd5e1 !important;
+  font-size: 14px;
+  font-weight: 600;
+}
 .pf-v5-c-form-control, .pf-v5-c-form-control input,
 input[type="text"], input[type="email"], input[type="password"], input[type="tel"],
 input[type="number"], input[type="url"], input[type="search"], select, textarea {
-  display:block !important; width:100% !important; max-width:none !important; min-width:0 !important; min-height:48px !important;
-  padding:12px 14px !important; border:1px solid var(--rp-field-border) !important; border-radius:10px !important;
-  background:var(--rp-field) !important; color:var(--rp-white) !important; font-family:inherit !important; font-size:14px !important;
-  box-shadow:none !important; transition:border-color .15s ease,box-shadow .15s ease;
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--rp-field-border) !important;
+  border-radius: 10px !important;
+  background: var(--rp-field) !important;
+  color: var(--rp-white) !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-input:hover, select:hover, textarea:hover { border-color:#48604b !important; }
-input:focus, select:focus, textarea:focus { outline:none !important; border-color:var(--rp-lime) !important; box-shadow:0 0 0 3px #b4f36a24 !important; }
-input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { -webkit-text-fill-color:var(--rp-white); box-shadow:0 0 0 1000px var(--rp-field) inset !important; }
-input[type="checkbox"], input[type="radio"] { width:16px !important; height:16px; min-height:16px !important; padding:0 !important; accent-color:var(--rp-lime); vertical-align:middle; }
-.pf-v5-c-check__label, .checkbox label, label:has(input[type="checkbox"]), label:has(input[type="radio"]) { color:var(--rp-muted) !important; font-weight:500; }
-#kc-form-options, #kc-form-options .checkbox { color:var(--rp-muted); font-size:12px; }
-.pf-v5-c-button, button, input[type="submit"], #kc-login { min-height:48px; border-radius:10px !important; font-family:inherit !important; font-weight:700; cursor:pointer; }
-.pf-v5-c-button.pf-m-primary, #kc-login, input[type="submit"] { display:block !important; width:100% !important; min-height:48px !important; padding:13px 16px !important; border:1px solid var(--rp-lime) !important; border-radius:10px !important; background:var(--rp-lime) !important; color:#10190c !important; font-size:13px !important; font-weight:750 !important; box-shadow:none !important; }
-.pf-v5-c-button.pf-m-primary:hover, #kc-login:hover, input[type="submit"]:hover { border-color:var(--rp-lime-hover) !important; background:var(--rp-lime-hover) !important; }
-button:focus-visible, input[type="submit"]:focus-visible, a:focus-visible { outline:3px solid #b4f36a66; outline-offset:3px; }
-a, #kc-form-options a, #kc-info a, #kc-registration a { color:var(--rp-lime) !important; font-weight:650; text-underline-offset:3px; }
-a:hover { color:#d0ff9b !important; }
-#kc-registration, #kc-registration-container { display:none !important; }
-.rackpay-entry-actions { display:grid; gap:11px; }
-.rackpay-entry-actions button { width:100%; min-height:48px; padding:13px 16px; border-radius:10px; font-size:13px; font-weight:700; }
-.rackpay-continue { border:1px solid var(--rp-lime); background:var(--rp-lime); color:#10190c; }
-.rackpay-continue:hover { background:var(--rp-lime-hover); }
-.rackpay-create { border:1px solid #293a35; background:#101c1c; color:#d6dfe1; }
-.rackpay-create:hover { background:#172724; }
-.rackpay-arrow { margin-left:9px; font-size:16px; vertical-align:-1px; }
-.rackpay-entry-note { margin:20px 0 0; padding-top:17px; border-top:1px solid #26332f; color:#82908c; font-size:11px; line-height:1.75; }
-.rackpay-home-link { display:inline-block; margin-top:15px; font-size:12px; }
-.pf-v5-c-alert, .alert, .pf-v5-c-form__helper-text, #input-error, .instruction { border-radius:8px; line-height:1.5; }
-.pf-v5-c-alert, .alert { color:var(--rp-white); }
-.pf-v5-c-form__helper-text, .instruction, .subtitle { color:var(--rp-muted); }
-
-@media (max-width: 900px) {
- .pf-v5-c-login, .login-pf-page { padding:32px 24px !important; }
- .rackpay-auth-layout { grid-template-columns:minmax(0,1fr) minmax(360px,460px) !important; column-gap:36px !important; }
- .rackpay-hero h1 { font-size:clamp(34px,4vw,44px); }
+input:hover, select:hover, textarea:hover { border-color: #64748b !important; }
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: #64748b !important;
+  box-shadow: 0 0 0 3px rgba(148,163,184,.14) !important;
 }
-@media (max-width: 720px) {
- .pf-v5-c-login, .login-pf-page { padding:24px 16px !important; }
- .rackpay-auth-layout { display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:28px !important; width:100% !important; max-width:520px !important; min-height:calc(100vh - 48px) !important; }
- .rackpay-hero { display:none !important; }
- .pf-v5-c-login__main, #kc-content { max-width:none !important; width:100% !important; }
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--rp-white);
+  box-shadow: 0 0 0 1000px var(--rp-field) inset !important;
 }
+input[type="checkbox"], input[type="radio"] {
+  width: 16px !important; height: 16px; min-height: 16px !important;
+  padding: 0 !important; accent-color: #f8fafc; vertical-align: middle;
+}
+.pf-v5-c-check__label, .checkbox label, label:has(input[type="checkbox"]), label:has(input[type="radio"]) {
+  color: var(--rp-muted) !important;
+  font-weight: 500;
+}
+#kc-form-options, #kc-form-options .checkbox { color: var(--rp-muted); font-size: 12px; }
+.pf-v5-c-button, button, input[type="submit"], #kc-login {
+  min-height: 46px;
+  border-radius: 10px !important;
+  font-family: inherit !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pf-v5-c-button.pf-m-primary, #kc-login, input[type="submit"] {
+  display: block !important;
+  width: 100% !important;
+  min-height: 46px !important;
+  padding: 12px 16px !important;
+  border: 1px solid #fff !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #020617 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+.pf-v5-c-button.pf-m-primary:hover, #kc-login:hover, input[type="submit"]:hover {
+  background: #e2e8f0 !important;
+  border-color: #e2e8f0 !important;
+}
+button:focus-visible, input[type="submit"]:focus-visible, a:focus-visible {
+  outline: 3px solid rgba(248,250,252,.45);
+  outline-offset: 3px;
+}
+a, #kc-form-options a, #kc-info a, #kc-registration a {
+  color: #f8fafc !important;
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+a:hover { color: #cbd5e1 !important; }
+#kc-registration, #kc-registration-container { display: none !important; }
+.rackpay-entry-actions { display: grid; gap: 12px; margin-top: 12px; }
+.rackpay-entry-actions button {
+  width: 100%; min-height: 46px; padding: 12px 16px;
+  border-radius: 10px; font-size: 14px; font-weight: 700;
+}
+.rackpay-create {
+  border: 1px solid var(--rp-field-border);
+  background: transparent;
+  color: var(--rp-white);
+}
+.rackpay-create:hover { background: #1e293b; }
+.rackpay-entry-note {
+  margin: 24px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+.rackpay-home-link { display: none !important; }
+.pf-v5-c-alert, .alert, .pf-v5-c-form__helper-text, #input-error, .instruction {
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.pf-v5-c-alert, .alert { color: var(--rp-white); }
+.pf-v5-c-form__helper-text, .instruction, .subtitle { color: var(--rp-muted); }
 @media (max-width: 480px) {
- .pf-v5-c-login, .login-pf-page { padding:16px 12px !important; }
- .pf-v5-c-login__main-header { padding:25px 22px 0 !important; }
- .pf-v5-c-login__main-body { padding:21px 22px 24px !important; }
+  .pf-v5-c-login, .login-pf-page { padding: 24px 16px !important; }
+  .pf-v5-c-login__main, #kc-content { padding: 24px !important; }
 }
-@media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition-duration:.01ms !important; scroll-behavior:auto !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
