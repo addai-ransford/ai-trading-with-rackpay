@@ -21,9 +21,11 @@ export function isValidRecipientPhone(
   const localPhoneDigits = phoneDigits.startsWith("0")
     ? phoneDigits.slice(1)
     : phoneDigits;
+  const isFlutterwaveGhanaSandboxNumber =
+    countryDialCode.replace(/\D/g, "") === "233" && phoneDigits === "054709929220";
 
   return countryDialCode.replace(/\D/g, "") === "233"
-    ? localPhoneDigits.length === 9
+    ? localPhoneDigits.length === 9 || isFlutterwaveGhanaSandboxNumber
     : phoneDigits.length >= 6;
 }
 

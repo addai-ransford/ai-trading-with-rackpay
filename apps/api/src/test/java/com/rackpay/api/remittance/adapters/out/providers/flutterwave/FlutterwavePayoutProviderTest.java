@@ -78,6 +78,48 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
+    void sendsFlutterwaveGhanaSandboxFixtureInPublishedLocalFormat() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                builder,
+                "http://flutterwave.test/v3",
+                "FLWSECK_TEST-sandbox-key",
+                mock(ProviderRetryExecutor.class),
+                mock(FlutterwaveTransferGateway.class)
+        );
+
+        server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
+                .andExpect(content().json("""
+                        {
+                          "account_number": "054709929220",
+                          "account_bank": "MTN",
+                          "country": "GH",
+                          "currency": "GHS"
+                        }
+                        """))
+                .andRespond(withSuccess("""
+                        {
+                          "status": "success",
+                          "data": {
+                            "account_name": "Test Recipient",
+                            "account_number": "054709929220"
+                          }
+                        }
+                        """, APPLICATION_JSON));
+
+        RecipientVerification result = provider.verifyRecipient(
+                new VerifyRecipientCommand(
+                        "GH", Currency.GHS, PayoutMethod.MOBILE_MONEY, "MTN", "+23354709929220"
+                )
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.verifiedName()).isEqualTo("Test Recipient");
+        server.verify();
+    }
+
+    @Test
     void preservesFlutterwaveMessageWhenRecipientVerificationIsRejected() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

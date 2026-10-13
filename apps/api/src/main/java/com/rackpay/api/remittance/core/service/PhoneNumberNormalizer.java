@@ -17,6 +17,10 @@ public class PhoneNumberNormalizer {
         if (dial.isBlank() || digits.isBlank()) {
             throw new IllegalArgumentException("phone number is invalid");
         }
+        // Flutterwave publishes this longer Ghana number as its sandbox MoMo fixture.
+        if ("233".equals(dial) && "054709929220".equals(digits)) {
+            return "+23354709929220";
+        }
         if (digits.startsWith("0")) {
             digits = digits.replaceFirst("^0+", "");
         }

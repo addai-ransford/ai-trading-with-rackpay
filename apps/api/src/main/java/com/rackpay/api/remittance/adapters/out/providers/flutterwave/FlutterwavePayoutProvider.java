@@ -70,6 +70,10 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         String accountNumber = command.normalizedPhoneNumber().replace("+", "");
+        if (isTestCredential() && "23354709929220".equals(accountNumber)) {
+            // Flutterwave's published Ghana sandbox fixture is formatted as a local phone number.
+            accountNumber = "054709929220";
+        }
         Map<String, String> body = Map.of(
                 "account_number", accountNumber,
                 "account_bank", providerNetworkCode(command.networkCode()),
@@ -251,10 +255,14 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         );
     }
 
+    private boolean isTestCredential() {
+        return secretKey.toUpperCase(java.util.Locale.ROOT).contains("_TEST-");
+    }
+
     private String verificationRejectedMessage(String providerMessage) {
         if (providerMessage != null
                 && providerMessage.toLowerCase(java.util.Locale.ROOT).contains("account resolve failed")
-                && secretKey.toUpperCase(java.util.Locale.ROOT).contains("_TEST-")) {
+                && isTestCredential()) {
             return "Flutterwave sandbox can resolve only test accounts. Use a test mobile-money number provided by Flutterwave.";
         }
         if (providerMessage == null || providerMessage.isBlank()) {

@@ -39,6 +39,10 @@ describe("isValidRecipientPhone", () => {
     expect(isValidRecipientPhone("241234567", "+233")).toBe(true);
   });
 
+  it("accepts Flutterwave's longer Ghana sandbox mobile money number", () => {
+    expect(isValidRecipientPhone("054709929220", "+233")).toBe(true);
+  });
+
   it("rejects invalid Ghana local number lengths", () => {
     expect(isValidRecipientPhone("02412345", "+233")).toBe(false);
     expect(isValidRecipientPhone("02412345678", "+233")).toBe(false);
