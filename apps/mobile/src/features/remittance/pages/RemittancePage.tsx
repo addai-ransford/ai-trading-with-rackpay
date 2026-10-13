@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  ArrowDownUp,
   ArrowRight,
   CheckCircle2,
   Clock3,
@@ -21,7 +20,7 @@ import {
   type MobileMoneyNetwork,
   type RemittanceCountry,
 } from "../api/remittanceApi";
-import { ApiError, apiFetch } from "../../../shared/api/httpClient";
+import { apiFetch } from "../../../shared/api/httpClient";
 import { countryFlag, isQuoteExpired, isValidAmount, isValidRecipientPhone } from "../utils/remittanceUtils";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
@@ -32,7 +31,9 @@ type ExchangeRate = {
   rateType: string;
 };
 
-function money(value: number, currency: string) {
+type Step = "amount" | "recipient" | "review";
+
+function money(value: number, currency: string): string {
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
@@ -46,15 +47,16 @@ function money(value: number, currency: string) {
 
 export function RemittancePage() {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const [activeStep, setActiveStep] = useState<Step>("amount");
   const [country, setCountry] = useState<RemittanceCountry>();
   const [sourceCountryCode, setSourceCountryCode] = useState("BE");
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [amount, setAmount] = useState("100");
   const [verificationFailure, setVerificationFailure] = useState<string>();
   const [recipientName, setRecipientName] = useState<string>();
   const [recipientId, setRecipientId] = useState<string>();
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
-  const [amount, setAmount] = useState("100");
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
   const [quoteNow, setQuoteNow] = useState(Date.now());
   const [fundIdempotencyKey, setFundIdempotencyKey] = useState<string>();
@@ -118,22 +120,33 @@ export function RemittancePage() {
     return value * Number(selectedRate.rate);
   }, [amount, selectedRate]);
 
-  const clearTransfer = () => {
-    setRecipientName(undefined);
-    setRecipientId(undefined);
-    setVerificationFailure(undefined);
-    setConfirmedRecipient(false);
-    setNetwork(undefined);
-    setPhoneNumber("");
+  const resetQuoteAndFunding = () => {
     quoteMutation.reset();
     fundMutation.reset();
     setFundedRemittanceId(undefined);
     setFundIdempotencyKey(undefined);
   };
 
+  const clearVerification = () => {
+    setRecipientName(undefined);
+    setRecipientId(undefined);
+    setVerificationFailure(undefined);
+    setConfirmedRecipient(false);
+    resetQuoteAndFunding();
+  };
+
+  const clearTransfer = () => {
+    clearVerification();
+    setNetwork(undefined);
+    setPhoneNumber("");
+    setActiveStep("amount");
+  };
+
   const verifyMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !country || !network) throw new Error("Choose a destination network and enter the recipient's number.");
+      if (!accessToken || !country || !network) {
+        throw new Error("Choose a destination network and enter the recipient's number.");
+      }
       return verifyRecipient(accessToken, {
         countryCode: country.code,
         countryDialCode: country.dialCode,
@@ -174,6 +187,7 @@ export function RemittancePage() {
     onSuccess: () => {
       setFundIdempotencyKey(crypto.randomUUID());
       setFundedRemittanceId(undefined);
+      setActiveStep("review");
     },
   });
   const quote = quoteMutation.data;
@@ -222,329 +236,474 @@ export function RemittancePage() {
   if (!accessToken) return null;
 
   return (
-    <section className="space-y-6 pb-8">
-      <header className="page-heading">
+    <section className="mx-auto max-w-6xl space-y-8 pb-12">
+      {/* Header */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="eyebrow">RACKPAY TRANSFERS</p>
-          <h1>Send money internationally</h1>
-          <p className="page-description">Choose a destination, see the indicative rate, verify your recipient and review the final quote — all in one place.</p>
+          <p className="eyebrow flex items-center gap-1.5">
+            <Send size={14} /> RackPay Transfers
+          </p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            Send money internationally
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Send directly to recipient mobile-money accounts with real-time conversion quotes from you rackpay wallet.
+          </p>
         </div>
-        <Link to="/remittance/history" className="button button-secondary"><History size={16} /> History</Link>
+        <Link to="/remittance/history" className="button button-secondary self-start sm:self-auto">
+          <History size={16} /> History
+        </Link>
       </header>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-        <div className="space-y-5">
-          <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 shadow-xl shadow-black/10">
-            <div className="border-b border-slate-800 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 p-5 sm:p-6">
-              <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-emerald-800/60 bg-emerald-950/70 text-emerald-300"><Send size={20} /></span>
+      {/* Step Progress Navigation */}
+      <StepIndicator
+        activeStep={activeStep}
+        setActiveStep={setActiveStep}
+        hasRecipient={Boolean(recipientId && confirmedRecipient)}
+        hasQuote={Boolean(quote)}
+      />
+
+      {/* Main Grid Layout */}
+      <div className="grid items-start gap-8 lg:grid-cols-12">
+        {/* Step Panels */}
+        <div className="space-y-6 lg:col-span-7">
+          {/* STEP 1: Route & Amount */}
+          {activeStep === "amount" && (
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl shadow-emerald-950/20">
+              <h2 className="text-xl font-semibold text-white">1. Select route & amount</h2>
+              <p className="mt-1 text-sm text-slate-400">Choose where you are sending from and how much to transfer.</p>
+
+              <div className="mt-6 space-y-4">
+                {/* Sending Country */}
                 <div>
-                  <h2 className="font-semibold text-white">Transfer details</h2>
-                  <p className="mt-1 text-sm text-slate-400">Your route determines the currencies and indicative rate.</p>
-                </div>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  You send from
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    You send from
+                  </label>
                   <select
                     value={sourceCountryCode}
-                    onChange={(event) => {
-                      setSourceCountryCode(event.target.value);
-                      quoteMutation.reset();
-                      fundMutation.reset();
-                      setFundedRemittanceId(undefined);
-                      setFundIdempotencyKey(undefined);
+                    onChange={(e) => {
+                      setSourceCountryCode(e.target.value);
+                      resetQuoteAndFunding();
                     }}
-                    disabled={sendCountriesQuery.isPending || sendCountriesQuery.isError}
-                    className="form-control mt-2 normal-case tracking-normal"
+                    disabled={sendCountriesQuery.isPending}
+                    className="form-control mt-2 w-full text-sm"
                   >
-                    <option value="">{sendCountriesQuery.isPending ? "Loading countries…" : "Choose sending country"}</option>
                     {sendCountriesQuery.data?.map((item) => (
-                      <option key={item.code} value={item.code}>{countryFlag(item.code)} {item.name} · {item.currency}</option>
+                      <option key={item.code} value={item.code}>
+                        {countryFlag(item.code)} {item.name} ({item.currency})
+                      </option>
                     ))}
                   </select>
-                </label>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Recipient country
+                </div>
+
+                {/* Receiving Country */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Destination Country
+                  </label>
                   <select
                     value={country?.code ?? ""}
-                    onChange={(event) => {
-                      const nextCountry = countriesQuery.data?.find((item) => item.code === event.target.value);
-                      if (!nextCountry) return;
-                      setCountry(nextCountry);
-                      clearTransfer();
+                    onChange={(e) => {
+                      const nextCountry = countriesQuery.data?.find((item) => item.code === e.target.value);
+                      if (nextCountry) {
+                        setCountry(nextCountry);
+                        clearTransfer();
+                      }
                     }}
-                    disabled={countriesQuery.isPending || countriesQuery.isError}
-                    className="form-control mt-2 normal-case tracking-normal"
+                    disabled={countriesQuery.isPending}
+                    className="form-control mt-2 w-full text-sm"
                   >
-                    <option value="">{countriesQuery.isPending ? "Loading destinations…" : "Choose recipient country"}</option>
                     {countriesQuery.data?.map((item) => (
-                      <option key={item.code} value={item.code}>{countryFlag(item.code)} {item.name} · {item.currency}</option>
+                      <option key={item.code} value={item.code}>
+                        {countryFlag(item.code)} {item.name} ({item.currency})
+                      </option>
                     ))}
                   </select>
-                </label>
-              </div>
-              {countriesQuery.isError || sendCountriesQuery.isError ? (
-                <p role="alert" className="mt-3 text-sm text-red-300">Country options could not be loaded. Please refresh and try again.</p>
-              ) : null}
-            </div>
-
-            <div className="space-y-5 p-5 sm:p-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm text-slate-300">
-                  Mobile-money network
-                  <select
-                    value={network?.code ?? ""}
-                    onChange={(event) => {
-                      setNetwork(networksQuery.data?.find((item) => item.code === event.target.value));
-                      setRecipientName(undefined);
-                      setRecipientId(undefined);
-                      setVerificationFailure(undefined);
-                      setConfirmedRecipient(false);
-                      quoteMutation.reset();
-                      fundMutation.reset();
-                      setFundedRemittanceId(undefined);
-                      setFundIdempotencyKey(undefined);
-                    }}
-                    className="form-control mt-2"
-                    disabled={!country || networksQuery.isPending || networksQuery.isError}
-                  >
-                    <option value="">{networksQuery.isPending ? "Loading networks…" : "Select network"}</option>
-                    {networksQuery.data?.map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
-                  </select>
-                  {networksQuery.isError ? <span className="mt-2 block text-xs text-red-300">Could not load networks. Try again shortly.</span> : null}
-                  {!networksQuery.isPending && !networksQuery.isError && networksQuery.data?.length === 0 ? <span className="mt-2 block text-xs text-amber-300">No mobile-money networks are enabled for this destination yet.</span> : null}
-                </label>
-                <label className="block text-sm text-slate-300">
-                  Recipient mobile number
-                  <div className="mt-2 flex">
-                    <span className="flex items-center rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 px-3 text-sm text-slate-300">{country?.dialCode ?? "—"}</span>
-                    <input
-                      value={phoneNumber}
-                      onChange={(event) => {
-                        setPhoneNumber(event.target.value);
-                        setRecipientName(undefined);
-                        setRecipientId(undefined);
-                        setVerificationFailure(undefined);
-                        setConfirmedRecipient(false);
-                        quoteMutation.reset();
-                        fundMutation.reset();
-                        setFundedRemittanceId(undefined);
-                        setFundIdempotencyKey(undefined);
-                      }}
-                      inputMode="tel"
-                      autoComplete="tel"
-                      placeholder={country?.code === "GH" ? "024 123 4567" : "Recipient phone number"}
-                      className="form-control min-w-0 rounded-l-none"
-                    />
-                  </div>
-                  {country?.dialCode.replace(/\D/g, "") === "233" ? <span className="mt-1 block text-xs text-slate-500">Enter 9 digits after +233. A leading 0 is optional.</span> : null}
-                </label>
-              </div>
-
-              {recipientName && recipientId ? (
-                <div className="rounded-2xl border border-emerald-800/70 bg-emerald-950/30 p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-400" size={20} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">Recipient verified</p>
-                      <p className="mt-1 font-semibold text-white">{recipientName}</p>
-                      <p className="mt-1 text-sm text-slate-400">{country?.dialCode} {phoneNumber}</p>
-                    </div>
-                  </div>
-                  <label className="mt-4 flex items-start gap-3 text-sm text-slate-300">
-                    <input type="checkbox" checked={confirmedRecipient} onChange={(event) => setConfirmedRecipient(event.target.checked)} className="mt-1 accent-emerald-400" />
-                    I confirm this is the person I want to send money to.
-                  </label>
                 </div>
-              ) : null}
 
-              {verifyMutation.isError || verificationFailure ? (
-                <p role="alert" className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
-                  {verificationFailure ?? errorMessage(verifyMutation.error, "The recipient could not be verified.")}
-                </p>
-              ) : null}
+                {/* Send Amount Input */}
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Amount to send
+                  </label>
+                  <div className="relative mt-2 flex items-center rounded-2xl border border-slate-700 bg-slate-950/80 focus-within:border-emerald-500">
+                    <input
+                      value={amount}
+                      onChange={(e) => {
+                        setAmount(e.target.value);
+                        resetQuoteAndFunding();
+                      }}
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="100.00"
+                      className="w-full bg-transparent px-4 py-3 text-2xl font-bold text-white focus:outline-none"
+                    />
+                    <span className="mr-4 rounded-xl bg-slate-800 px-3 py-1.5 text-sm font-semibold text-slate-200">
+                      {sourceCountry?.currency ?? "EUR"}
+                    </span>
+                  </div>
+                </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+                {/* Live Indicative Estimate Card */}
+                {selectedRate && indicativeDestination !== undefined && (
+                  <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/20 p-4">
+                    <p className="text-xs text-emerald-400">Estimated Recipient Amount</p>
+                    <p className="mt-1 text-2xl font-bold text-white">
+                      {money(indicativeDestination, country?.currency ?? "")}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      1 {sourceCountry?.currency} = {Number(selectedRate.rate).toFixed(4)} {country?.currency}
+                    </p>
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  disabled={!country || !network || !phoneNumberIsValid || verifyMutation.isPending}
-                  onClick={() => verifyMutation.mutate()}
-                  className="button button-secondary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={!amountIsValid}
+                  onClick={() => setActiveStep("recipient")}
+                  className="button button-primary mt-4 w-full justify-center py-3 text-base"
                 >
-                  {verifyMutation.isPending ? "Verifying recipient…" : recipientId ? "Verify again" : "Verify recipient"}
+                  Continue to Recipient <ArrowRight size={18} />
                 </button>
-                <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-slate-500">
-                  <ShieldCheck className="shrink-0 text-emerald-400" size={17} />
-                  Recipient details are checked before a transfer quote can be requested.
-                </div>
               </div>
             </div>
-          </section>
+          )}
 
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="eyebrow">TRANSFER AMOUNT</p>
-                <h2 className="mt-1 text-lg font-semibold text-white">How much would you like to send?</h2>
+          {/* STEP 2: Recipient Details */}
+          {activeStep === "recipient" && (
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl shadow-emerald-950/20">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white">2. Recipient details</h2>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep("amount")}
+                  className="text-xs text-slate-400 underline hover:text-slate-200"
+                >
+                  Edit Amount
+                </button>
               </div>
-              <span className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-300"><ArrowDownUp size={18} /></span>
-            </div>
-            <label className="mt-5 block text-sm text-slate-300">
-              Amount to send
-              <div className="mt-2 flex">
-                <span className="flex items-center rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 px-4 font-semibold text-white">{sourceCountry?.currency ?? "—"}</span>
-                <input
-                  value={amount}
-                  onChange={(event) => {
-                    setAmount(event.target.value);
-                    quoteMutation.reset();
-                    fundMutation.reset();
-                    setFundedRemittanceId(undefined);
-                    setFundIdempotencyKey(undefined);
-                  }}
-                  inputMode="decimal"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="100.00"
-                  className="form-control min-w-0 rounded-l-none text-lg"
-                />
-              </div>
-            </label>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                disabled={!recipientId || !confirmedRecipient || !sourceCountry || !amountIsValid || quoteMutation.isPending}
-                onClick={() => quoteMutation.mutate()}
-                className="button button-primary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {quoteMutation.isPending ? "Preparing quote…" : "Get transfer quote"} <ArrowRight size={16} />
-              </button>
-              {!confirmedRecipient ? <p className="self-center text-xs text-slate-500">Verify and confirm the recipient to continue.</p> : null}
-            </div>
-            {quoteMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(quoteMutation.error, "The quote could not be created. Check the details and try again.")}</p> : null}
-          </section>
+              <p className="mt-1 text-sm text-slate-400">Choose the payout network and recipient mobile number.</p>
 
-          {quote ? (
-            <section className="rounded-3xl border border-emerald-800/60 bg-slate-900 p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-4">
+              <div className="mt-6 space-y-4">
+                {/* Mobile Money Network */}
                 <div>
-                  <p className="eyebrow">YOUR TRANSFER QUOTE</p>
-                  <h2 className="mt-1 text-lg font-semibold text-white">Review before funding</h2>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Mobile Money Network
+                  </label>
+                  <select
+                    value={network?.code ?? ""}
+                    onChange={(e) => {
+                      setNetwork(networksQuery.data?.find((item) => item.code === e.target.value));
+                      clearVerification();
+                    }}
+                    disabled={networksQuery.isPending}
+                    className="form-control mt-2 w-full text-sm"
+                  >
+                    <option value="">Select Network</option>
+                    {networksQuery.data?.map((item) => (
+                      <option key={item.id} value={item.code}>{item.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <span className="flex items-center gap-1.5 rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-300"><Clock3 size={13} /> Expires {new Date(quote.expiresAt).toLocaleTimeString()}</span>
-              </div>
-              <div className="mt-5 rounded-2xl bg-emerald-950/40 p-4">
-                <p className="text-sm text-emerald-200">Recipient gets</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight text-white">{money(Number(quote.destinationAmount), quote.destinationCurrency)}</p>
-                <p className="mt-2 text-sm text-emerald-100/70">1 {quote.sourceCurrency} = {Number(quote.fxRate).toLocaleString(undefined, { maximumFractionDigits: 6 })} {quote.destinationCurrency}</p>
-              </div>
-              <div className="mt-4 divide-y divide-slate-800 text-sm">
-                <QuoteRow label="You send" value={money(Number(quote.sourceAmount), quote.sourceCurrency)} />
-                <QuoteRow label="Transfer fee" value={money(Number(quote.feeAmount), quote.sourceCurrency)} />
-                <QuoteRow label="Recipient receives" value={money(Number(quote.destinationAmount), quote.destinationCurrency)} />
-              </div>
-              {quoteExpired ? <p className="mt-4 text-sm text-amber-300">This quote has expired. Request a new quote before funding.</p> : null}
-              {fundedRemittanceId ? (
-                <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transfer status</p>
-                  <p className="mt-1 font-semibold text-white">{remittanceQuery.data?.status ?? "FUNDS_RESERVED"}</p>
-                  <p className="mt-1 break-all text-xs text-slate-500">Reference: {fundedRemittanceId}</p>
-                  {!["PAYOUT_PENDING", "PAYOUT_PROCESSING", "COMPLETED"].includes(remittanceQuery.data?.status ?? "") ? (
-                    <button type="button" disabled={payoutMutation.isPending || !remittanceQuery.data} onClick={() => payoutMutation.mutate()} className="button button-primary mt-4 w-full justify-center disabled:opacity-40">
-                      {payoutMutation.isPending ? "Starting payout…" : "Start payout"}
-                    </button>
-                  ) : null}
-                  {payoutMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(payoutMutation.error, "Payout could not be started.")}</p> : null}
+
+                {/* Recipient Phone Number */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Phone Number
+                  </label>
+                  <div className="mt-2 flex">
+                    <span className="flex items-center rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 px-3 text-sm text-slate-300">
+                      {country?.dialCode ?? "—"}
+                    </span>
+                    <input
+                      value={phoneNumber}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        clearVerification();
+                      }}
+                      inputMode="tel"
+                      placeholder="024 123 4567"
+                      className="form-control min-w-0 rounded-l-none text-sm"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <p className="mt-4 text-xs leading-5 text-slate-500">The final quote is issued by RackPay's backend and expires at the time shown. Funding and payout status are confirmed by the backend.</p>
-                  <button type="button" disabled={fundMutation.isPending || !fundIdempotencyKey || quoteExpired} onClick={() => fundMutation.mutate()} className="button button-primary mt-4 w-full justify-center disabled:opacity-40">
-                    {fundMutation.isPending ? "Funding transfer…" : "Confirm and fund transfer"}
+
+                {/* Verification Box */}
+                {recipientName && recipientId ? (
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-4">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-emerald-400">Verified Recipient</p>
+                        <p className="text-lg font-bold text-white">{recipientName}</p>
+                      </div>
+                    </div>
+                    <label className="mt-3 flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={confirmedRecipient}
+                        onChange={(e) => setConfirmedRecipient(e.target.checked)}
+                        className="mt-0.5 accent-emerald-400"
+                      />
+                      I confirm this is the recipient I intend to send money to.
+                    </label>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!network || !phoneNumberIsValid || verifyMutation.isPending}
+                    onClick={() => verifyMutation.mutate()}
+                    className="button button-secondary w-full justify-center py-2.5"
+                  >
+                    {verifyMutation.isPending ? "Verifying..." : "Verify Recipient Name"}
                   </button>
-                  {fundMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(fundMutation.error, "The transfer could not be funded.")}</p> : null}
-                </>
+                )}
+
+                {verificationFailure && (
+                  <p role="alert" className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300">
+                    {verificationFailure}
+                  </p>
+                )}
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep("amount")}
+                    className="button button-secondary flex-1 justify-center"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!confirmedRecipient || quoteMutation.isPending}
+                    onClick={() => quoteMutation.mutate()}
+                    className="button button-primary flex-1 justify-center"
+                  >
+                    {quoteMutation.isPending ? "Fetching Quote..." : "Get Transfer Quote"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Review & Payment Confirmation */}
+          {activeStep === "review" && quote && (
+            <div className="rounded-3xl border border-emerald-800/60 bg-slate-900/90 p-6 shadow-2xl shadow-emerald-950/30">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white">3. Final Review & Fund</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                  <Clock3 size={13} /> Expires at {new Date(quote.expiresAt).toLocaleTimeString()}
+                </span>
+              </div>
+
+              <div className="mt-6 rounded-2xl bg-slate-950/70 p-5 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Source Amount:</span>
+                  <span className="font-semibold text-white">{money(Number(quote.sourceAmount), quote.sourceCurrency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Transfer Fee:</span>
+                  <span className="font-semibold text-white">{money(Number(quote.feeAmount), quote.sourceCurrency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Guaranteed FX Rate:</span>
+                  <span className="font-semibold text-emerald-400">
+                    1 {quote.sourceCurrency} = {Number(quote.fxRate).toFixed(4)} {quote.destinationCurrency}
+                  </span>
+                </div>
+                <div className="my-2 border-t border-slate-800" />
+                <div className="flex justify-between text-base">
+                  <span className="font-medium text-slate-200">Recipient Receives:</span>
+                  <span className="text-xl font-bold text-emerald-400">
+                    {money(Number(quote.destinationAmount), quote.destinationCurrency)}
+                  </span>
+                </div>
+              </div>
+
+              {quoteExpired && (
+                <p className="mt-3 text-xs text-amber-300">This quote expired. Please go back to refresh.</p>
               )}
-            </section>
-          ) : null}
+
+              {/* Action Buttons */}
+              <div className="mt-6 space-y-3">
+                {!fundedRemittanceId ? (
+                  <button
+                    type="button"
+                    disabled={fundMutation.isPending || quoteExpired}
+                    onClick={() => fundMutation.mutate()}
+                    className="button button-primary w-full justify-center py-3 text-base"
+                  >
+                    {fundMutation.isPending ? "Funding Transfer..." : "Confirm & Fund Transfer"}
+                  </button>
+                ) : (
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4 space-y-3">
+                    <p className="text-xs text-emerald-400 font-semibold uppercase">Transfer Funded!</p>
+                    <p className="text-xs text-slate-300">
+                      Status: <strong className="text-white">{remittanceQuery.data?.status ?? "FUNDS_RESERVED"}</strong>
+                    </p>
+                    <button
+                      type="button"
+                      disabled={payoutMutation.isPending}
+                      onClick={() => payoutMutation.mutate()}
+                      className="button button-primary w-full justify-center"
+                    >
+                      {payoutMutation.isPending ? "Starting Payout…" : "Start Payout"}
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveStep("recipient")}
+                  className="button button-secondary w-full justify-center text-xs"
+                >
+                  Change Recipient / Details
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <aside className="space-y-5 xl:sticky xl:top-6">
-          <section className="overflow-hidden rounded-3xl border border-emerald-900/60 bg-[radial-gradient(ellipse_at_100%_0%,#1c4933_0,transparent_48%),linear-gradient(145deg,#12251b,#0f1720_75%)] p-5 sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-emerald-800 bg-emerald-950/70 text-emerald-300"><ArrowDownUp size={19} /></span>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Live indicative rate</p>
-                <p className="mt-1 text-sm text-slate-300">{sourceCountry?.name ?? "Belgium"} → {country?.name ?? "Ghana"}</p>
-              </div>
-            </div>
-            {ratesQuery.isPending ? <p className="mt-6 text-sm text-slate-400">Loading latest rate…</p> : ratesQuery.isError ? (
-              <div className="mt-5 text-sm text-amber-200">The indicative rate is temporarily unavailable. You can still request a backend quote.</div>
-            ) : selectedRate ? (
-              <>
-                <p className="mt-6 text-sm text-slate-400">1 {sourceCountry?.currency} equals</p>
-                <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-white">{Number(selectedRate.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })} <span className="text-xl text-emerald-300">{country?.currency}</span></p>
-                <div className="my-5 h-px bg-emerald-900/70" />
-                <p className="text-sm text-slate-400">Estimated recipient amount</p>
-                <p className="mt-1 text-2xl font-semibold text-emerald-300">{indicativeDestination === undefined ? "—" : money(indicativeDestination, country?.currency ?? "")}</p>
-                <p className="mt-2 text-xs leading-5 text-slate-500">Based on {amount || "0"} {sourceCountry?.currency}. Indicative estimate before fees.</p>
-                <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-900 bg-emerald-950/50 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Published rate · indicative</span>
-              </>
-            ) : (
-              <div className="mt-5 rounded-xl border border-slate-700/70 bg-black/10 p-4">
-                <p className="font-medium text-white">Rate not available yet</p>
-                <p className="mt-1 text-sm leading-5 text-slate-400">No published rate is available for this currency pair. RackPay will not guess a rate; request a transfer quote when ready.</p>
-              </div>
-            )}
-            {ratesQuery.isError ? <button type="button" className="mt-3 text-sm text-emerald-300 underline" onClick={() => void ratesQuery.refetch()}>Try loading again</button> : null}
-          </section>
+        {/* Transfer Summary Sidebar */}
+        <aside className="space-y-6 lg:col-span-5 lg:sticky lg:top-6">
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur">
+            <h3 className="text-base font-semibold text-white">Transfer Summary</h3>
 
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
-            <h3 className="font-semibold text-white">Your route</h3>
-            <div className="mt-4 flex items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-800 text-2xl">{sourceCountry ? countryFlag(sourceCountry.code) : "🇧🇪"}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-slate-500">Sending from</p>
-                <p className="truncate font-medium text-white">{sourceCountry?.name ?? "Belgium"}</p>
-                <p className="text-xs text-slate-400">{sourceCountry?.currency ?? "EUR"}</p>
+            {/* Route Section */}
+            <div className="mt-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{sourceCountry ? countryFlag(sourceCountry.code) : "🇪🇺"}</span>
+                <div>
+                  <p className="text-xs text-slate-400">Sending from</p>
+                  <p className="text-sm font-semibold text-white">{sourceCountry?.name ?? "Europe"}</p>
+                </div>
               </div>
-            </div>
-            <div className="ml-5 my-1 h-6 border-l border-dashed border-slate-700" />
-            <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-800 text-2xl">{country ? countryFlag(country.code) : "🇬🇭"}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-slate-500">Receiving in</p>
-                <p className="truncate font-medium text-white">{country?.name ?? "Ghana"}</p>
-                <p className="text-xs text-slate-400">{country?.currency ?? "GHS"}</p>
-              </div>
-            </div>
-          </section>
 
-          <div className="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 text-sm leading-5 text-slate-400">
-            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-emerald-400" />
-            The displayed rate is an estimate. Your final rate, fee and recipient amount are confirmed in the transfer quote before you fund.
+              <div className="ml-4 h-6 border-l border-dashed border-slate-700" />
+
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{country ? countryFlag(country.code) : "🌍"}</span>
+                <div>
+                  <p className="text-xs text-slate-400">Receiving in</p>
+                  <p className="text-sm font-semibold text-white">{country?.name ?? "Destination"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Financial Breakdown */}
+            <div className="mt-6 border-t border-slate-800 pt-4 space-y-2.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">You send</span>
+                <span className="font-semibold text-white text-sm">
+                  {amountIsValid ? money(Number(amount), sourceCountry?.currency ?? "EUR") : "—"}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Recipient receives</span>
+                <span className="font-semibold text-emerald-400 text-sm">
+                  {quote
+                    ? money(Number(quote.destinationAmount), quote.destinationCurrency)
+                    : indicativeDestination !== undefined && country
+                    ? money(indicativeDestination, country.currency)
+                    : "—"}
+                </span>
+              </div>
+
+              {quote ? (
+                <div className="flex justify-between items-center pt-2 border-t border-slate-800/60">
+                  <span className="text-slate-400">Transfer Fee</span>
+                  <span className="font-medium text-slate-200">
+                    {money(Number(quote.feeAmount), quote.sourceCurrency)}
+                  </span>
+                </div>
+              ) : selectedRate ? (
+                <div className="flex justify-between items-center pt-2 border-t border-slate-800/60">
+                  <span className="text-slate-400">Exchange Rate (Indicative)</span>
+                  <span className="font-medium text-slate-200">
+                    1 {sourceCountry?.currency} = {Number(selectedRate.rate).toFixed(4)} {country?.currency}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Recipient & Network Info */}
+            <div className="mt-4 border-t border-slate-800 pt-4 space-y-2 text-xs text-slate-400">
+              <div className="flex justify-between">
+                <span>Network:</span>
+                <span className="font-medium text-slate-200">{network?.name ?? "Not selected"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Recipient:</span>
+                <span className="font-medium text-slate-200">{recipientName ?? "Unverified"}</span>
+              </div>
+            </div>
+
+            {/* Security Note */}
+            <div className="mt-6 rounded-2xl bg-slate-950/50 p-3.5 flex items-start gap-2.5 text-xs text-slate-400">
+              <ShieldCheck size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+              <span>RackPay guarantees zero hidden fees and instant payout dispatch upon funding.</span>
+            </div>
           </div>
-          {ratesQuery.isFetching ? <p className="text-xs text-slate-500">Refreshing published rates…</p> : null}
         </aside>
       </div>
     </section>
   );
 }
 
-function QuoteRow({ label, value }: { label: string; value: string }) {
+// --- Step Indicator Helper Component ---
+function StepIndicator({
+  activeStep,
+  setActiveStep,
+  hasRecipient,
+  hasQuote,
+}: {
+  activeStep: Step;
+  setActiveStep: (step: Step) => void;
+  hasRecipient: boolean;
+  hasQuote: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-right font-medium text-slate-100">{value}</span>
+    <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 p-2 text-xs sm:text-sm">
+      <button
+        type="button"
+        onClick={() => setActiveStep("amount")}
+        className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 font-medium transition ${
+          activeStep === "amount" ? "bg-emerald-500/10 text-emerald-400" : "text-slate-400"
+        }`}
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-xs font-bold">1</span>
+        Amount
+      </button>
+
+      <span className="text-slate-700">•</span>
+
+      <button
+        type="button"
+        disabled={!hasRecipient && activeStep === "amount"}
+        onClick={() => setActiveStep("recipient")}
+        className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 font-medium transition ${
+          activeStep === "recipient" ? "bg-emerald-500/10 text-emerald-400" : "text-slate-400"
+        }`}
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-xs font-bold">2</span>
+        Recipient
+      </button>
+
+      <span className="text-slate-700">•</span>
+
+      <button
+        type="button"
+        disabled={!hasQuote}
+        onClick={() => setActiveStep("review")}
+        className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 font-medium transition ${
+          activeStep === "review" ? "bg-emerald-500/10 text-emerald-400" : "text-slate-400"
+        }`}
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-xs font-bold">3</span>
+        Review & Pay
+      </button>
     </div>
   );
-}
-
-function errorMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError) {
-    return error.correlationId ? `${error.message} (Reference: ${error.correlationId})` : error.message;
-  }
-  return error instanceof Error ? error.message : fallback;
 }
