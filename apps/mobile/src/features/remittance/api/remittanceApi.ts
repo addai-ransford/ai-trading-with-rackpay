@@ -30,7 +30,7 @@ export type RecipientVerification = {
   verified: boolean;
   normalizedPhoneNumber: string;
   verifiedName?: string;
-  verificationProvider?: "FLUTTERWAVE" | "PAYSTACK";
+  verificationProvider?: "FLUTTERWAVE" | "PAYSTACK" | null;
   providerRecipientReference?: string;
   failureReason?: string;
 };

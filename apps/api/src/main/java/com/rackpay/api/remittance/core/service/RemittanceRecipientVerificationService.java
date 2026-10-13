@@ -74,9 +74,16 @@ public class RemittanceRecipientVerificationService {
 
         String normalized = phoneNumbers.normalize(country.getDialCode(), request.phoneNumber());
 
-        PayoutProvider provider = providers.requireRecipientVerificationProvider(
-            countryCode, currency, payoutMethod
-        );
+        PayoutProvider provider;
+        try {
+            provider = providers.requireRecipientVerificationProvider(countryCode, currency, payoutMethod);
+        } catch (IllegalStateException exception) {
+            return new VerificationResponse(
+                false, null, countryCode, currency, payoutMethod, network.getCode(),
+                normalized, null, null, null,
+                "No configured payout provider can verify this destination and network.", user.getId()
+            );
+        }
 
         PayoutProvider.RecipientVerification result = provider.verifyRecipient(
             new PayoutProvider.VerifyRecipientCommand(

@@ -83,6 +83,7 @@ rackpay:
       callback-url: ${RACKPAY_FLUTTERWAVE_CALLBACK_URL:}
     paystack:
       base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
+      secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
 
   providers:
     retry:
