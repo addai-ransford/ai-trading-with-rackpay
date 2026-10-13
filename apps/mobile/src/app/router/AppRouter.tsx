@@ -6,7 +6,6 @@ import { ProtectedRoute } from "../../features/auth/routes/ProtectedRoute";
 import { WalletPage } from "../../features/wallet/pages/WalletPage";
 import { RemittancePage } from "../../features/remittance/pages/RemittancePage";
 import { RemittanceHistoryPage } from "../../features/remittance/pages/RemittanceHistoryPage";
-import { ExchangeRatesPage } from "../../features/remittance/pages/ExchangeRatesPage";
 import { PaymentPage } from "../../features/payments/pages/PaymentPage";
 import { TradingPage } from "../../features/trading/pages/TradingPage";
 import { PaymentProviderAdminPage } from "../../features/admin/pages/PaymentProviderAdminPage";
@@ -19,7 +18,7 @@ export function AppRouter() {
       <Route element={<AppShell />}>
         <Route path="/login" element={<LoginPage />} />
         <Route index element={<HomePage />} />
-        <Route path="/rates" element={<ExchangeRatesPage />} />
+        <Route path="/rates" element={<Navigate to="/remittance" replace />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/wallet/add-money" element={<PaymentPage />} />
