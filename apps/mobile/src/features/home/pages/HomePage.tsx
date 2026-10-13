@@ -70,6 +70,9 @@ export function HomePage() {
               <Link to="/login?mode=register" className="button button-primary">
                 Create your account <ArrowRight size={16} />
               </Link>
+              <Link to="/rates" className="button button-secondary">
+                View exchange rates <ArrowLeftRight size={16} />
+              </Link>
             </div>
             <div className="public-trust-note"><LockKeyhole size={15} /> Secure sign-in powered by RackPay and Keycloak</div>
           </div>
@@ -87,7 +90,7 @@ export function HomePage() {
         </div>
         <div className="public-feature-grid">
           <article className="public-feature-card"><span className="action-icon"><WalletCards size={20}/></span><h3>Multi-currency wallet</h3><p>Keep your currency balances and transaction history together.</p></article>
-          <article className="public-feature-card"><span className="action-icon"><ArrowLeftRight size={20}/></span><h3>Clear remittance quotes</h3><p>See the exchange rate, fees and recipient amount before funding a transfer.</p></article>
+          <Link to="/rates" className="public-feature-card"><span className="action-icon"><ArrowLeftRight size={20}/></span><h3>Public exchange rates</h3><p>Check published currency rates and estimate what your recipient could receive before you create an account.</p><span className="text-link">Explore rates <ArrowRight size={14}/></span></Link>
           <article className="public-feature-card"><span className="action-icon"><Bot size={20}/></span><h3>Risk-controlled trading</h3><p>Set a maximum amount or range that the trading system must respect.</p></article>
         </div>
         <p className="compliance-note"><ShieldCheck size={14}/> Financial balances, rates, fees and transfer status are determined by RackPay's backend.</p>
@@ -141,6 +144,7 @@ export function HomePage() {
         <Link to="/wallet" className="action-card"><span className="action-icon"><WalletCards size={19}/></span><strong>Manage wallet</strong><p>Swipe through balances and view transaction history</p><ArrowRight className="action-arrow" size={16}/></Link>
         <Link to="/wallet/add-money" className="action-card"><span className="action-icon"><CreditCard size={19}/></span><strong>Add money</strong><p>Start a secure provider-hosted checkout</p><ArrowRight className="action-arrow" size={16}/></Link>
         <Link to="/remittance" className="action-card"><span className="action-icon"><ArrowLeftRight size={19}/></span><strong>Send money</strong><p>Review exchange rates and send internationally</p><ArrowRight className="action-arrow" size={16}/></Link>
+        <Link to="/rates" className="action-card"><span className="action-icon"><ArrowLeftRight size={19}/></span><strong>Exchange rates</strong><p>View published rates and calculate an estimate</p><ArrowRight className="action-arrow" size={16}/></Link>
         <Link to="/trading" className="action-card"><span className="action-icon"><Bot size={19}/></span><strong>AI Trading</strong><p>Trading sessions and risk controls</p><ArrowRight className="action-arrow" size={16}/></Link>
       </div>
 
