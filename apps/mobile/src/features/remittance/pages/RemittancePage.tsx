@@ -500,7 +500,7 @@ export function RemittancePage() {
                     type="button"
                     disabled={!confirmedRecipient || quoteMutation.isPending}
                     onClick={() => quoteMutation.mutate()}
-                    className="button button-primary flex-1 justify-center"
+                    className="button button-primary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {quoteMutation.isPending ? "Fetching Quote..." : "Get Transfer Quote"}
                   </button>
