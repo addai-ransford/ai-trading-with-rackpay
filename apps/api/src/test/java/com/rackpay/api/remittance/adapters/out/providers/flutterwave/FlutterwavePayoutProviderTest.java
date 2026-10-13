@@ -8,8 +8,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.math.BigDecimal;
 
@@ -26,6 +28,54 @@ import com.rackpay.api.shared.core.money.Currency;
 import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 
 class FlutterwavePayoutProviderTest {
+
+    @Test
+    void resolvesGhanaMobileMoneyNumberToVerifiedRecipientName() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                builder,
+                "http://flutterwave.test/v3",
+                "test-secret",
+                mock(ProviderRetryExecutor.class),
+                mock(FlutterwaveTransferGateway.class)
+        );
+
+        server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
+                .andExpect(content().json("""
+                        {
+                          "account_number": "233241234567",
+                          "account_bank": "MTN",
+                          "country": "GH",
+                          "currency": "GHS"
+                        }
+                        """))
+                .andRespond(withSuccess("""
+                        {
+                          "status": "success",
+                          "data": {
+                            "account_name": "Ama Mensah",
+                            "account_number": "233241234567"
+                          }
+                        }
+                        """, APPLICATION_JSON));
+
+        RecipientVerification result = provider.verifyRecipient(
+                new VerifyRecipientCommand(
+                        "GH",
+                        Currency.GHS,
+                        PayoutMethod.MOBILE_MONEY,
+                        "MTN",
+                        "+233241234567"
+                )
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.verifiedName()).isEqualTo("Ama Mensah");
+        assertThat(result.providerRecipientReference()).isEqualTo("233241234567");
+        server.verify();
+    }
 
     @Test
     void preservesFlutterwaveMessageWhenRecipientVerificationIsRejected() {

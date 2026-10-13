@@ -56,6 +56,7 @@ export function RemittancePage() {
   const [verificationFailure, setVerificationFailure] = useState<string>();
   const [recipientName, setRecipientName] = useState<string>();
   const [recipientId, setRecipientId] = useState<string>();
+  const [verificationProvider, setVerificationProvider] = useState<string>();
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
   const [quoteNow, setQuoteNow] = useState(Date.now());
@@ -130,8 +131,10 @@ export function RemittancePage() {
   const clearVerification = () => {
     setRecipientName(undefined);
     setRecipientId(undefined);
+    setVerificationProvider(undefined);
     setVerificationFailure(undefined);
     setConfirmedRecipient(false);
+    verifyMutation.reset();
     resetQuoteAndFunding();
   };
 
@@ -143,37 +146,43 @@ export function RemittancePage() {
   };
 
   const verifyMutation = useMutation({
-    mutationFn: () => {
-      if (!accessToken || !country || !network) {
-        throw new Error("Choose a destination network and enter the recipient's number.");
-      }
+    mutationFn: (request: {
+      countryCode: string;
+      countryDialCode: string;
+      currency: string;
+      networkCode: string;
+      phoneNumber: string;
+    }) => {
+      if (!accessToken) throw new Error("Sign in before verifying a recipient.");
       return verifyRecipient(accessToken, {
-        countryCode: country.code,
-        countryDialCode: country.dialCode,
-        currency: country.currency,
+        ...request,
         payoutMethod: "MOBILE_MONEY",
-        networkCode: network.code,
-        phoneNumber,
       });
     },
-    onSuccess: (result) => {
-      if (!result.verified) {
+    onSuccess: (result, request) => {
+      // Ignore a response for details the user has edited while verification was in flight.
+      if (country?.code !== request.countryCode || network?.code !== request.networkCode || phoneNumber !== request.phoneNumber) {
+        return;
+      }
+      if (!result.verified || !result.recipientId || !result.verifiedName?.trim()) {
         setRecipientName(undefined);
         setRecipientId(undefined);
+        setVerificationProvider(undefined);
         setConfirmedRecipient(false);
-        setVerificationFailure(result.failureReason ?? "The recipient could not be verified.");
+        setVerificationFailure(result.failureReason ?? "The provider did not return a verified recipient name.");
         return;
       }
       setVerificationFailure(undefined);
-      setRecipientName(result.verifiedName);
+      setRecipientName(result.verifiedName.trim());
       setRecipientId(result.recipientId);
+      setVerificationProvider(result.verificationProvider);
       setConfirmedRecipient(false);
     },
   });
 
   const quoteMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !recipientId || !country || !sourceCountry || !amount.trim()) {
+      if (!accessToken || !recipientId || !confirmedRecipient || !country || !sourceCountry || !amount.trim()) {
         throw new Error("Verify the recipient and complete the transfer details first.");
       }
       return createQuote(accessToken, {
@@ -435,7 +444,9 @@ export function RemittancePage() {
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
                       <div>
-                        <p className="text-xs font-semibold uppercase text-emerald-400">Verified Recipient</p>
+                        <p className="text-xs font-semibold uppercase text-emerald-400">
+                          Verified via {verificationProvider ?? "payment provider"}
+                        </p>
                         <p className="text-lg font-bold text-white">{recipientName}</p>
                       </div>
                     </div>
@@ -453,16 +464,27 @@ export function RemittancePage() {
                   <button
                     type="button"
                     disabled={!network || !phoneNumberIsValid || verifyMutation.isPending}
-                    onClick={() => verifyMutation.mutate()}
+                    onClick={() => {
+                      if (!country || !network) return;
+                      verifyMutation.mutate({
+                        countryCode: country.code,
+                        countryDialCode: country.dialCode,
+                        currency: country.currency,
+                        networkCode: network.code,
+                        phoneNumber,
+                      });
+                    }}
                     className="button button-secondary w-full justify-center py-2.5"
                   >
                     {verifyMutation.isPending ? "Verifying..." : "Verify Recipient Name"}
                   </button>
                 )}
 
-                {verificationFailure && (
+                {(verificationFailure || verifyMutation.error) && (
                   <p role="alert" className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300">
-                    {verificationFailure}
+                    {verificationFailure ?? (verifyMutation.error instanceof Error
+                      ? verifyMutation.error.message
+                      : "Recipient verification failed. Try again.")}
                   </p>
                 )}
 

@@ -26,10 +26,11 @@ export type RecipientVerificationRequest = {
 };
 
 export type RecipientVerification = {
-  recipientId: string;
+  recipientId: string | null;
   verified: boolean;
   normalizedPhoneNumber: string;
   verifiedName?: string;
+  verificationProvider?: "FLUTTERWAVE" | "PAYSTACK";
   providerRecipientReference?: string;
   failureReason?: string;
 };
