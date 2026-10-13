@@ -69,7 +69,7 @@ rackpay:
       base-url: ${RACKPAY_STRIPE_BASE_URL:https://api.stripe.com/v1}
   remittance:
     quote-lifetime: PT2M
-    fx-rates: {}
+    fx-rates: ${RACKPAY_REMITTANCE_FX_RATES:{}}
   payout:
     default-provider: ${RACKPAY_PAYOUT_DEFAULT_PROVIDER:FLUTTERWAVE}
     provider-order: ${RACKPAY_PAYOUT_PROVIDER_ORDER:FLUTTERWAVE,PAYSTACK}
