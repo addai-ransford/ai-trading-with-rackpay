@@ -175,7 +175,7 @@ export function RemittancePage() {
       setVerificationFailure(undefined);
       setRecipientName(result.verifiedName.trim());
       setRecipientId(result.recipientId);
-      setVerificationProvider(result.verificationProvider);
+      setVerificationProvider(result.verificationProvider ?? undefined);
       setConfirmedRecipient(false);
     },
   });
