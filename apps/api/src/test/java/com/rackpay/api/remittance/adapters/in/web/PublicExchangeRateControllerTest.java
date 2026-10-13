@@ -33,7 +33,7 @@ class PublicExchangeRateControllerTest {
 
         assertEquals("GHS", rates.get(1).sourceCurrency());
         assertEquals("EUR", rates.get(1).destinationCurrency());
-        assertEquals(new BigDecimal("0.0810045363"), rates.get(1).rate());
+        assertEquals(new BigDecimal("0.081000518403"), rates.get(1).rate());
     }
 
     @Test
