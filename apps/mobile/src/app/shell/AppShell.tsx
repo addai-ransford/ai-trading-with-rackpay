@@ -12,6 +12,7 @@ import {
 
 const links = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
+  { to: "/rates", label: "Exchange rates", icon: ArrowLeftRight },
   { to: "/wallet", label: "Wallet", icon: WalletCards },
   { to: "/remittance", label: "Remittance", icon: ArrowLeftRight },
   { to: "/trading", label: "AI Trading", icon: ChartNoAxesCombined },
@@ -37,6 +38,7 @@ export function AppShell() {
               <strong>Your money, connected.</strong>
               <p>Wallets, international transfers and risk-controlled trading in one secure space.</p>
               <Link to="/login" className="button button-primary full-width">Sign in or create account</Link>
+              <Link to="/rates" className="button button-secondary full-width">Explore exchange rates</Link>
             </div>
           ) : (
             <>
@@ -75,7 +77,7 @@ export function AppShell() {
         <div className={isLoginRoute ? "login-content" : "page-content"}><Outlet /></div>
         {!isLoginRoute && !isGuestHome ? (
           <nav className="mobile-nav" aria-label="Mobile navigation">
-            {links.slice(0, 4).map(({ to, label, icon: Icon, end }) => (
+            {links.filter(({ to }) => ["/", "/wallet", "/remittance", "/trading"].includes(to)).map(({ to, label, icon: Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `mobile-nav-link ${isActive ? "active" : ""}`}>
                 <Icon size={20}/><span>{label === "Overview" ? "Home" : label === "Remittance" ? "Send" : label === "AI Trading" ? "Trading" : label}</span>
               </NavLink>
