@@ -1,20 +1,19 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../shared/auth/authStore";
 import {
-  ArrowLeftRight,
   ChartNoAxesCombined,
   CircleHelp,
   CircleUserRound,
   LayoutDashboard,
   Settings2,
   WalletCards,
+  ArrowLeftRight,
 } from "lucide-react";
 
 const links = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
-  { to: "/rates", label: "Exchange rates", icon: ArrowLeftRight },
   { to: "/wallet", label: "Wallet", icon: WalletCards },
-  { to: "/remittance", label: "Remittance", icon: ArrowLeftRight },
+  { to: "/remittance", label: "Send money", icon: ArrowLeftRight },
   { to: "/trading", label: "AI Trading", icon: ChartNoAxesCombined },
   { to: "/settings", label: "Settings", icon: Settings2 },
 ];
@@ -79,7 +78,7 @@ export function AppShell() {
           <nav className="mobile-nav" aria-label="Mobile navigation">
             {links.filter(({ to }) => ["/", "/wallet", "/remittance", "/trading"].includes(to)).map(({ to, label, icon: Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `mobile-nav-link ${isActive ? "active" : ""}`}>
-                <Icon size={20}/><span>{label === "Overview" ? "Home" : label === "Remittance" ? "Send" : label === "AI Trading" ? "Trading" : label}</span>
+                <Icon size={20}/><span>{label === "Overview" ? "Home" : label === "Send money" ? "Send" : label === "AI Trading" ? "Trading" : label}</span>
               </NavLink>
             ))}
           </nav>
