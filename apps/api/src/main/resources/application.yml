@@ -70,6 +70,8 @@ rackpay:
   remittance:
     quote-lifetime: PT2M
     fx-rates: ${RACKPAY_REMITTANCE_FX_RATES:{}}
+  public-fx:
+    api-key: ${RACKPAY_EXCHANGE_RATE_API_KEY:}
   payout:
     default-provider: ${RACKPAY_PAYOUT_DEFAULT_PROVIDER:FLUTTERWAVE}
     provider-order: ${RACKPAY_PAYOUT_PROVIDER_ORDER:FLUTTERWAVE,PAYSTACK}
@@ -81,7 +83,6 @@ rackpay:
       callback-url: ${RACKPAY_FLUTTERWAVE_CALLBACK_URL:}
     paystack:
       base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
-      secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}
 
   providers:
     retry:
