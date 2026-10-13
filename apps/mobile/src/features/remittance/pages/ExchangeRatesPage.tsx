@@ -8,7 +8,7 @@ import { useAuthStore } from "../../../shared/auth/authStore";
 type ExchangeRate = {
   sourceCurrency: string;
   destinationCurrency: string;
-  rate: string;
+  rate: string | number;
   rateType: "INDICATIVE" | string;
 };
 
