@@ -1,6 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CheckCircle2, History, Search, Send, ShieldCheck } from "lucide-react";
+import {
+  ArrowDownUp,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  History,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
@@ -13,32 +21,42 @@ import {
   type MobileMoneyNetwork,
   type RemittanceCountry,
 } from "../api/remittanceApi";
-import { ApiError } from "../../../shared/api/httpClient";
-import {
-  countryFlag,
-  isQuoteExpired,
-  isValidAmount,
-  isValidRecipientPhone,
-} from "../utils/remittanceUtils";
+import { ApiError, apiFetch } from "../../../shared/api/httpClient";
+import { countryFlag, isQuoteExpired, isValidAmount, isValidRecipientPhone } from "../utils/remittanceUtils";
 import { useAuthStore } from "../../../shared/auth/authStore";
 
-type Step = "country" | "recipient" | "amount";
+type ExchangeRate = {
+  sourceCurrency: string;
+  destinationCurrency: string;
+  rate: string | number;
+  rateType: string;
+};
+
+function money(value: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currency}`;
+  }
+}
 
 export function RemittancePage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [country, setCountry] = useState<RemittanceCountry>();
-  const [countrySearch, setCountrySearch] = useState("");
-  const [sourceCountryCode, setSourceCountryCode] = useState("");
+  const [sourceCountryCode, setSourceCountryCode] = useState("BE");
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationFailure, setVerificationFailure] = useState<string>();
   const [recipientName, setRecipientName] = useState<string>();
   const [recipientId, setRecipientId] = useState<string>();
-  const [amount, setAmount] = useState("");
-  const [step, setStep] = useState<Step>("country");
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
+  const [amount, setAmount] = useState("100");
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
-  const [quoteNow, setQuoteNow] = useState(0);
+  const [quoteNow, setQuoteNow] = useState(Date.now());
   const [fundIdempotencyKey, setFundIdempotencyKey] = useState<string>();
 
   const countriesQuery = useQuery({
@@ -47,19 +65,38 @@ export function RemittancePage() {
     enabled: Boolean(accessToken),
     staleTime: 5 * 60_000,
   });
-
   const sendCountriesQuery = useQuery({
     queryKey: ["remittance", "countries", "SEND"],
     queryFn: () => listRemittanceCountries(accessToken!, "SEND"),
     enabled: Boolean(accessToken),
     staleTime: 5 * 60_000,
   });
-
-  const filteredCountries = (countriesQuery.data ?? []).filter((item) => {
-    const term = countrySearch.trim().toLocaleLowerCase();
-    return !term || [item.name, item.code, item.dialCode, item.currency].some((value) => value.toLocaleLowerCase().includes(term));
+  const ratesQuery = useQuery({
+    queryKey: ["public", "exchange-rates"],
+    queryFn: () => apiFetch<ExchangeRate[]>("/api/v1/public/exchange-rates"),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
+  useEffect(() => {
+    if (!country && countriesQuery.data?.length) {
+      setCountry(
+        countriesQuery.data.find((item) => item.code === "GH") ??
+        countriesQuery.data[0],
+      );
+    }
+  }, [country, countriesQuery.data]);
+
+  useEffect(() => {
+    if (sendCountriesQuery.data?.length && !sendCountriesQuery.data.some((item) => item.code === sourceCountryCode)) {
+      setSourceCountryCode(
+        sendCountriesQuery.data.find((item) => item.code === "BE")?.code ??
+        sendCountriesQuery.data[0].code,
+      );
+    }
+  }, [sendCountriesQuery.data, sourceCountryCode]);
+
+  const sourceCountry = sendCountriesQuery.data?.find((item) => item.code === sourceCountryCode);
   const networksQuery = useQuery({
     queryKey: ["remittance", "networks", country?.code],
     queryFn: () => listMobileMoneyNetworks(accessToken!, country!.code),
@@ -67,12 +104,36 @@ export function RemittancePage() {
     staleTime: 5 * 60_000,
   });
 
+  const selectedRate = useMemo(() => {
+    if (!sourceCountry || !country) return undefined;
+    return ratesQuery.data?.find(
+      (item) => item.sourceCurrency === sourceCountry.currency &&
+        item.destinationCurrency === country.currency,
+    );
+  }, [country, ratesQuery.data, sourceCountry]);
+
+  const indicativeDestination = useMemo(() => {
+    const value = Number(amount);
+    if (!selectedRate || !Number.isFinite(value) || value <= 0) return undefined;
+    return value * Number(selectedRate.rate);
+  }, [amount, selectedRate]);
+
+  const clearTransfer = () => {
+    setRecipientName(undefined);
+    setRecipientId(undefined);
+    setVerificationFailure(undefined);
+    setConfirmedRecipient(false);
+    setNetwork(undefined);
+    setPhoneNumber("");
+    quoteMutation.reset();
+    fundMutation.reset();
+    setFundedRemittanceId(undefined);
+    setFundIdempotencyKey(undefined);
+  };
+
   const verifyMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !country || !network) {
-        throw new Error("Recipient details are incomplete.");
-      }
-
+      if (!accessToken || !country || !network) throw new Error("Choose a destination network and enter the recipient's number.");
       return verifyRecipient(accessToken, {
         countryCode: country.code,
         countryDialCode: country.dialCode,
@@ -87,42 +148,21 @@ export function RemittancePage() {
         setRecipientName(undefined);
         setRecipientId(undefined);
         setConfirmedRecipient(false);
-        setVerificationFailure(
-          result.failureReason ?? "The recipient could not be verified.",
-        );
+        setVerificationFailure(result.failureReason ?? "The recipient could not be verified.");
         return;
       }
       setVerificationFailure(undefined);
       setRecipientName(result.verifiedName);
       setRecipientId(result.recipientId);
       setConfirmedRecipient(false);
-      if (result.verifiedName) setStep("recipient");
-    },
-  });
-
-  const payoutMutation = useMutation({
-    mutationFn: () => {
-      if (!accessToken || !fundedRemittanceId)
-        throw new Error("Remittance is not funded.");
-      return triggerPayout(accessToken, fundedRemittanceId);
     },
   });
 
   const quoteMutation = useMutation({
     mutationFn: () => {
-      const sourceCountry = sendCountriesQuery.data?.find(
-        (item) => item.code === sourceCountryCode,
-      );
-      if (
-        !accessToken ||
-        !recipientId ||
-        !country ||
-        !sourceCountry ||
-        !amount.trim()
-      ) {
-        throw new Error("Quote details are incomplete.");
+      if (!accessToken || !recipientId || !country || !sourceCountry || !amount.trim()) {
+        throw new Error("Verify the recipient and complete the transfer details first.");
       }
-
       return createQuote(accessToken, {
         recipientId,
         sourceCountryCode: sourceCountry.code,
@@ -136,26 +176,28 @@ export function RemittancePage() {
       setFundedRemittanceId(undefined);
     },
   });
-
   const quote = quoteMutation.data;
 
   const fundMutation = useMutation({
     mutationFn: () => {
-      if (!accessToken || !quote) throw new Error("Quote is required.");
-      if (!fundIdempotencyKey) throw new Error("Funding key is not ready.");
+      if (!accessToken || !quote) throw new Error("A valid quote is required.");
+      if (!fundIdempotencyKey) throw new Error("The funding request key is not ready.");
       return fundRemittance(accessToken, quote.quoteId, fundIdempotencyKey);
     },
     onSuccess: (result) => setFundedRemittanceId(result.remittanceId),
   });
 
+  const payoutMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || !fundedRemittanceId) throw new Error("Fund the remittance before starting payout.");
+      return triggerPayout(accessToken, fundedRemittanceId);
+    },
+  });
+
   useEffect(() => {
     if (!quote) return;
-    const initialTick = window.setTimeout(() => setQuoteNow(Date.now()), 0);
     const timer = window.setInterval(() => setQuoteNow(Date.now()), 1000);
-    return () => {
-      window.clearTimeout(initialTick);
-      window.clearInterval(timer);
-    };
+    return () => window.clearInterval(timer);
   }, [quote]);
 
   const quoteExpired = useMemo(
@@ -163,11 +205,7 @@ export function RemittancePage() {
     [quote, quoteNow],
   );
   const amountIsValid = isValidAmount(amount);
-
-  const phoneNumberIsValid = isValidRecipientPhone(
-    phoneNumber,
-    country?.dialCode ?? "",
-  );
+  const phoneNumberIsValid = isValidRecipientPhone(phoneNumber, country?.dialCode ?? "");
 
   const remittanceQuery = useQuery({
     queryKey: ["remittance", "detail", fundedRemittanceId],
@@ -175,496 +213,338 @@ export function RemittancePage() {
     enabled: Boolean(accessToken && fundedRemittanceId),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status &&
-        ["COMPLETED", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"].includes(
-          status,
-        )
+      return status && ["COMPLETED", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"].includes(status)
         ? false
         : 3000;
     },
   });
 
-  if (!accessToken) {
-    return null;
-  }
+  if (!accessToken) return null;
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6 pb-8">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">INTERNATIONAL TRANSFERS</p>
-          <h1>Send money</h1>
-          <p className="page-description">Verify the recipient, review RackPay’s exchange rate and fees, then confirm your transfer.</p>
+          <p className="eyebrow">RACKPAY TRANSFERS</p>
+          <h1>Send money internationally</h1>
+          <p className="page-description">Choose a destination, see the indicative rate, verify your recipient and review the final quote — all in one place.</p>
         </div>
-        <Link to="/remittance/history" className="button button-secondary" aria-label="Remittance history">
-          <History size={16} /> History
-        </Link>
+        <Link to="/remittance/history" className="button button-secondary"><History size={16} /> History</Link>
       </header>
 
-      <div className="remittance-steps flex gap-2">
-        {(["country", "recipient", "amount"] as Step[]).map((item, index) => (
-          <div key={item} className="flex flex-1 items-center gap-2">
-            <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                step === item
-                  ? "bg-white text-slate-950"
-                  : "bg-slate-800 text-slate-400"
-              }`}
-            >
-              {index + 1}
-            </div>
-            <span className="hidden text-xs capitalize text-slate-500 sm:block">
-              {item}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {step === "country" ? (
-        <section className="country-picker-panel">
-          <div className="country-picker-heading">
-            <div>
-              <p className="eyebrow">CHOOSE DESTINATION</p>
-              <h2>Where are you sending?</h2>
-              <p>Choose a country where RackPay has enabled receiving transfers.</p>
-            </div>
-            <span className="country-picker-icon"><ArrowRight size={20}/></span>
-          </div>
-
-          <div className="country-picker-search">
-            <Search size={17} aria-hidden="true" />
-            <input
-              value={countrySearch}
-              onChange={(event) => setCountrySearch(event.target.value)}
-              placeholder="Search country, code or currency"
-              aria-label="Search receiving countries"
-            />
-            {countrySearch ? <button type="button" onClick={() => setCountrySearch("")} aria-label="Clear country search">Clear</button> : null}
-          </div>
-
-          {countriesQuery.isPending ? (
-            <div className="country-picker-loading" role="status"><span className="country-loading-dot" /> Loading available destinations…</div>
-          ) : countriesQuery.isError ? (
-            <div className="country-picker-empty">
-              <strong>Destinations are temporarily unavailable</strong>
-              <p>We could not load the current receiving-country configuration.</p>
-              <button type="button" className="button button-secondary" onClick={() => void countriesQuery.refetch()}>Try again</button>
-            </div>
-          ) : countriesQuery.data.length === 0 ? (
-            <div className="country-picker-empty">
-              <strong>No receiving destinations are enabled yet</strong>
-              <p>RackPay will show destinations here once they are enabled by the platform.</p>
-            </div>
-          ) : filteredCountries.length === 0 ? (
-            <div className="country-picker-empty">
-              <strong>No countries match “{countrySearch}”</strong>
-              <p>Try a country name, two-letter country code, calling code or currency.</p>
-              <button type="button" className="button button-secondary" onClick={() => setCountrySearch("")}>Clear search</button>
-            </div>
-          ) : (
-            <>
-              <div className="country-picker-results"><span>{filteredCountries.length} {filteredCountries.length === 1 ? "destination" : "destinations"}</span><span>Enabled corridors</span></div>
-              <div className="country-picker-grid">
-                {filteredCountries.map((item) => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    onClick={() => {
-                      setCountry(item);
-                      setNetwork(undefined);
-                      setPhoneNumber("");
-                      setRecipientName(undefined);
-                      setRecipientId(undefined);
-                      setVerificationFailure(undefined);
-                      setConfirmedRecipient(false);
-                      setAmount("");
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+        <div className="space-y-5">
+          <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 shadow-xl shadow-black/10">
+            <div className="border-b border-slate-800 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-emerald-800/60 bg-emerald-950/70 text-emerald-300"><Send size={20} /></span>
+                <div>
+                  <h2 className="font-semibold text-white">Transfer details</h2>
+                  <p className="mt-1 text-sm text-slate-400">Your route determines the currencies and indicative rate.</p>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  You send from
+                  <select
+                    value={sourceCountryCode}
+                    onChange={(event) => {
+                      setSourceCountryCode(event.target.value);
                       quoteMutation.reset();
                       fundMutation.reset();
                       setFundedRemittanceId(undefined);
                       setFundIdempotencyKey(undefined);
-                      setStep("recipient");
                     }}
-                    className={`country-option ${country?.code === item.code ? "selected" : ""}`}
-                    aria-pressed={country?.code === item.code}
+                    disabled={sendCountriesQuery.isPending || sendCountriesQuery.isError}
+                    className="form-control mt-2 normal-case tracking-normal"
                   >
-                    <span className="country-option-flag" aria-hidden="true">{countryFlag(item.code)}</span>
-                    <span className="country-option-copy">
-                      <strong>{item.name}</strong>
-                      <small>{item.dialCode} <span aria-hidden="true">·</span> {item.currency}</small>
-                    </span>
-                    <span className="country-option-code">{item.code}</span>
-                    <ArrowRight className="country-option-arrow" size={16} aria-hidden="true"/>
-                  </button>
-                ))}
+                    <option value="">{sendCountriesQuery.isPending ? "Loading countries…" : "Choose sending country"}</option>
+                    {sendCountriesQuery.data?.map((item) => (
+                      <option key={item.code} value={item.code}>{countryFlag(item.code)} {item.name} · {item.currency}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Recipient country
+                  <select
+                    value={country?.code ?? ""}
+                    onChange={(event) => {
+                      const nextCountry = countriesQuery.data?.find((item) => item.code === event.target.value);
+                      if (!nextCountry) return;
+                      setCountry(nextCountry);
+                      clearTransfer();
+                    }}
+                    disabled={countriesQuery.isPending || countriesQuery.isError}
+                    className="form-control mt-2 normal-case tracking-normal"
+                  >
+                    <option value="">{countriesQuery.isPending ? "Loading destinations…" : "Choose recipient country"}</option>
+                    {countriesQuery.data?.map((item) => (
+                      <option key={item.code} value={item.code}>{countryFlag(item.code)} {item.name} · {item.currency}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
-            </>
-          )}
-          <p className="country-picker-footnote"><ShieldCheck size={14}/> Destinations and available networks come from RackPay configuration.</p>
-        </section>
-      ) : null}
-
-      {step === "recipient" && country ? (
-        <section className="form-panel">
-          <button
-            type="button"
-            onClick={() => setStep("country")}
-            className="button button-secondary mb-4"
-          >
-            <ArrowLeft size={16} /> Back to destinations
-          </button>
-          <h2 className="font-medium">Recipient</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Verify the mobile-money account before you fund the transfer.
-          </p>
-
-          <label className="mt-5 block text-sm text-slate-400">
-            Network
-            <select
-              value={network?.code ?? ""}
-              onChange={(event) => {
-                setNetwork(
-                  networksQuery.data?.find(
-                    (item) => item.code === event.target.value,
-                  ),
-                );
-                setRecipientName(undefined);
-                setRecipientId(undefined);
-                setVerificationFailure(undefined);
-                setConfirmedRecipient(false);
-                setAmount("");
-                quoteMutation.reset();
-                fundMutation.reset();
-                setFundedRemittanceId(undefined);
-                setFundIdempotencyKey(undefined);
-              }}
-              className="form-control"
-            >
-              <option value="">Select network</option>
-              {networksQuery.data?.map((item) => (
-                <option key={item.id} value={item.code}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            {networksQuery.isPending ? (
-              <span className="mt-2 block text-xs text-slate-500">Loading available networks…</span>
-            ) : networksQuery.isError ? (
-              <span className="mt-2 block text-xs text-red-300">Networks could not be loaded. Try again in a moment.</span>
-            ) : networksQuery.data?.length === 0 ? (
-              <span className="mt-2 block text-xs text-amber-300">No enabled mobile-money networks are configured for this country.</span>
-            ) : null}
-          </label>
-
-          <label className="mt-4 block text-sm text-slate-400">
-            Mobile-money phone number
-            <div className="mt-2 flex">
-              <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {country.dialCode}
-              </span>
-              <input
-                value={phoneNumber}
-                onChange={(event) => {
-                  setPhoneNumber(event.target.value);
-                  setRecipientName(undefined);
-                  setRecipientId(undefined);
-                  setVerificationFailure(undefined);
-                  setConfirmedRecipient(false);
-                  setAmount("");
-                  quoteMutation.reset();
-                  fundMutation.reset();
-                  setFundedRemittanceId(undefined);
-                  setFundIdempotencyKey(undefined);
-                }}
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="024 123 4567"
-                className="min-w-0 flex-1 rounded-r-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none"
-              />
+              {countriesQuery.isError || sendCountriesQuery.isError ? (
+                <p role="alert" className="mt-3 text-sm text-red-300">Country options could not be loaded. Please refresh and try again.</p>
+              ) : null}
             </div>
-            {country.dialCode.replace(/\D/g, "") === "233" ? (
-              <span className="mt-1 block text-xs text-slate-500">
-                Enter 9 digits after +233. A leading 0 is optional.
-              </span>
-            ) : null}
-          </label>
 
-          <button
-            type="button"
-            disabled={
-              !network || !phoneNumberIsValid || verifyMutation.isPending
-            }
-            onClick={() => verifyMutation.mutate()}
-            className="mt-5 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
-          >
-            {verifyMutation.isPending ? "Verifying…" : "Verify recipient"}
-          </button>
+            <div className="space-y-5 p-5 sm:p-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm text-slate-300">
+                  Mobile-money network
+                  <select
+                    value={network?.code ?? ""}
+                    onChange={(event) => {
+                      setNetwork(networksQuery.data?.find((item) => item.code === event.target.value));
+                      setRecipientName(undefined);
+                      setRecipientId(undefined);
+                      setVerificationFailure(undefined);
+                      setConfirmedRecipient(false);
+                      quoteMutation.reset();
+                      fundMutation.reset();
+                      setFundedRemittanceId(undefined);
+                      setFundIdempotencyKey(undefined);
+                    }}
+                    className="form-control mt-2"
+                    disabled={!country || networksQuery.isPending || networksQuery.isError}
+                  >
+                    <option value="">{networksQuery.isPending ? "Loading networks…" : "Select network"}</option>
+                    {networksQuery.data?.map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
+                  {networksQuery.isError ? <span className="mt-2 block text-xs text-red-300">Could not load networks. Try again shortly.</span> : null}
+                  {!networksQuery.isPending && !networksQuery.isError && networksQuery.data?.length === 0 ? <span className="mt-2 block text-xs text-amber-300">No mobile-money networks are enabled for this destination yet.</span> : null}
+                </label>
+                <label className="block text-sm text-slate-300">
+                  Recipient mobile number
+                  <div className="mt-2 flex">
+                    <span className="flex items-center rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 px-3 text-sm text-slate-300">{country?.dialCode ?? "—"}</span>
+                    <input
+                      value={phoneNumber}
+                      onChange={(event) => {
+                        setPhoneNumber(event.target.value);
+                        setRecipientName(undefined);
+                        setRecipientId(undefined);
+                        setVerificationFailure(undefined);
+                        setConfirmedRecipient(false);
+                        quoteMutation.reset();
+                        fundMutation.reset();
+                        setFundedRemittanceId(undefined);
+                        setFundIdempotencyKey(undefined);
+                      }}
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder={country?.code === "GH" ? "024 123 4567" : "Recipient phone number"}
+                      className="form-control min-w-0 rounded-l-none"
+                    />
+                  </div>
+                  {country?.dialCode.replace(/\D/g, "") === "233" ? <span className="mt-1 block text-xs text-slate-500">Enter 9 digits after +233. A leading 0 is optional.</span> : null}
+                </label>
+              </div>
 
-          {verifyMutation.isError || verificationFailure ? (
-            <p className="mt-3 text-sm text-red-300">
-              {verificationFailure ??
-                (verifyMutation.error instanceof Error
-                  ? verifyMutation.error.message
-                  : "The recipient could not be verified.")}
-            </p>
-          ) : null}
+              {recipientName && recipientId ? (
+                <div className="rounded-2xl border border-emerald-800/70 bg-emerald-950/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-400" size={20} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">Recipient verified</p>
+                      <p className="mt-1 font-semibold text-white">{recipientName}</p>
+                      <p className="mt-1 text-sm text-slate-400">{country?.dialCode} {phoneNumber}</p>
+                    </div>
+                  </div>
+                  <label className="mt-4 flex items-start gap-3 text-sm text-slate-300">
+                    <input type="checkbox" checked={confirmedRecipient} onChange={(event) => setConfirmedRecipient(event.target.checked)} className="mt-1 accent-emerald-400" />
+                    I confirm this is the person I want to send money to.
+                  </label>
+                </div>
+              ) : null}
 
-          {recipientName ? (
-            <div className="verified-recipient">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 shrink-0" size={20} />
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Verified recipient
-                  </p>
-                  <p className="mt-1 font-medium">{recipientName}</p>
-                  <p className="text-sm text-slate-500">
-                    {country.dialCode} {phoneNumber}
-                  </p>
+              {verifyMutation.isError || verificationFailure ? (
+                <p role="alert" className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
+                  {verificationFailure ?? errorMessage(verifyMutation.error, "The recipient could not be verified.")}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={!country || !network || !phoneNumberIsValid || verifyMutation.isPending}
+                  onClick={() => verifyMutation.mutate()}
+                  className="button button-secondary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {verifyMutation.isPending ? "Verifying recipient…" : recipientId ? "Verify again" : "Verify recipient"}
+                </button>
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-slate-500">
+                  <ShieldCheck className="shrink-0 text-emerald-400" size={17} />
+                  Recipient details are checked before a transfer quote can be requested.
                 </div>
               </div>
+            </div>
+          </section>
 
-              <label className="mt-4 flex items-start gap-3 text-sm text-slate-300">
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow">TRANSFER AMOUNT</p>
+                <h2 className="mt-1 text-lg font-semibold text-white">How much would you like to send?</h2>
+              </div>
+              <span className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-300"><ArrowDownUp size={18} /></span>
+            </div>
+            <label className="mt-5 block text-sm text-slate-300">
+              Amount to send
+              <div className="mt-2 flex">
+                <span className="flex items-center rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 px-4 font-semibold text-white">{sourceCountry?.currency ?? "—"}</span>
                 <input
-                  type="checkbox"
-                  checked={confirmedRecipient}
-                  onChange={(event) =>
-                    setConfirmedRecipient(event.target.checked)
-                  }
-                  className="mt-1"
+                  value={amount}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    quoteMutation.reset();
+                    fundMutation.reset();
+                    setFundedRemittanceId(undefined);
+                    setFundIdempotencyKey(undefined);
+                  }}
+                  inputMode="decimal"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="100.00"
+                  className="form-control min-w-0 rounded-l-none text-lg"
                 />
-                I confirm this is the recipient I want to send money to.
-              </label>
-
+              </div>
+            </label>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                disabled={!confirmedRecipient}
-                onClick={() => setStep("amount")}
-                className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
+                disabled={!recipientId || !confirmedRecipient || !sourceCountry || !amountIsValid || quoteMutation.isPending}
+                onClick={() => quoteMutation.mutate()}
+                className="button button-primary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Continue
+                {quoteMutation.isPending ? "Preparing quote…" : "Get transfer quote"} <ArrowRight size={16} />
               </button>
+              {!confirmedRecipient ? <p className="self-center text-xs text-slate-500">Verify and confirm the recipient to continue.</p> : null}
             </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {step === "amount" && country && recipientId ? (
-        <section className="form-panel">
-          <button
-            type="button"
-            onClick={() => setStep("recipient")}
-            className="button button-secondary mb-4"
-          >
-            <ArrowLeft size={16} /> Back to recipient
-          </button>
-          <h2 className="font-medium">Amount</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Enter the amount in your sending currency. RackPay supplies the
-            quote and FX rate.
-          </p>
-
-          <label className="mt-5 block text-sm text-slate-400">
-            Sending country
-            <select
-              value={sourceCountryCode}
-              onChange={(event) => {
-                setSourceCountryCode(event.target.value);
-                quoteMutation.reset();
-                fundMutation.reset();
-                setFundedRemittanceId(undefined);
-                setFundIdempotencyKey(undefined);
-              }}
-              disabled={sendCountriesQuery.isPending || sendCountriesQuery.isError}
-              className="form-control"
-            >
-              <option value="">
-                {sendCountriesQuery.isPending
-                  ? "Loading sending countries…"
-                  : "Select sending country"}
-              </option>
-              {sendCountriesQuery.data?.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.name} · {item.currency}
-                </option>
-              ))}
-            </select>
-            {sendCountriesQuery.isError ? (
-              <span className="mt-2 block text-xs text-red-300">
-                Sending countries could not be loaded. Retry by reopening this page.
-              </span>
-            ) : null}
-          </label>
-
-          <label className="mt-4 block text-sm text-slate-400">
-            You send
-            <div className="mt-2 flex">
-              <span className="rounded-l-2xl border border-r-0 border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-300">
-                {sendCountriesQuery.data?.find((item) => item.code === sourceCountryCode)?.currency ?? "—"}
-              </span>
-              <input
-                value={amount}
-                onChange={(event) => {
-                  setAmount(event.target.value);
-                  quoteMutation.reset();
-                  fundMutation.reset();
-                  setFundedRemittanceId(undefined);
-                  setFundIdempotencyKey(undefined);
-                }}
-                inputMode="decimal"
-                placeholder="100.00"
-                className="amount-input min-w-0 flex-1"
-              />
-            </div>
-          </label>
-
-          <button
-            type="button"
-            disabled={
-              !amountIsValid ||
-              !sourceCountryCode ||
-              !sendCountriesQuery.data?.some((item) => item.code === sourceCountryCode) ||
-              quoteMutation.isPending
-            }
-            onClick={() => quoteMutation.mutate()}
-            className="mt-5 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
-          >
-            {quoteMutation.isPending ? "Getting quote…" : "Get quote"}
-          </button>
-
-          {quoteMutation.isError ? (
-            <p role="alert" className="mt-3 text-sm text-red-300">
-              {errorMessage(quoteMutation.error, "The quote could not be created. Review the details and try again.")}
-            </p>
-          ) : null}
+            {quoteMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(quoteMutation.error, "The quote could not be created. Check the details and try again.")}</p> : null}
+          </section>
 
           {quote ? (
-            <div className="quote-card">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-slate-800 p-2">
-                  <Send size={18} />
-                </div>
+            <section className="rounded-3xl border border-emerald-800/60 bg-slate-900 p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-medium">Quote ready</p>
-                  <p className="text-xs text-slate-500">
-                    Expires {new Date(quote.expiresAt).toLocaleTimeString()}
-                  </p>
+                  <p className="eyebrow">YOUR TRANSFER QUOTE</p>
+                  <h2 className="mt-1 text-lg font-semibold text-white">Review before funding</h2>
                 </div>
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-300"><Clock3 size={13} /> Expires {new Date(quote.expiresAt).toLocaleTimeString()}</span>
               </div>
-
-              <div className="quote-rate" aria-label="Quoted exchange rate">
-                <div>
-                  <p className="quote-rate-label">
-                    <span aria-hidden="true">↔</span>
-                    Exchange rate
-                  </p>
-                  <p className="quote-rate-note">
-                    Rate returned by RackPay for this quote
-                  </p>
-                </div>
-                <p className="quote-rate-value">
-                  1 {quote.sourceCurrency} = {quote.fxRate} {quote.destinationCurrency}
-                </p>
+              <div className="mt-5 rounded-2xl bg-emerald-950/40 p-4">
+                <p className="text-sm text-emerald-200">Recipient gets</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight text-white">{money(Number(quote.destinationAmount), quote.destinationCurrency)}</p>
+                <p className="mt-2 text-sm text-emerald-100/70">1 {quote.sourceCurrency} = {Number(quote.fxRate).toLocaleString(undefined, { maximumFractionDigits: 6 })} {quote.destinationCurrency}</p>
               </div>
-
-              <div className="mt-4 grid gap-3 text-sm">
-                <QuoteRow
-                  label="You send"
-                  value={`${quote.sourceAmount} ${quote.sourceCurrency}`}
-                />
-                <QuoteRow
-                  label="Fee"
-                  value={`${quote.feeAmount} ${quote.sourceCurrency}`}
-                />
-                <QuoteRow
-                  label="Recipient gets"
-                  value={`${quote.destinationAmount} ${quote.destinationCurrency}`}
-                />
+              <div className="mt-4 divide-y divide-slate-800 text-sm">
+                <QuoteRow label="You send" value={money(Number(quote.sourceAmount), quote.sourceCurrency)} />
+                <QuoteRow label="Transfer fee" value={money(Number(quote.feeAmount), quote.sourceCurrency)} />
+                <QuoteRow label="Recipient receives" value={money(Number(quote.destinationAmount), quote.destinationCurrency)} />
               </div>
-
-              {quoteExpired ? (
-                <p className="mt-4 text-sm text-amber-300">
-                  This quote has expired. Get a new quote before funding.
-                </p>
-              ) : fundedRemittanceId ? (
-                <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Remittance
-                  </p>
-                  <p className="mt-1 font-medium">
-                    {remittanceQuery.data?.status ?? "FUNDS_RESERVED"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    The backend is the source of truth for the transfer state.
-                  </p>
-                  {![
-                    "PAYOUT_PENDING",
-                    "PAYOUT_PROCESSING",
-                    "COMPLETED",
-                  ].includes(remittanceQuery.data?.status ?? "") ? (
-                    <button
-                      type="button"
-                      disabled={
-                        payoutMutation.isPending || !remittanceQuery.data
-                      }
-                      onClick={() => payoutMutation.mutate()}
-                      className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
-                    >
-                      {payoutMutation.isPending
-                        ? "Starting payout…"
-                        : "Start payout"}
+              {quoteExpired ? <p className="mt-4 text-sm text-amber-300">This quote has expired. Request a new quote before funding.</p> : null}
+              {fundedRemittanceId ? (
+                <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transfer status</p>
+                  <p className="mt-1 font-semibold text-white">{remittanceQuery.data?.status ?? "FUNDS_RESERVED"}</p>
+                  <p className="mt-1 break-all text-xs text-slate-500">Reference: {fundedRemittanceId}</p>
+                  {!["PAYOUT_PENDING", "PAYOUT_PROCESSING", "COMPLETED"].includes(remittanceQuery.data?.status ?? "") ? (
+                    <button type="button" disabled={payoutMutation.isPending || !remittanceQuery.data} onClick={() => payoutMutation.mutate()} className="button button-primary mt-4 w-full justify-center disabled:opacity-40">
+                      {payoutMutation.isPending ? "Starting payout…" : "Start payout"}
                     </button>
                   ) : null}
-                  {payoutMutation.isError ? (
-                    <p role="alert" className="mt-3 text-sm text-red-300">
-                      {errorMessage(payoutMutation.error, "The payout request could not be started.")}
-                    </p>
-                  ) : null}
+                  {payoutMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(payoutMutation.error, "Payout could not be started.")}</p> : null}
                 </div>
               ) : (
                 <>
-                  <p className="mt-4 text-xs leading-5 text-slate-500">
-                    Funding and payout are handled by the backend. The app does
-                    not choose a payout provider or determine final remittance
-                    state.
-                  </p>
-                  <button
-                    type="button"
-                    disabled={fundMutation.isPending || !fundIdempotencyKey || quoteExpired}
-                    onClick={() => fundMutation.mutate()}
-                    className="mt-4 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
-                  >
-                    {fundMutation.isPending ? "Funding…" : "Fund remittance"}
+                  <p className="mt-4 text-xs leading-5 text-slate-500">The final quote is issued by RackPay's backend and expires at the time shown. Funding and payout status are confirmed by the backend.</p>
+                  <button type="button" disabled={fundMutation.isPending || !fundIdempotencyKey || quoteExpired} onClick={() => fundMutation.mutate()} className="button button-primary mt-4 w-full justify-center disabled:opacity-40">
+                    {fundMutation.isPending ? "Funding transfer…" : "Confirm and fund transfer"}
                   </button>
-                  {fundMutation.isError ? (
-                    <p role="alert" className="mt-3 text-sm text-red-300">
-                      {errorMessage(fundMutation.error, "The remittance could not be funded. Your wallet was not assumed to be debited by the app.")}
-                    </p>
-                  ) : null}
+                  {fundMutation.isError ? <p role="alert" className="mt-3 text-sm text-red-300">{errorMessage(fundMutation.error, "The transfer could not be funded.")}</p> : null}
                 </>
               )}
-            </div>
+            </section>
           ) : null}
-        </section>
-      ) : null}
+        </div>
+
+        <aside className="space-y-5 xl:sticky xl:top-6">
+          <section className="overflow-hidden rounded-3xl border border-emerald-900/60 bg-[radial-gradient(ellipse_at_100%_0%,#1c4933_0,transparent_48%),linear-gradient(145deg,#12251b,#0f1720_75%)] p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-emerald-800 bg-emerald-950/70 text-emerald-300"><ArrowDownUp size={19} /></span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Live indicative rate</p>
+                <p className="mt-1 text-sm text-slate-300">{sourceCountry?.name ?? "Belgium"} → {country?.name ?? "Ghana"}</p>
+              </div>
+            </div>
+            {ratesQuery.isPending ? <p className="mt-6 text-sm text-slate-400">Loading latest rate…</p> : ratesQuery.isError ? (
+              <div className="mt-5 text-sm text-amber-200">The indicative rate is temporarily unavailable. You can still request a backend quote.</div>
+            ) : selectedRate ? (
+              <>
+                <p className="mt-6 text-sm text-slate-400">1 {sourceCountry?.currency} equals</p>
+                <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-white">{Number(selectedRate.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })} <span className="text-xl text-emerald-300">{country?.currency}</span></p>
+                <div className="my-5 h-px bg-emerald-900/70" />
+                <p className="text-sm text-slate-400">Estimated recipient amount</p>
+                <p className="mt-1 text-2xl font-semibold text-emerald-300">{indicativeDestination === undefined ? "—" : money(indicativeDestination, country?.currency ?? "")}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">Based on {amount || "0"} {sourceCountry?.currency}. Indicative estimate before fees.</p>
+                <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-900 bg-emerald-950/50 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Published rate · indicative</span>
+              </>
+            ) : (
+              <div className="mt-5 rounded-xl border border-slate-700/70 bg-black/10 p-4">
+                <p className="font-medium text-white">Rate not available yet</p>
+                <p className="mt-1 text-sm leading-5 text-slate-400">No published rate is available for this currency pair. RackPay will not guess a rate; request a transfer quote when ready.</p>
+              </div>
+            )}
+            {ratesQuery.isError ? <button type="button" className="mt-3 text-sm text-emerald-300 underline" onClick={() => void ratesQuery.refetch()}>Try loading again</button> : null}
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
+            <h3 className="font-semibold text-white">Your route</h3>
+            <div className="mt-4 flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-800 text-2xl">{sourceCountry ? countryFlag(sourceCountry.code) : "🇧🇪"}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-slate-500">Sending from</p>
+                <p className="truncate font-medium text-white">{sourceCountry?.name ?? "Belgium"}</p>
+                <p className="text-xs text-slate-400">{sourceCountry?.currency ?? "EUR"}</p>
+              </div>
+            </div>
+            <div className="ml-5 my-1 h-6 border-l border-dashed border-slate-700" />
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-800 text-2xl">{country ? countryFlag(country.code) : "🇬🇭"}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-slate-500">Receiving in</p>
+                <p className="truncate font-medium text-white">{country?.name ?? "Ghana"}</p>
+                <p className="text-xs text-slate-400">{country?.currency ?? "GHS"}</p>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 text-sm leading-5 text-slate-400">
+            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-emerald-400" />
+            The displayed rate is an estimate. Your final rate, fee and recipient amount are confirmed in the transfer quote before you fund.
+          </div>
+          {ratesQuery.isFetching ? <p className="text-xs text-slate-500">Refreshing published rates…</p> : null}
+        </aside>
+      </div>
     </section>
   );
 }
 
 function QuoteRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 py-3">
       <span className="text-slate-500">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="text-right font-medium text-slate-100">{value}</span>
     </div>
   );
 }
 
-
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
-    return error.correlationId
-      ? `${error.message} (Reference: ${error.correlationId})`
-      : error.message;
+    return error.correlationId ? `${error.message} (Reference: ${error.correlationId})` : error.message;
   }
   return error instanceof Error ? error.message : fallback;
 }
