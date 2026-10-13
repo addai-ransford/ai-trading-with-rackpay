@@ -118,6 +118,40 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
+    void explainsThatSandboxAccountResolutionRequiresFlutterwaveTestAccounts() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                builder,
+                "http://flutterwave.test/v3",
+                "FLWSECK_TEST-sandbox-key",
+                mock(ProviderRetryExecutor.class),
+                mock(FlutterwaveTransferGateway.class)
+        );
+
+        server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
+                .andRespond(withStatus(UNPROCESSABLE_ENTITY)
+                        .contentType(APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "status": "error",
+                                  "message": "Account resolve failed."
+                                }
+                                """));
+
+        RecipientVerification result = provider.verifyRecipient(
+                new VerifyRecipientCommand(
+                        "GH", Currency.GHS, PayoutMethod.MOBILE_MONEY, "MTN", "+233241234567"
+                )
+        );
+
+        assertThat(result.verified()).isFalse();
+        assertThat(result.failureReason())
+                .isEqualTo("Flutterwave sandbox can resolve only test accounts. Use a test mobile-money number provided by Flutterwave.");
+        server.verify();
+    }
+
+    @Test
     void fallsBackToSafeMessageWhenFlutterwaveReturnsNoErrorMessage() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

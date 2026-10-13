@@ -89,10 +89,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         } catch (RestClientResponseException exception) {
             String providerMessage = providerErrorMessage(exception);
             String failureReason = switch (exception.getStatusCode().value()) {
-                case 400, 422 ->
-                    providerMessage == null
-                            ? "The provider rejected this phone number or mobile-money network."
-                            : "Flutterwave: " + providerMessage;
+                case 400, 422 -> verificationRejectedMessage(providerMessage);
                 case 401, 403 ->
                     "Recipient verification provider credentials were rejected.";
                 default ->
@@ -252,6 +249,18 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                 },
                 ProviderRetryClassifier::isTransient
         );
+    }
+
+    private String verificationRejectedMessage(String providerMessage) {
+        if (providerMessage != null
+                && providerMessage.toLowerCase(java.util.Locale.ROOT).contains("account resolve failed")
+                && secretKey.toUpperCase(java.util.Locale.ROOT).contains("_TEST-")) {
+            return "Flutterwave sandbox can resolve only test accounts. Use a test mobile-money number provided by Flutterwave.";
+        }
+        if (providerMessage == null || providerMessage.isBlank()) {
+            return "The provider rejected this phone number or mobile-money network.";
+        }
+        return "Flutterwave: " + providerMessage;
     }
 
     private String providerErrorMessage(RestClientResponseException exception) {
