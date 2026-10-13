@@ -14,9 +14,9 @@ import com.flutterwave.utility.Environment;
 /**
  * Adapter for Flutterwave's official Java-v3 SDK.
  *
- * The upstream SDK stores its secret key in a JVM-wide system property.
- * Serialize configuration + SDK invocation so concurrent RackPay requests
- * cannot overwrite the key between those operations.
+ * The upstream SDK stores credentials in JVM-wide system properties.
+ * Serialize SDK configuration + invocation so concurrent RackPay requests
+ * cannot overwrite the configured credentials during a transfer.
  */
 @Component
 public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGateway {
@@ -24,13 +24,19 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
     private static final Object SDK_LOCK = new Object();
 
     private final String secretKey;
+    private final String publicKey;
+    private final String encryptionKey;
     private final String callbackUrl;
 
     public FlutterwaveJavaV3TransferGateway(
             @Value("${rackpay.payout.flutterwave.secret-key:}") String secretKey,
+            @Value("${rackpay.payout.flutterwave.public-key:}") String publicKey,
+            @Value("${rackpay.payout.flutterwave.encryption-key:}") String encryptionKey,
             @Value("${rackpay.payout.flutterwave.callback-url:}") String callbackUrl
     ) {
         this.secretKey = secretKey;
+        this.publicKey = publicKey;
+        this.encryptionKey = encryptionKey;
         this.callbackUrl = callbackUrl;
     }
 
@@ -44,6 +50,9 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
         synchronized (SDK_LOCK) {
             try {
                 Environment.setSecretKey(secretKey);
+                Environment.setPublicKey(publicKey);
+                Environment.setEncryptionKey(encryptionKey);
+
                 TransferRequest request = new TransferRequest(
                         StringUtils.hasText(callbackUrl) ? callbackUrl : null,
                         command.reference(),
