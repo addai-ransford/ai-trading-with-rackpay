@@ -4,11 +4,17 @@ import {
   ChartNoAxesCombined,
   CircleHelp,
   CircleUserRound,
+  ChevronDown,
   LayoutDashboard,
+  LogOut,
   Settings2,
   WalletCards,
   ArrowLeftRight,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "../../shared/theme/ThemeProvider";
+import { logout } from "../../shared/auth/keycloak";
 
 const links = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
@@ -21,6 +27,8 @@ const links = [
 export function AppShell() {
   const { pathname } = useLocation();
   const authenticated = useAuthStore((state) => state.authenticated);
+  const user = useAuthStore((state) => state.user);
+  const { theme, toggleTheme } = useTheme();
   const isLoginRoute = pathname === "/login";
   const isGuestHome = pathname === "/" && !authenticated;
   return (
@@ -63,8 +71,33 @@ export function AppShell() {
             <NavLink to="/" className="mobile-brand"><span className="brand-mark">R</span> rack<span className="brand-light">pay</span></NavLink>
             <span className="topbar-label">PERSONAL WORKSPACE</span>
             <div className="topbar-right">
+              <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
+                {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                <span>{theme === "dark" ? "Light" : "Dark"}</span>
+              </button>
               {authenticated ? (
-                <><span className="status-dot"/> <span>Secure session</span></>
+                <details className="profile-menu" onBlur={(event) => {
+                  const nextTarget = event.relatedTarget as Node | null;
+                  if (!nextTarget || !event.currentTarget.contains(nextTarget)) event.currentTarget.open = false;
+                }}>
+                  <summary className="profile-trigger" aria-label="Open profile menu">
+                    <span className="profile-avatar">{(user?.name ?? user?.username ?? "U").trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</span>
+                    <span className="profile-trigger-copy"><strong>{user?.name ?? user?.username ?? "My account"}</strong><small>Profile</small></span>
+                    <ChevronDown size={15} className="profile-chevron" />
+                  </summary>
+                  <div className="profile-menu-panel">
+                    <div className="profile-menu-identity">
+                      <strong>{user?.name ?? user?.username ?? "RackPay user"}</strong>
+                      {user?.email ? <span>{user.email}</span> : null}
+                    </div>
+                    <Link to="/settings" className="profile-menu-item" onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")}>
+                      <Settings2 size={16} /> Settings
+                    </Link>
+                    <button type="button" className="profile-menu-item profile-menu-signout" onClick={() => void logout()}>
+                      <LogOut size={16} /> Sign out
+                    </button>
+                  </div>
+                </details>
               ) : (
                 <Link to="/login" className="account-entry" aria-label="Sign in or create account">
                   <CircleUserRound size={19} /><span>Sign in</span>
