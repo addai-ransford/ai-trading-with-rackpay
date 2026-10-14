@@ -47,10 +47,9 @@ class FlutterwavePayoutProviderTest {
                         {
                           "account_number": "233241234567",
                           "account_bank": "MTN",
-                          "country": "GH",
-                          "currency": "GHS"
+                          "country": "GH"
                         }
-                        """))
+                        """, true))
                 .andRespond(withSuccess("""
                         {
                           "status": "success",
@@ -78,7 +77,7 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
-    void sendsFlutterwaveGhanaSandboxFixtureInPublishedLocalFormat() {
+    void sendsNormalizedGhanaMobileNumberToAccountResolutionEndpointWithTestCredentials() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
@@ -92,18 +91,17 @@ class FlutterwavePayoutProviderTest {
         server.expect(requestTo("http://flutterwave.test/v3/accounts/resolve"))
                 .andExpect(content().json("""
                         {
-                          "account_number": "054709929220",
+                          "account_number": "23354709929220",
                           "account_bank": "MTN",
-                          "country": "GH",
-                          "currency": "GHS"
+                          "country": "GH"
                         }
-                        """))
+                        """, true))
                 .andRespond(withSuccess("""
                         {
                           "status": "success",
                           "data": {
                             "account_name": "Test Recipient",
-                            "account_number": "054709929220"
+                            "account_number": "23354709929220"
                           }
                         }
                         """, APPLICATION_JSON));
