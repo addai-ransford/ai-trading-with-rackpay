@@ -70,15 +70,10 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         }
 
         String accountNumber = command.normalizedPhoneNumber().replace("+", "");
-        if (isTestCredential() && "23354709929220".equals(accountNumber)) {
-            // Flutterwave's published Ghana sandbox fixture is formatted as a local phone number.
-            accountNumber = "054709929220";
-        }
         Map<String, String> body = Map.of(
                 "account_number", accountNumber,
                 "account_bank", providerNetworkCode(command.networkCode()),
-                "country", command.countryCode(),
-                "currency", command.currency().name()
+                "country", command.countryCode()
         );
 
         JsonNode response;
