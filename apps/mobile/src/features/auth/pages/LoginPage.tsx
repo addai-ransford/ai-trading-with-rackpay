@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, LockKeyhole, Moon, ShieldCheck, Sun } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../shared/api/httpClient";
 import { login } from "../../../shared/auth/keycloak";
 import { useAuthStore } from "../../../shared/auth/authStore";
+import { useTheme } from "../../../shared/theme/ThemeProvider";
 
 export function LoginPage() {
   const error = useAuthStore((state) => state.error);
+  const { theme, toggleTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const registering = searchParams.get("mode") === "register";
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +56,10 @@ export function LoginPage() {
 
   return (
     <section className="auth-page">
+      <button type="button" className="theme-toggle auth-theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
+        {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+        <span>{theme === "dark" ? "Light" : "Dark"} theme</span>
+      </button>
       <div className="auth-intro">
         <Link to="/" className="auth-brand" aria-label="Back to RackPay home"><span className="brand-mark">R</span> rack<span className="brand-light">pay</span></Link>
         <p className="eyebrow">YOUR FINANCIAL SPACE</p>
