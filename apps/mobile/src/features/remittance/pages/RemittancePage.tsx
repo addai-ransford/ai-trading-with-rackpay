@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  addManualRecipient,
   createQuote,
   fundRemittance,
   getRemittance,
@@ -57,6 +58,8 @@ export function RemittancePage() {
   const [recipientName, setRecipientName] = useState<string>();
   const [recipientId, setRecipientId] = useState<string>();
   const [verificationProvider, setVerificationProvider] = useState<string>();
+  const [recipientIsVerified, setRecipientIsVerified] = useState(false);
+  const [manualRecipientName, setManualRecipientName] = useState("");
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
   const [quoteNow, setQuoteNow] = useState(Date.now());
@@ -132,6 +135,8 @@ export function RemittancePage() {
     setRecipientName(undefined);
     setRecipientId(undefined);
     setVerificationProvider(undefined);
+    setRecipientIsVerified(false);
+    setManualRecipientName("");
     setVerificationFailure(undefined);
     setConfirmedRecipient(false);
     verifyMutation.reset();
@@ -168,6 +173,7 @@ export function RemittancePage() {
         setRecipientName(undefined);
         setRecipientId(undefined);
         setVerificationProvider(undefined);
+        setRecipientIsVerified(false);
         setConfirmedRecipient(false);
         setVerificationFailure(result.failureReason ?? "The provider did not return a verified recipient name.");
         return;
@@ -176,6 +182,29 @@ export function RemittancePage() {
       setRecipientName(result.verifiedName.trim());
       setRecipientId(result.recipientId);
       setVerificationProvider(result.verificationProvider ?? undefined);
+      setRecipientIsVerified(true);
+      setConfirmedRecipient(false);
+    },
+  });
+
+  const manualRecipientMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || !country || !network) throw new Error("Complete the recipient details first.");
+      return addManualRecipient(accessToken, {
+        countryCode: country.code,
+        currency: country.currency,
+        payoutMethod: "MOBILE_MONEY",
+        networkCode: network.code,
+        phoneNumber,
+        recipientName: manualRecipientName.trim(),
+      });
+    },
+    onSuccess: (result) => {
+      if (!result.recipientId || !result.recipientName) return;
+      setRecipientId(result.recipientId);
+      setRecipientName(result.recipientName);
+      setVerificationProvider(result.verificationProvider ?? undefined);
+      setRecipientIsVerified(result.verified);
       setConfirmedRecipient(false);
     },
   });
@@ -183,7 +212,7 @@ export function RemittancePage() {
   const quoteMutation = useMutation({
     mutationFn: () => {
       if (!accessToken || !recipientId || !confirmedRecipient || !country || !sourceCountry || !amount.trim()) {
-        throw new Error("Verify the recipient and complete the transfer details first.");
+        throw new Error("Confirm the recipient and complete the transfer details first.");
       }
       return createQuote(accessToken, {
         recipientId,
@@ -440,16 +469,17 @@ export function RemittancePage() {
 
                 {/* Verification Box */}
                 {recipientName && recipientId ? (
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-4">
+                  <div className={`rounded-2xl border p-4 ${recipientIsVerified ? "border-emerald-500/30 bg-emerald-950/40" : "border-amber-500/40 bg-amber-950/20"}`}>
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
+                      <CheckCircle2 className={`${recipientIsVerified ? "text-emerald-400" : "text-amber-400"} shrink-0`} size={20} />
                       <div>
-                        <p className="text-xs font-semibold uppercase text-emerald-400">
-                          Verified via {verificationProvider ?? "payment provider"}
+                        <p className={`text-xs font-semibold uppercase ${recipientIsVerified ? "text-emerald-400" : "text-amber-400"}`}>
+                          {recipientIsVerified ? `Verified via ${verificationProvider ?? "payment provider"}` : "Name entered by sender · unverified"}
                         </p>
                         <p className="text-lg font-bold text-white">{recipientName}</p>
                       </div>
                     </div>
+                    {!recipientIsVerified && <p className="mt-2 text-xs text-amber-200">The provider could not confirm this name. Check the recipient’s name and number carefully; a wrong detail may cause a failed or misdirected transfer.</p>}
                     <label className="mt-3 flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer">
                       <input
                         type="checkbox"
@@ -461,23 +491,25 @@ export function RemittancePage() {
                     </label>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={!network || !phoneNumberIsValid || verifyMutation.isPending}
-                    onClick={() => {
-                      if (!country || !network) return;
-                      verifyMutation.mutate({
-                        countryCode: country.code,
-                        countryDialCode: country.dialCode,
-                        currency: country.currency,
-                        networkCode: network.code,
-                        phoneNumber,
-                      });
-                    }}
-                    className="button button-secondary w-full justify-center py-2.5"
-                  >
-                    {verifyMutation.isPending ? "Verifying..." : "Verify Recipient Name"}
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={!network || !phoneNumberIsValid || verifyMutation.isPending}
+                      onClick={() => {
+                        if (!country || !network) return;
+                        verifyMutation.mutate({
+                          countryCode: country.code,
+                          countryDialCode: country.dialCode,
+                          currency: country.currency,
+                          networkCode: network.code,
+                          phoneNumber,
+                        });
+                      }}
+                      className="button button-secondary w-full justify-center py-2.5"
+                    >
+                      {verifyMutation.isPending ? "Verifying..." : "Verify Recipient Name"}
+                    </button>
+                  </div>
                 )}
 
                 {(verificationFailure || verifyMutation.error) && (
@@ -486,6 +518,31 @@ export function RemittancePage() {
                       ? verifyMutation.error.message
                       : "Recipient verification failed. Try again.")}
                   </p>
+                )}
+
+                {!recipientId && (verificationFailure || verifyMutation.error) && (
+                  <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-950/10 p-3">
+                    <label className="block text-xs font-semibold text-amber-200" htmlFor="manual-recipient-name">Enter recipient name manually</label>
+                    <input
+                      id="manual-recipient-name"
+                      value={manualRecipientName}
+                      onChange={(event) => setManualRecipientName(event.target.value)}
+                      maxLength={255}
+                      autoComplete="name"
+                      placeholder="Recipient’s full name"
+                      className="form-control w-full text-sm"
+                    />
+                    <p className="text-xs text-amber-200">This name is not verified by Flutterwave or Paystack.</p>
+                    <button
+                      type="button"
+                      disabled={!network || !phoneNumberIsValid || !manualRecipientName.trim() || manualRecipientMutation.isPending}
+                      onClick={() => manualRecipientMutation.mutate()}
+                      className="button button-secondary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {manualRecipientMutation.isPending ? "Saving recipient..." : "Continue with unverified name"}
+                    </button>
+                    {manualRecipientMutation.error && <p role="alert" className="text-xs text-red-300">{manualRecipientMutation.error instanceof Error ? manualRecipientMutation.error.message : "Could not save recipient."}</p>}
+                  </div>
                 )}
 
                 <div className="pt-2 flex gap-3">

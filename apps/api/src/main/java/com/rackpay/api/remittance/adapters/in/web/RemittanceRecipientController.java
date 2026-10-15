@@ -24,4 +24,12 @@ public class RemittanceRecipientController {
     ) {
         return service.verify(authentication, request);
     }
+
+    @PostMapping("/manual")
+    public RemittanceRecipientVerificationService.VerificationResponse addManualRecipient(
+        Authentication authentication,
+        @RequestBody RemittanceRecipientVerificationService.ManualRecipientRequest request
+    ) {
+        return service.addSenderProvidedRecipient(authentication, request);
+    }
 }

@@ -33,6 +33,11 @@ export type RecipientVerification = {
   verificationProvider?: "FLUTTERWAVE" | "PAYSTACK" | null;
   providerRecipientReference?: string;
   failureReason?: string;
+  recipientName?: string;
+};
+
+export type ManualRecipientRequest = Omit<RecipientVerificationRequest, "countryDialCode"> & {
+  recipientName: string;
 };
 
 export type QuoteRequest = {
@@ -101,6 +106,14 @@ export function verifyRecipient(
       method: "POST",
       body: JSON.stringify(request),
     },
+    accessToken,
+  );
+}
+
+export function addManualRecipient(accessToken: string, request: ManualRecipientRequest) {
+  return apiFetch<RecipientVerification>(
+    "/api/v1/remittances/recipients/manual",
+    { method: "POST", body: JSON.stringify(request) },
     accessToken,
   );
 }
