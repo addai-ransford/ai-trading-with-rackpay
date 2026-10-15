@@ -134,7 +134,7 @@ export function WalletPage() {
   );
 
   return (
-    <section className="mx-auto max-w-5xl space-y-8 pb-12 pt-4">
+    <section className="wallet-page mx-auto max-w-5xl space-y-8 pb-12 pt-4">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
