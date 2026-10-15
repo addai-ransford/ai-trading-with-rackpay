@@ -30,6 +30,21 @@ import com.rackpay.api.shared.infrastructure.retry.ProviderRetryExecutor;
 class FlutterwavePayoutProviderTest {
 
     @Test
+    void supportsGhanaOperatorsAndKenyaMpesa() {
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                RestClient.builder(), "http://flutterwave.test/v3", "test-secret",
+                mock(ProviderRetryExecutor.class), mock(FlutterwaveTransferGateway.class)
+        );
+
+        assertThat(provider.supportsPayout(command("GH", Currency.GHS, "MTN"))).isTrue();
+        assertThat(provider.supportsPayout(command("GH", Currency.GHS, "AIRTELTIGO"))).isTrue();
+        assertThat(provider.supportsPayout(command("GH", Currency.GHS, "TIGO"))).isTrue();
+        assertThat(provider.supportsPayout(command("GH", Currency.GHS, "TELECEL"))).isTrue();
+        assertThat(provider.supportsPayout(command("KE", Currency.KES, "MPESA"))).isTrue();
+        assertThat(provider.supportsPayout(command("KE", Currency.KES, "MTN"))).isFalse();
+    }
+
+    @Test
     void resolvesGhanaMobileMoneyNumberToVerifiedRecipientName() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -330,6 +345,11 @@ class FlutterwavePayoutProviderTest {
                 "+233241234567",
                 "Recipient Name"
         );
+    }
+
+    private CreatePayoutCommand command(String country, Currency currency, String network) {
+        return new CreatePayoutCommand("ref", BigDecimal.ONE, currency, currency, country,
+                PayoutMethod.MOBILE_MONEY, network, "+123456789", "Recipient Name");
     }
 
 }

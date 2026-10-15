@@ -22,7 +22,11 @@ public interface PayoutProvider {
 
     record VerifyRecipientCommand(String countryCode, Currency currency, PayoutMethod payoutMethod, String networkCode, String normalizedPhoneNumber) {}
     record RecipientVerification(boolean verified, String normalizedPhoneNumber, String verifiedName, String providerRecipientReference, String failureReason) {}
-    record CreatePayoutCommand(String reference, BigDecimal amount, Currency currency, Currency sourceCurrency, String countryCode, PayoutMethod payoutMethod, String networkCode, String normalizedPhoneNumber, String recipientName) {}
+    record CreatePayoutCommand(String reference, BigDecimal amount, Currency currency, Currency sourceCurrency, String countryCode, PayoutMethod payoutMethod, String networkCode, String normalizedPhoneNumber, String recipientName, String senderName, String senderCountry, String senderMobileNumber) {
+        public CreatePayoutCommand(String reference, BigDecimal amount, Currency currency, Currency sourceCurrency, String countryCode, PayoutMethod payoutMethod, String networkCode, String normalizedPhoneNumber, String recipientName) {
+            this(reference, amount, currency, sourceCurrency, countryCode, payoutMethod, networkCode, normalizedPhoneNumber, recipientName, null, null, null);
+        }
+    }
     record PayoutResult(String providerTransferId, String status) {}
     enum PayoutStatus { CREATED, PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED, UNKNOWN }
 }

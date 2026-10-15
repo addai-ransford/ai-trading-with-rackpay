@@ -65,6 +65,10 @@ class RemittancePayoutServiceTest {
         service = new RemittancePayoutService(
             remittances,
             recipients,
+            mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository.class),
+            mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository.class),
+            mock(com.rackpay.api.user.adapters.out.persistence.UserJpaRepository.class),
+            new PhoneNumberNormalizer(),
             networks,
             attempts,
             providers,

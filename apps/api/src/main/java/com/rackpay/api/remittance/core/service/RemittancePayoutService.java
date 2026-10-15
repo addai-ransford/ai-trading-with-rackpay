@@ -17,6 +17,9 @@ import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttem
 import com.rackpay.api.remittance.adapters.out.persistence.RemittancePayoutAttemptJpaRepository;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceRecipientJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository;
+import com.rackpay.api.user.adapters.out.persistence.UserJpaRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -34,6 +37,10 @@ import java.util.UUID;
 public class RemittancePayoutService {
     private final RemittanceJpaRepository remittances;
     private final RemittanceRecipientJpaRepository recipients;
+    private final RemittanceCorridorJpaRepository corridors;
+    private final RemittanceCountryJpaRepository countries;
+    private final UserJpaRepository users;
+    private final PhoneNumberNormalizer phoneNumbers;
     private final MobileMoneyNetworkJpaRepository networks;
     private final RemittancePayoutAttemptJpaRepository attempts;
     private final PayoutProviderRegistry providers;
@@ -47,6 +54,10 @@ public class RemittancePayoutService {
     public RemittancePayoutService(
         RemittanceJpaRepository remittances,
         RemittanceRecipientJpaRepository recipients,
+        RemittanceCorridorJpaRepository corridors,
+        RemittanceCountryJpaRepository countries,
+        UserJpaRepository users,
+        PhoneNumberNormalizer phoneNumbers,
         MobileMoneyNetworkJpaRepository networks,
         RemittancePayoutAttemptJpaRepository attempts,
         PayoutProviderRegistry providers,
@@ -57,6 +68,10 @@ public class RemittancePayoutService {
     ) {
         this.remittances = remittances;
         this.recipients = recipients;
+        this.corridors = corridors;
+        this.countries = countries;
+        this.users = users;
+        this.phoneNumbers = phoneNumbers;
         this.networks = networks;
         this.attempts = attempts;
         this.providers = providers;
@@ -122,7 +137,10 @@ public class RemittancePayoutService {
                             payout.payoutMethod(),
                             payout.networkCode(),
                             payout.normalizedPhoneNumber(),
-                            payout.recipientName()
+                            payout.recipientName(),
+                            payout.senderName(),
+                            payout.senderCountry(),
+                            payout.senderMobileNumber()
                         ));
                     }
                 }
@@ -397,6 +415,9 @@ public class RemittancePayoutService {
         RemittanceRecipientEntity recipient,
         MobileMoneyNetworkEntity network
     ) {
+        SenderDetails sender = "KE".equalsIgnoreCase(recipient.getCountryCode())
+            ? senderDetails(remittance)
+            : new SenderDetails(null, null, null);
         return new PayoutProvider.CreatePayoutCommand(
             remittance.getPayoutReference(),
             remittance.getDestinationAmount(),
@@ -406,9 +427,33 @@ public class RemittancePayoutService {
             recipient.getPayoutMethod(),
             network.getCode(),
             recipient.getNormalizedPhoneNumber(),
-            recipient.getVerifiedName()
+            recipient.getVerifiedName(),
+            sender.name(),
+            sender.countryCode(),
+            sender.mobileNumber()
         );
     }
+
+    private SenderDetails senderDetails(RemittanceEntity remittance) {
+        var user = users.findById(remittance.getUserId())
+            .orElseThrow(() -> new IllegalStateException("remittance sender profile not found"));
+        String name = (user.getFirstName() + " " + user.getLastName()).trim();
+        if (name.isBlank() || user.getPhone() == null || user.getPhone().isBlank()) {
+            throw new IllegalStateException("sender full name and mobile number are required for Kenya payouts");
+        }
+        var corridor = corridors.findById(remittance.getCorridorId())
+            .orElseThrow(() -> new IllegalStateException("remittance corridor not found"));
+        String sourceCountryCode = corridor.getSourceCountryCode();
+        var sourceCountry = countries.findByCodeIgnoreCaseAndEnabledTrue(sourceCountryCode)
+            .orElseThrow(() -> new IllegalStateException("sender country is not configured"));
+        String digits = user.getPhone().replaceAll("[^0-9]", "");
+        String dial = sourceCountry.getDialCode().replaceAll("[^0-9]", "");
+        String normalized = digits.startsWith(dial) ? "+" + digits
+            : phoneNumbers.normalize(sourceCountry.getDialCode(), user.getPhone());
+        return new SenderDetails(name, sourceCountryCode.toUpperCase(java.util.Locale.ROOT), normalized.replace("+", ""));
+    }
+
+    private record SenderDetails(String name, String countryCode, String mobileNumber) {}
 
     private PreparedPayout prepared(
         RemittanceEntity remittance,
@@ -418,6 +463,7 @@ public class RemittancePayoutService {
         boolean executionClaimed,
         boolean newlyCreatedAttempt
     ) {
+        var payoutCommand = commandFor(remittance, recipient, network);
         return new PreparedPayout(
             remittance.getId(),
             attempt.getId(),
@@ -432,6 +478,9 @@ public class RemittancePayoutService {
             network.getCode(),
             recipient.getNormalizedPhoneNumber(),
             recipient.getVerifiedName(),
+            payoutCommand.senderName(),
+            payoutCommand.senderCountry(),
+            payoutCommand.senderMobileNumber(),
             remittance.getStatus(),
             executionClaimed,
             executionClaimed ? remittance.getPayoutExecutionClaimToken() : null,
@@ -448,7 +497,7 @@ public class RemittancePayoutService {
             remittance.getId(), null, provider, remittance.getProviderTransferId(),
             remittance.getPayoutReference(), remittance.getSourceCurrency(),
             remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
-            null, null, null, null, null, remittance.getStatus(), false, null, false
+            null, null, null, null, null, null, null, null, remittance.getStatus(), false, null, false
         );
     }
 

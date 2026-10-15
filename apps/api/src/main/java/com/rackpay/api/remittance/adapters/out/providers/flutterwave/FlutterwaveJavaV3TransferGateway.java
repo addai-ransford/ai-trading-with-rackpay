@@ -3,6 +3,7 @@ package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -66,7 +67,10 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                         command.narration(),
                         command.amount(),
                         command.currency(),
-                        command.beneficiaryName()
+                        command.beneficiaryName(),
+                        command.senderName(),
+                        command.senderCountry(),
+                        command.senderMobileNumber()
                 );
 
                 Response response = new Transfer().runTransaction(request);
@@ -102,6 +106,9 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
     static final class BeneficiaryTransferRequest extends TransferRequest {
         @JsonProperty("beneficiary_name")
         private final String beneficiaryName;
+        @JsonProperty("meta")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private final SenderMeta meta;
 
         BeneficiaryTransferRequest(
                 String callbackUrl,
@@ -114,8 +121,39 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                 String currency,
                 String beneficiaryName
         ) {
+            this(callbackUrl, reference, debitCurrency, accountBank, accountNumber, narration,
+                    amount, currency, beneficiaryName, null, null, null);
+        }
+
+        BeneficiaryTransferRequest(
+                String callbackUrl,
+                String reference,
+                String debitCurrency,
+                String accountBank,
+                String accountNumber,
+                String narration,
+                java.math.BigDecimal amount,
+                String currency,
+                String beneficiaryName,
+                String senderName,
+                String senderCountry,
+                String senderMobileNumber
+        ) {
             super(callbackUrl, reference, debitCurrency, accountBank, accountNumber, narration, amount, currency);
             this.beneficiaryName = beneficiaryName;
+            this.meta = StringUtils.hasText(senderName) ? new SenderMeta(senderName, senderCountry, senderMobileNumber) : null;
+        }
+    }
+
+    static final class SenderMeta {
+        @JsonProperty("sender") private final String sender;
+        @JsonProperty("sender_country") private final String senderCountry;
+        @JsonProperty("mobile_number") private final String mobileNumber;
+
+        SenderMeta(String sender, String senderCountry, String mobileNumber) {
+            this.sender = sender;
+            this.senderCountry = senderCountry;
+            this.mobileNumber = mobileNumber;
         }
     }
 

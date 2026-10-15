@@ -162,7 +162,10 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                         providerNetworkCode(command.networkCode()),
                         command.normalizedPhoneNumber().replace("+", ""),
                         "RackPay remittance " + command.reference(),
-                        command.recipientName().trim()
+                        command.recipientName().trim(),
+                        command.senderName(),
+                        command.senderCountry(),
+                        command.senderMobileNumber()
                 )
         );
 
@@ -292,7 +295,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
             case "GH" ->
                 currency == Currency.GHS
                 && switch (network) {
-                    case "MTN", "AIRTELTIGO", "TELECEL" ->
+                    case "MTN", "AIRTELTIGO", "AIRTEL_TIGO", "TIGO", "TELECEL" ->
                         true;
                     default ->
                         false;
@@ -316,6 +319,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         return switch (networkCode.toUpperCase(java.util.Locale.ROOT)) {
             case "MPESA" ->
                 "MPS";
+            case "AIRTEL_TIGO", "TIGO" ->
+                "AIRTELTIGO";
             case "TELECEL" ->
                 "VODAFONE";
             default ->
