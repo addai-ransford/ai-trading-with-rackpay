@@ -17,7 +17,8 @@ public interface FlutterwaveTransferGateway {
             String debitCurrency,
             String bankCode,
             String accountNumber,
-            String narration
+            String narration,
+            String beneficiaryName
     ) {}
 
     record TransferResponse(String providerTransferId, String responseStatus, String status, String message) {}

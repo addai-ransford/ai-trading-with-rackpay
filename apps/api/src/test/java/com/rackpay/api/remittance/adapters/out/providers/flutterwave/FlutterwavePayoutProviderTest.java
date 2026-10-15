@@ -315,6 +315,7 @@ class FlutterwavePayoutProviderTest {
         assertThat(captor.getValue().debitCurrency()).isEqualTo("GHS");
         assertThat(captor.getValue().bankCode()).isEqualTo("MTN");
         assertThat(captor.getValue().accountNumber()).isEqualTo("233241234567");
+        assertThat(captor.getValue().beneficiaryName()).isEqualTo("Recipient Name");
     }
 
     private CreatePayoutCommand validCommand() {

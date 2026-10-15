@@ -161,7 +161,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                         debitCurrency,
                         providerNetworkCode(command.networkCode()),
                         command.normalizedPhoneNumber().replace("+", ""),
-                        "RackPay remittance " + command.reference()
+                        "RackPay remittance " + command.reference(),
+                        command.recipientName().trim()
                 )
         );
 

@@ -2,6 +2,7 @@ package com.rackpay.api.remittance.adapters.out.providers.flutterwave;
 
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -46,6 +47,9 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
             throw new IllegalStateException("Flutterwave secret key is not configured");
         }
         Objects.requireNonNull(command, "transfer command is required");
+        if (!StringUtils.hasText(command.beneficiaryName())) {
+            throw new IllegalArgumentException("Flutterwave beneficiary name is required");
+        }
 
         synchronized (SDK_LOCK) {
             try {
@@ -53,7 +57,7 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                 Environment.setPublicKey(publicKey);
                 Environment.setEncryptionKey(encryptionKey);
 
-                TransferRequest request = new TransferRequest(
+                TransferRequest request = new BeneficiaryTransferRequest(
                         StringUtils.hasText(callbackUrl) ? callbackUrl : null,
                         command.reference(),
                         command.debitCurrency(),
@@ -61,7 +65,8 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                         command.accountNumber(),
                         command.narration(),
                         command.amount(),
-                        command.currency()
+                        command.currency(),
+                        command.beneficiaryName()
                 );
 
                 Response response = new Transfer().runTransaction(request);
@@ -86,6 +91,31 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
                         exception
                 );
             }
+        }
+    }
+
+    /**
+     * The upstream v3 SDK model omits beneficiary_name, which Flutterwave
+     * requires for mobile-money payouts. Its request serializer uses this
+     * runtime subclass's Jackson property when posting the transfer.
+     */
+    static final class BeneficiaryTransferRequest extends TransferRequest {
+        @JsonProperty("beneficiary_name")
+        private final String beneficiaryName;
+
+        BeneficiaryTransferRequest(
+                String callbackUrl,
+                String reference,
+                String debitCurrency,
+                String accountBank,
+                String accountNumber,
+                String narration,
+                java.math.BigDecimal amount,
+                String currency,
+                String beneficiaryName
+        ) {
+            super(callbackUrl, reference, debitCurrency, accountBank, accountNumber, narration, amount, currency);
+            this.beneficiaryName = beneficiaryName;
         }
     }
 
