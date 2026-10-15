@@ -245,7 +245,7 @@ export function RemittancePage() {
   if (!accessToken) return null;
 
   return (
-    <section className="mx-auto max-w-6xl space-y-8 pb-12">
+    <section className="remittance-page mx-auto max-w-6xl space-y-8 pb-12">
       {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
