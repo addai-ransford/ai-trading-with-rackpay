@@ -206,6 +206,8 @@ export function RemittancePage() {
       setVerificationProvider(result.verificationProvider ?? undefined);
       setRecipientIsVerified(result.verified);
       setConfirmedRecipient(false);
+      setVerificationFailure(undefined);
+      verifyMutation.reset();
     },
   });
 
