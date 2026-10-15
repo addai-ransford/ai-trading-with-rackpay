@@ -76,7 +76,7 @@ export function HomePage() {
 
   if (!accessToken) {
     return (
-      <div className="mx-auto max-w-6xl space-y-20 pb-20 pt-8 px-4 sm:px-6 lg:px-8">
+      <div className="dashboard-page mx-auto max-w-6xl space-y-20 pb-20 pt-8 px-4 sm:px-6 lg:px-8">
         {/* Public Hero */}
         <section className="relative overflow-hidden rounded-[2.5rem] border border-slate-800 bg-[radial-gradient(ellipse_at_top,#132e21_0,transparent_60%),linear-gradient(135deg,#090d16,#05070a)] p-8 sm:p-14 shadow-2xl">
           <div className="grid items-center gap-12 lg:grid-cols-12 relative z-10">
@@ -175,7 +175,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 pb-16 pt-4 px-4 sm:px-6 lg:px-8">
+    <div className="dashboard-page mx-auto max-w-6xl space-y-10 pb-16 pt-4 px-4 sm:px-6 lg:px-8">
       {/* Dashboard Top Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-6">
         <div>
