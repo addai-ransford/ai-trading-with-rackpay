@@ -26,7 +26,7 @@ public record PreparedPayout(
         String senderCountry,
         String senderMobileNumber,
         String flutterwaveNetworkCode,
-        String paystackNetworkCode
+        String paystackNetworkCode,
         RemittanceEntity.Status status,
         boolean executionClaimed,
         UUID executionClaimToken,
