@@ -52,7 +52,8 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
         return !secretKey.isBlank()
                 && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
                 && command.currency() != null
-                && supportedNetwork(command.countryCode(), command.currency(), command.networkCode());
+                && (hasText(command.flutterwaveNetworkCode())
+                    || supportedNetwork(command.countryCode(), command.currency(), command.networkCode()));
     }
 
     @Override
@@ -159,7 +160,7 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
                         java.math.BigDecimal.valueOf(transferAmount),
                         command.currency().name(),
                         debitCurrency,
-                        providerNetworkCode(command.networkCode()),
+                        providerNetworkCode(command),
                         command.normalizedPhoneNumber().replace("+", ""),
                         "RackPay remittance " + command.reference(),
                         command.recipientName().trim(),
@@ -326,6 +327,16 @@ public class FlutterwavePayoutProvider implements PayoutProvider {
             default ->
                 networkCode;
         };
+    }
+
+    private String providerNetworkCode(CreatePayoutCommand command) {
+        return hasText(command.flutterwaveNetworkCode())
+            ? command.flutterwaveNetworkCode().trim()
+            : providerNetworkCode(command.networkCode());
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private PayoutStatus mapStatus(String status) {

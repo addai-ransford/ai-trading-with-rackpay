@@ -54,7 +54,8 @@ public class PublicExchangeRateController {
         }
 
         return availableRates.stream()
-            .sorted(Comparator.comparing(ExchangeRateResponse::sourceCurrency)
+            .sorted(Comparator.comparing((ExchangeRateResponse rate) -> !"EUR".equals(rate.sourceCurrency()))
+                .thenComparing(ExchangeRateResponse::sourceCurrency)
                 .thenComparing(ExchangeRateResponse::destinationCurrency))
             .toList();
     }

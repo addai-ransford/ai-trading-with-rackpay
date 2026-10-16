@@ -140,7 +140,9 @@ public class RemittancePayoutService {
                             payout.recipientName(),
                             payout.senderName(),
                             payout.senderCountry(),
-                            payout.senderMobileNumber()
+                            payout.senderMobileNumber(),
+                            payout.flutterwaveNetworkCode(),
+                            payout.paystackNetworkCode()
                         ));
                     }
                 }
@@ -430,7 +432,9 @@ public class RemittancePayoutService {
             recipient.getVerifiedName(),
             sender.name(),
             sender.countryCode(),
-            sender.mobileNumber()
+            sender.mobileNumber(),
+            network.getFlutterwaveCode(),
+            network.getPaystackCode()
         );
     }
 
@@ -481,6 +485,8 @@ public class RemittancePayoutService {
             payoutCommand.senderName(),
             payoutCommand.senderCountry(),
             payoutCommand.senderMobileNumber(),
+            payoutCommand.flutterwaveNetworkCode(),
+            payoutCommand.paystackNetworkCode(),
             remittance.getStatus(),
             executionClaimed,
             executionClaimed ? remittance.getPayoutExecutionClaimToken() : null,
@@ -497,7 +503,7 @@ public class RemittancePayoutService {
             remittance.getId(), null, provider, remittance.getProviderTransferId(),
             remittance.getPayoutReference(), remittance.getSourceCurrency(),
             remittance.getDestinationAmount(), remittance.getDestinationCurrency(),
-            null, null, null, null, null, null, null, null, remittance.getStatus(), false, null, false
+            null, null, null, null, null, null, null, null, null, null, remittance.getStatus(), false, null, false
         );
     }
 

@@ -52,9 +52,11 @@ public class PaystackPayoutProvider implements PayoutProvider {
     public boolean supportsPayout(CreatePayoutCommand command) {
         return !secretKey.isBlank()
             && command.payoutMethod() == PayoutMethod.MOBILE_MONEY
-            && ((("GH".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.GHS)
-                || ("KE".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.KES)))
-            && supportedNetwork(command.networkCode());
+            && command.currency() != null
+            && ((command.paystackNetworkCode() != null && !command.paystackNetworkCode().isBlank())
+                || ((("GH".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.GHS)
+                    || ("KE".equalsIgnoreCase(command.countryCode()) && command.currency() == Currency.KES))
+                    && supportedNetwork(command.networkCode())));
     }
 
     @Override
@@ -139,7 +141,8 @@ public class PaystackPayoutProvider implements PayoutProvider {
             "type", "mobile_money",
             "name", command.recipientName(),
             "account_number", command.normalizedPhoneNumber().replace("+", ""),
-            "bank_code", networkCode(command.networkCode()),
+            "bank_code", command.paystackNetworkCode() != null && !command.paystackNetworkCode().isBlank()
+                ? command.paystackNetworkCode().trim() : networkCode(command.networkCode()),
             "currency", command.currency().name()
         );
 

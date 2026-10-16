@@ -38,6 +38,30 @@ public class RemittanceCountryEntity {
 
     protected RemittanceCountryEntity() {}
 
+    public RemittanceCountryEntity(String code, String name, String dialCode, String currencyCode,
+        boolean enabled, boolean sendEnabled, boolean receiveEnabled) {
+        this.code = code;
+        this.name = name;
+        this.dialCode = dialCode;
+        this.currencyCode = currencyCode;
+        this.enabled = enabled;
+        this.sendEnabled = sendEnabled;
+        this.receiveEnabled = receiveEnabled;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    public void update(String name, String dialCode, String currencyCode, boolean enabled,
+        boolean sendEnabled, boolean receiveEnabled) {
+        this.name = name;
+        this.dialCode = dialCode;
+        this.currencyCode = currencyCode;
+        this.enabled = enabled;
+        this.sendEnabled = sendEnabled;
+        this.receiveEnabled = receiveEnabled;
+        this.updatedAt = Instant.now();
+    }
+
     public String getCode() { return code; }
     public String getName() { return name; }
     public String getDialCode() { return dialCode; }

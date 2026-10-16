@@ -13,7 +13,6 @@ import {
   TrendingUp,
   Send,
   ChevronRight,
-  Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../../shared/api/httpClient";

@@ -93,7 +93,9 @@ public class RemittanceQuoteService {
             .divide(BigDecimal.valueOf(10000),18,RoundingMode.HALF_EVEN))
             .setScale(sourceCurrency.minorUnits(),RoundingMode.HALF_EVEN);
 
-        BigDecimal rate=fxRates.getRate(sourceCurrency,destinationCurrency);
+        BigDecimal rate=corridor.getFxRate() != null
+            ? corridor.getFxRate()
+            : fxRates.getRate(sourceCurrency,destinationCurrency);
         if(rate==null||rate.signum()<=0) throw new IllegalStateException("FX provider returned an invalid rate");
 
         BigDecimal destinationAmount=sourceAmount.multiply(rate)

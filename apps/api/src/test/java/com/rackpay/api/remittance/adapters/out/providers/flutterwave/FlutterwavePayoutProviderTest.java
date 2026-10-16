@@ -45,6 +45,31 @@ class FlutterwavePayoutProviderTest {
     }
 
     @Test
+    void usesAdminConfiguredFlutterwaveCodeForAdditionalCountries() {
+        FlutterwaveTransferGateway gateway = mock(FlutterwaveTransferGateway.class);
+        when(gateway.createTransfer(any())).thenReturn(
+                new FlutterwaveTransferGateway.TransferResponse("fw-1", "success", "NEW", "queued")
+        );
+        FlutterwavePayoutProvider provider = new FlutterwavePayoutProvider(
+                RestClient.builder(), "http://flutterwave.test/v3", "test-secret",
+                mock(ProviderRetryExecutor.class), gateway
+        );
+        CreatePayoutCommand command = new CreatePayoutCommand(
+                "new-route-001", BigDecimal.ONE, Currency.UGX, Currency.EUR, "UG",
+                PayoutMethod.MOBILE_MONEY, "CUSTOM_NETWORK", "+256700000000", "Recipient Name",
+                null, null, null, "FLW_NETWORK_CODE", null
+        );
+
+        assertThat(provider.supportsPayout(command)).isTrue();
+        provider.createPayout(command);
+
+        ArgumentCaptor<FlutterwaveTransferGateway.TransferCommand> captor =
+                ArgumentCaptor.forClass(FlutterwaveTransferGateway.TransferCommand.class);
+        verify(gateway).createTransfer(captor.capture());
+        assertThat(captor.getValue().bankCode()).isEqualTo("FLW_NETWORK_CODE");
+    }
+
+    @Test
     void resolvesGhanaMobileMoneyNumberToVerifiedRecipientName() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

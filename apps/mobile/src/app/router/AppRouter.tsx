@@ -10,6 +10,7 @@ import { PaymentPage } from "../../features/payments/pages/PaymentPage";
 import { TradingPage } from "../../features/trading/pages/TradingPage";
 import { PaymentProviderAdminPage } from "../../features/admin/pages/PaymentProviderAdminPage";
 import { AdminUserAdminPage } from "../../features/admin/pages/AdminUserAdminPage";
+import { RemittanceConfigurationAdminPage } from "../../features/admin/pages/RemittanceConfigurationAdminPage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
 
 export function AppRouter() {
@@ -28,6 +29,7 @@ export function AppRouter() {
           <Route path="/trading" element={<TradingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin/payment-providers" element={<PaymentProviderAdminPage />} />
+          <Route path="/admin/remittance" element={<RemittanceConfigurationAdminPage />} />
           <Route path="/admin/admins/new" element={<AdminUserAdminPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
