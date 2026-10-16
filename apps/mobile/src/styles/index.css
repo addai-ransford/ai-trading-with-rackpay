@@ -369,3 +369,29 @@ textarea {
 [data-theme="light"] .wallet-page .divide-slate-800\/60 > :not(:last-child) { border-color: #e2e9e2; }
 
 @media(max-width:680px){[data-theme="light"] .theme-settings-card{align-items:flex-start;flex-wrap:wrap}[data-theme="light"] .theme-options{margin-left:51px}[data-theme="dark"] .theme-settings-card{align-items:flex-start;flex-wrap:wrap}[data-theme="dark"] .theme-options{margin-left:51px}[data-theme="light"] .topbar-right{gap:6px}[data-theme="light"] .theme-toggle span{display:none}[data-theme="dark"] .theme-toggle span{display:none}[data-theme] .profile-trigger-copy{display:none}[data-theme] .profile-trigger{gap:4px;padding-right:4px}}
+
+.rates-panel { border: 1px solid #34463a; background: radial-gradient(ellipse at 95% 0%,#233827 0,transparent 43%),linear-gradient(120deg,#18261c,#101a18 75%); }
+.rates-panel-heading,.rates-rate { color: #b7f36b; }
+.rates-icon { background: #1b2a20; }
+.rates-panel-title,.rates-empty strong,.rates-amount,.rates-info-title { color: #eef6eb; }
+.rates-muted,.rates-empty p { color: #a8b8ab; }
+.rates-state,.rates-empty { border: 1px solid #344638; background: #101a14b3; color: #a8b8ab; }
+.rates-error { border: 1px solid #7f1d1d99; background: #450a0a33; color: #fecaca; }
+.rates-field-label { color: #b8c4ca; }
+.rates-result { border: 1px solid #354638; background: #101a14bf; }
+.rates-divider { background: #2a3a2d; }
+.rates-info-card { border: 1px solid #24313b; background: #101820; }
+.rates-info-copy { color: #8b9aa5; }
+.rates-page .rates-muted:last-child { color: #81909a; }
+[data-theme="light"] .rates-panel { border-color: #d6e5cf; background: radial-gradient(ellipse at 95% 0%,#f2f8ed 0,transparent 43%),linear-gradient(120deg,#f5f9f2,#fff 75%); }
+[data-theme="light"] .rates-panel-heading,[data-theme="light"] .rates-rate { color: #477b28; }
+[data-theme="light"] .rates-icon { background: #e8f3df; }
+[data-theme="light"] .rates-panel-title,[data-theme="light"] .rates-empty strong,[data-theme="light"] .rates-amount,[data-theme="light"] .rates-info-title { color: #243328; }
+[data-theme="light"] .rates-muted,[data-theme="light"] .rates-empty p { color: #627067; }
+[data-theme="light"] .rates-state,[data-theme="light"] .rates-empty { border-color: #d9e6d4; background: #fff; color: #526157; }
+[data-theme="light"] .rates-error { border-color: #fecaca; background: #fff5f5; color: #991b1b; }
+[data-theme="light"] .rates-field-label { color: #526157; }
+[data-theme="light"] .rates-result { border-color: #d9e9d2; background: linear-gradient(120deg,#f4f9ef,#edf5e9); }
+[data-theme="light"] .rates-divider { background: #d9e5d4; }
+[data-theme="light"] .rates-info-card { border-color: #e0e8df; background: #fff; }
+[data-theme="light"] .rates-info-copy,[data-theme="light"] .rates-page .rates-muted:last-child { color: #627067; }

@@ -62,7 +62,7 @@ export function ExchangeRatesPage() {
   }, [selectedRate, sourceAmount]);
 
   return (
-    <section className="space-y-7">
+    <section className="rates-page space-y-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">RACKPAY EXCHANGE RATES</p>
@@ -76,51 +76,51 @@ export function ExchangeRatesPage() {
         </Link>
       </div>
 
-      <div className="rounded-2xl border border-[#34463a] bg-[radial-gradient(ellipse_at_95%_0%,#233827_0,transparent_43%),linear-gradient(120deg,#18261c,#101a18_75%)] p-6 sm:p-8">
-        <div className="mb-6 flex items-center gap-3 text-[#b7f36b]">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#1b2a20]"><ArrowLeftRight size={22} /></span>
+      <div className="rates-panel rounded-2xl p-6 sm:p-8">
+        <div className="rates-panel-heading mb-6 flex items-center gap-3">
+          <span className="rates-icon grid h-11 w-11 place-items-center rounded-xl"><ArrowLeftRight size={22} /></span>
           <div>
-            <h2 className="text-lg font-semibold text-[#eef6eb]">Exchange rate calculator</h2>
-            <p className="text-xs text-[#a8b8ab]">Use the published rate to estimate your transfer.</p>
+            <h2 className="rates-panel-title text-lg font-semibold">Exchange rate calculator</h2>
+            <p className="rates-muted text-xs">Use the published rate to estimate your transfer.</p>
           </div>
         </div>
 
         {ratesQuery.isPending ? (
-          <div className="rounded-xl border border-[#344638] p-5 text-sm text-[#a8b8ab]" role="status">Loading published rates…</div>
+          <div className="rates-state rounded-xl p-5 text-sm" role="status">Loading published rates…</div>
         ) : ratesQuery.isError ? (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/20 p-5 text-sm text-red-200" role="alert">
+          <div className="rates-error rounded-xl p-5 text-sm" role="alert">
             Exchange rates are temporarily unavailable. Please try again shortly.
             <button type="button" className="ml-3 underline" onClick={() => void ratesQuery.refetch()}>Try again</button>
           </div>
         ) : rates.length === 0 ? (
-          <div className="rounded-xl border border-[#344638] bg-[#101a14]/70 p-5">
-            <strong className="text-[#eef6eb]">Rates are being prepared</strong>
-            <p className="mt-2 text-sm leading-6 text-[#a8b8ab]">
+          <div className="rates-empty rounded-xl p-5">
+            <strong>Rates are being prepared</strong>
+            <p className="rates-muted mt-2 text-sm leading-6">
               RackPay has not published an exchange rate yet. We will display a rate here once a corridor is configured. We will never substitute an invented rate.
             </p>
           </div>
         ) : selectedRate ? (
           <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
             <div className="space-y-4">
-              <label className="block text-xs font-semibold text-[#b8c4ca]" htmlFor="rate-pair">Currency pair</label>
+              <label className="rates-field-label block text-xs font-semibold" htmlFor="rate-pair">Currency pair</label>
               <select id="rate-pair" className="form-control" value={pairKey} onChange={(event) => setSelectedPair(event.target.value)}>
                 {rates.map((item) => {
                   const key = `${item.sourceCurrency}_${item.destinationCurrency}`;
                   return <option key={key} value={key}>{item.sourceCurrency} → {item.destinationCurrency}</option>;
                 })}
               </select>
-              <label className="block text-xs font-semibold text-[#b8c4ca]" htmlFor="send-amount">You send ({selectedRate.sourceCurrency})</label>
+              <label className="rates-field-label block text-xs font-semibold" htmlFor="send-amount">You send ({selectedRate.sourceCurrency})</label>
               <input id="send-amount" className="form-control" type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-              <p className="text-xs text-[#8b9aa5]">{currencyNames[selectedRate.sourceCurrency] ?? selectedRate.sourceCurrency} to {currencyNames[selectedRate.destinationCurrency] ?? selectedRate.destinationCurrency}</p>
+              <p className="rates-muted text-xs">{currencyNames[selectedRate.sourceCurrency] ?? selectedRate.sourceCurrency} to {currencyNames[selectedRate.destinationCurrency] ?? selectedRate.destinationCurrency}</p>
             </div>
-            <div className="flex flex-col justify-center rounded-xl border border-[#354638] bg-[#101a14]/75 p-5">
-              <p className="text-xs text-[#a8b8ab]">Published indicative rate</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-[#b7f36b]">
+            <div className="rates-result flex flex-col justify-center rounded-xl p-5">
+              <p className="rates-muted text-xs">Published indicative rate</p>
+              <p className="rates-rate mt-2 text-2xl font-semibold tracking-tight">
                 1 {selectedRate.sourceCurrency} = {Number(selectedRate.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })} {selectedRate.destinationCurrency}
               </p>
-              <div className="my-5 h-px bg-[#2a3a2d]" />
-              <p className="text-xs text-[#a8b8ab]">Estimated recipient amount, before fees</p>
-              <p className="mt-2 break-words text-3xl font-semibold text-[#eef6eb]">
+              <div className="rates-divider my-5 h-px" />
+              <p className="rates-muted text-xs">Estimated recipient amount, before fees</p>
+              <p className="rates-amount mt-2 break-words text-3xl font-semibold">
                 {destinationAmount === undefined ? "—" : money(destinationAmount, selectedRate.destinationCurrency)}
               </p>
               <Link to={authenticated ? "/remittance" : "/login?mode=register"} className="button button-primary mt-5 w-full">
@@ -132,17 +132,17 @@ export function ExchangeRatesPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <article className="rounded-xl border border-[#24313b] bg-[#101820] p-5">
-          <h3 className="font-semibold text-[#eaf0f2]">Clear before you confirm</h3>
-          <p className="mt-2 text-sm leading-6 text-[#8b9aa5]">Your final quote shows the applicable transfer fee, the confirmed exchange rate and the amount your recipient will receive before you fund the transfer.</p>
+        <article className="rates-info-card rounded-xl p-5">
+          <h3 className="rates-info-title font-semibold">Clear before you confirm</h3>
+          <p className="rates-info-copy mt-2 text-sm leading-6">Your final quote shows the applicable transfer fee, the confirmed exchange rate and the amount your recipient will receive before you fund the transfer.</p>
         </article>
-        <article className="rounded-xl border border-[#24313b] bg-[#101820] p-5">
-          <h3 className="font-semibold text-[#eaf0f2]">Rates are not a promise until quoted</h3>
-          <p className="mt-2 text-sm leading-6 text-[#8b9aa5]">Published rates are indicative. The backend-issued transfer quote is authoritative and expires at the time shown during checkout.</p>
+        <article className="rates-info-card rounded-xl p-5">
+          <h3 className="rates-info-title font-semibold">Rates are not a promise until quoted</h3>
+          <p className="rates-info-copy mt-2 text-sm leading-6">Published rates are indicative. The backend-issued transfer quote is authoritative and expires at the time shown during checkout.</p>
         </article>
       </div>
       <p className="compliance-note"><ShieldCheck size={14} /> Exchange rates and transfer fees are supplied by RackPay's backend. The calculator is an estimate and does not include fees.</p>
-      <div className="flex items-center gap-2 text-xs text-[#81909a]"><RefreshCw size={13} /> {ratesQuery.isFetching ? "Checking published rates…" : "Published rates are checked periodically."}</div>
+      <div className="rates-muted flex items-center gap-2 text-xs"><RefreshCw size={13} /> {ratesQuery.isFetching ? "Checking published rates…" : "Published rates are checked periodically."}</div>
     </section>
   );
 }

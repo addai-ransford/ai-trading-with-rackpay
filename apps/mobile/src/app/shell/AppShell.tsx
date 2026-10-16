@@ -30,7 +30,7 @@ export function AppShell() {
   const user = useAuthStore((state) => state.user);
   const { theme, toggleTheme } = useTheme();
   const isLoginRoute = pathname === "/login";
-  const isGuestHome = pathname === "/" && !authenticated;
+  const isGuestPage = !authenticated;
   return (
     <div className="app-frame">
       {!isLoginRoute ? (
@@ -39,7 +39,7 @@ export function AppShell() {
             <span className="brand-mark">R</span>
             <span>rack<span className="brand-light">pay</span></span>
           </NavLink>
-          {isGuestHome ? (
+          {isGuestPage ? (
             <div className="guest-sidebar-note">
               <span className="secure-dot" />
               <strong>Your money, connected.</strong>
@@ -69,7 +69,7 @@ export function AppShell() {
         {!isLoginRoute ? (
           <header className="topbar">
             <NavLink to="/" className="mobile-brand"><span className="brand-mark">R</span> rack<span className="brand-light">pay</span></NavLink>
-            <span className="topbar-label">PERSONAL WORKSPACE</span>
+            <span className="topbar-label">{authenticated ? "PERSONAL WORKSPACE" : "EXPLORE RACKPAY"}</span>
             <div className="topbar-right">
               <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
                 {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
@@ -107,7 +107,7 @@ export function AppShell() {
           </header>
         ) : null}
         <div className={isLoginRoute ? "login-content" : "page-content"}><Outlet /></div>
-        {!isLoginRoute && !isGuestHome ? (
+        {!isLoginRoute && !isGuestPage ? (
           <nav className="mobile-nav" aria-label="Mobile navigation">
             {links.filter(({ to }) => ["/", "/wallet", "/remittance", "/trading"].includes(to)).map(({ to, label, icon: Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `mobile-nav-link ${isActive ? "active" : ""}`}>
