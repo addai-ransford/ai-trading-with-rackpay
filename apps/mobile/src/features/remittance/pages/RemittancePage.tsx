@@ -49,8 +49,8 @@ function money(value: number, currency: string): string {
 export function RemittancePage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [activeStep, setActiveStep] = useState<Step>("amount");
-  const [country, setCountry] = useState<RemittanceCountry>();
-  const [sourceCountryCode, setSourceCountryCode] = useState("BE");
+  const [selectedCountry, setSelectedCountry] = useState<RemittanceCountry>();
+  const [selectedSourceCountryCode, setSelectedSourceCountryCode] = useState("BE");
   const [network, setNetwork] = useState<MobileMoneyNetwork>();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [amount, setAmount] = useState("100");
@@ -62,7 +62,7 @@ export function RemittancePage() {
   const [manualRecipientName, setManualRecipientName] = useState("");
   const [confirmedRecipient, setConfirmedRecipient] = useState(false);
   const [fundedRemittanceId, setFundedRemittanceId] = useState<string>();
-  const [quoteNow, setQuoteNow] = useState(Date.now());
+  const [quoteNow, setQuoteNow] = useState(0);
   const [fundIdempotencyKey, setFundIdempotencyKey] = useState<string>();
 
   const countriesQuery = useQuery({
@@ -84,24 +84,10 @@ export function RemittancePage() {
     refetchInterval: 60_000,
   });
 
-  useEffect(() => {
-    if (!country && countriesQuery.data?.length) {
-      setCountry(
-        countriesQuery.data.find((item) => item.code === "GH") ??
-        countriesQuery.data[0],
-      );
-    }
-  }, [country, countriesQuery.data]);
-
-  useEffect(() => {
-    if (sendCountriesQuery.data?.length && !sendCountriesQuery.data.some((item) => item.code === sourceCountryCode)) {
-      setSourceCountryCode(
-        sendCountriesQuery.data.find((item) => item.code === "BE")?.code ??
-        sendCountriesQuery.data[0].code,
-      );
-    }
-  }, [sendCountriesQuery.data, sourceCountryCode]);
-
+  const country = selectedCountry ?? countriesQuery.data?.find((item) => item.code === "GH") ?? countriesQuery.data?.[0];
+  const sourceCountryCode = sendCountriesQuery.data?.some((item) => item.code === selectedSourceCountryCode)
+    ? selectedSourceCountryCode
+    : sendCountriesQuery.data?.find((item) => item.code === "BE")?.code ?? sendCountriesQuery.data?.[0]?.code ?? selectedSourceCountryCode;
   const sourceCountry = sendCountriesQuery.data?.find((item) => item.code === sourceCountryCode);
   const networksQuery = useQuery({
     queryKey: ["remittance", "networks", country?.code],
@@ -225,6 +211,7 @@ export function RemittancePage() {
       });
     },
     onSuccess: () => {
+      setQuoteNow(Date.now());
       setFundIdempotencyKey(crypto.randomUUID());
       setFundedRemittanceId(undefined);
       setActiveStep("review");
@@ -322,7 +309,7 @@ export function RemittancePage() {
                   <select
                     value={sourceCountryCode}
                     onChange={(e) => {
-                      setSourceCountryCode(e.target.value);
+                      setSelectedSourceCountryCode(e.target.value);
                       resetQuoteAndFunding();
                     }}
                     disabled={sendCountriesQuery.isPending}
@@ -346,7 +333,7 @@ export function RemittancePage() {
                     onChange={(e) => {
                       const nextCountry = countriesQuery.data?.find((item) => item.code === e.target.value);
                       if (nextCountry) {
-                        setCountry(nextCountry);
+                        setSelectedCountry(nextCountry);
                         clearTransfer();
                       }
                     }}

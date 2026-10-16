@@ -65,11 +65,13 @@ export function WalletPage() {
     if (!returnedFromCheckout) return;
     void queryClient.invalidateQueries({ queryKey: ["wallet"] });
     const timeout = window.setTimeout(() => {
-      searchParams.delete("payment");
-      setSearchParams(searchParams, { replace: true });
+      setSearchParams((params) => {
+        params.delete("payment");
+        return params;
+      }, { replace: true });
     }, 10_000);
     return () => window.clearTimeout(timeout);
-  }, [returnedFromCheckout, queryClient]);
+  }, [returnedFromCheckout, queryClient, setSearchParams]);
 
   const walletQuery = useQuery({
     queryKey: ["wallet"],
@@ -87,21 +89,19 @@ export function WalletPage() {
     return Array.from(new Set([...activeCurrencies, ...standardCurrencies]));
   }, [wallet]);
 
+  const unopenedCurrencies = availableCurrencies.filter(
+    (c) => !wallet?.balances.some((b) => b.currency === c),
+  );
+  const selectedCurrency = unopenedCurrencies.includes(currency)
+    ? currency
+    : unopenedCurrencies[0] ?? currency;
+
   const openBalanceMutation = useMutation({
-    mutationFn: () => openWalletBalance(accessToken!, currency),
+    mutationFn: () => openWalletBalance(accessToken!, selectedCurrency),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["wallet"] });
     },
   });
-
-  useEffect(() => {
-    const unopened = availableCurrencies.filter(
-      (c) => !wallet?.balances.some((b) => b.currency === c),
-    );
-    if (unopened.length > 0 && (!currency || wallet?.balances.some((b) => b.currency === currency))) {
-      setCurrency(unopened[0]);
-    }
-  }, [availableCurrencies, currency, wallet]);
 
   if (walletQuery.isPending) {
     return <WalletLoading />;
@@ -128,10 +128,7 @@ export function WalletPage() {
     );
   }
 
-  const currencyAlreadyOpen = wallet?.balances.some((balance) => balance.currency === currency) ?? false;
-  const unopenedCurrencies = availableCurrencies.filter(
-    (c) => !wallet?.balances.some((b) => b.currency === c),
-  );
+  const currencyAlreadyOpen = wallet?.balances.some((balance) => balance.currency === selectedCurrency) ?? false;
 
   return (
     <section className="wallet-page mx-auto max-w-5xl space-y-8 pb-12 pt-4">
@@ -260,7 +257,7 @@ export function WalletPage() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {availableCurrencies.map((option) => {
               const isOpen = wallet?.balances.some((b) => b.currency === option) ?? false;
-              const isSelected = currency === option;
+              const isSelected = selectedCurrency === option;
               const symbol = getCurrencySymbol(option);
 
               return (
@@ -296,7 +293,7 @@ export function WalletPage() {
               onClick={() => openBalanceMutation.mutate()}
               className="button button-primary w-full sm:w-auto px-6 py-3"
             >
-              {openBalanceMutation.isPending ? "Opening…" : `Open ${currency} Balance`}
+              {openBalanceMutation.isPending ? "Opening…" : `Open ${selectedCurrency} Balance`}
             </button>
           </div>
         </div>

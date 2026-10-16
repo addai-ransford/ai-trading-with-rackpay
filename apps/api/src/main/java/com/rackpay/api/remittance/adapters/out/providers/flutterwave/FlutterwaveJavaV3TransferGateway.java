@@ -155,6 +155,15 @@ public class FlutterwaveJavaV3TransferGateway implements FlutterwaveTransferGate
             this.senderCountry = senderCountry;
             this.mobileNumber = mobileNumber;
         }
+
+        @JsonProperty("sender")
+        public String getSender() { return sender; }
+
+        @JsonProperty("sender_country")
+        public String getSenderCountry() { return senderCountry; }
+
+        @JsonProperty("mobile_number")
+        public String getMobileNumber() { return mobileNumber; }
     }
 
     public static final class FlutterwaveTransferException extends RuntimeException {
