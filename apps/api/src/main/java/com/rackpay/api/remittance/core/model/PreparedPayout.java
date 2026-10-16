@@ -22,9 +22,15 @@ public record PreparedPayout(
         String networkCode,
         String normalizedPhoneNumber,
         String recipientName,
+        String senderName,
+        String senderCountry,
+        String senderMobileNumber,
+        String flutterwaveNetworkCode,
+        String paystackNetworkCode,
         RemittanceEntity.Status status,
         boolean executionClaimed,
-        UUID executionClaimToken
+        UUID executionClaimToken,
+        boolean newlyCreatedAttempt
         ) {
 
 }

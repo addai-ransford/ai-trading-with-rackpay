@@ -44,7 +44,7 @@ info:
     version: 0.1.0
 rackpay:
   web:
-    allowed-origins: ${RACKPAY_WEB_ALLOWED_ORIGINS:http://localhost:4000}
+    allowed-origins: ${RACKPAY_WEB_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4000}
   keycloak:
     admin:
       base-url: ${RACKPAY_KEYCLOAK_BASE_URL:http://localhost:8081}
@@ -69,13 +69,18 @@ rackpay:
       base-url: ${RACKPAY_STRIPE_BASE_URL:https://api.stripe.com/v1}
   remittance:
     quote-lifetime: PT2M
-    fx-rates: {}
+    fx-rates: ${RACKPAY_REMITTANCE_FX_RATES:{}}
+  public-fx:
+    api-key: ${RACKPAY_EXCHANGE_RATE_API_KEY:}
   payout:
     default-provider: ${RACKPAY_PAYOUT_DEFAULT_PROVIDER:FLUTTERWAVE}
     provider-order: ${RACKPAY_PAYOUT_PROVIDER_ORDER:FLUTTERWAVE,PAYSTACK}
     flutterwave:
       base-url: ${RACKPAY_FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
       secret-key: ${RACKPAY_FLUTTERWAVE_SECRET_KEY:}
+      public-key: ${RACKPAY_FLUTTERWAVE_PUBLIC_KEY:}
+      encryption-key: ${RACKPAY_FLUTTERWAVE_ENCRYPTION_KEY:}
+      callback-url: ${RACKPAY_FLUTTERWAVE_CALLBACK_URL:}
     paystack:
       base-url: ${RACKPAY_PAYSTACK_BASE_URL:https://api.paystack.co}
       secret-key: ${RACKPAY_PAYSTACK_SECRET_KEY:}

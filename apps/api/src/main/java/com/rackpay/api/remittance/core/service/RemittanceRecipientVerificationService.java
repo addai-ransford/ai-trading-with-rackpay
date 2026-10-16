@@ -74,9 +74,16 @@ public class RemittanceRecipientVerificationService {
 
         String normalized = phoneNumbers.normalize(country.getDialCode(), request.phoneNumber());
 
-        PayoutProvider provider = providers.requireRecipientVerificationProvider(
-            countryCode, currency, payoutMethod
-        );
+        PayoutProvider provider;
+        try {
+            provider = providers.requireRecipientVerificationProvider(countryCode, currency, payoutMethod);
+        } catch (IllegalStateException exception) {
+            return new VerificationResponse(
+                false, null, countryCode, currency, payoutMethod, network.getCode(),
+                normalized, null, null, null,
+                "No configured payout provider can verify this destination and network.", user.getId(), null
+            );
+        }
 
         PayoutProvider.RecipientVerification result = provider.verifyRecipient(
             new PayoutProvider.VerifyRecipientCommand(
@@ -88,7 +95,7 @@ public class RemittanceRecipientVerificationService {
             return new VerificationResponse(
                 false, null, countryCode, currency, payoutMethod, network.getCode(),
                 result.normalizedPhoneNumber(), null, provider.type(),
-                result.providerRecipientReference(), result.failureReason(), user.getId()
+                result.providerRecipientReference(), result.failureReason(), user.getId(), null
             );
         }
 
@@ -111,33 +118,64 @@ public class RemittanceRecipientVerificationService {
                 now
             ));
 
-        if (recipient.getId() != null && recipient.getVerifiedAt() != null
-            && !recipient.getVerifiedName().equals(result.verifiedName())) {
-            recipient.refreshVerification(
-                request.phoneNumber(),
-                result.normalizedPhoneNumber(),
-                result.verifiedName(),
-                provider.type().name(),
-                result.providerRecipientReference(),
-                now
-            );
-        } else if (recipient.getVerifiedAt() != null) {
-            recipient.refreshVerification(
-                request.phoneNumber(),
-                result.normalizedPhoneNumber(),
-                result.verifiedName(),
-                provider.type().name(),
-                result.providerRecipientReference(),
-                now
-            );
-        }
+        // A successful provider lookup upgrades an earlier sender-entered recipient
+        // and refreshes the stored details for an already-verified recipient.
+        recipient.refreshVerification(
+            request.phoneNumber(),
+            result.normalizedPhoneNumber(),
+            result.verifiedName(),
+            provider.type().name(),
+            result.providerRecipientReference(),
+            now
+        );
 
         recipients.save(recipient);
 
         return new VerificationResponse(
             true, recipient.getId(), countryCode, currency, payoutMethod, network.getCode(),
             result.normalizedPhoneNumber(), result.verifiedName(), provider.type(),
-            result.providerRecipientReference(), null, user.getId()
+            result.providerRecipientReference(), null, user.getId(), result.verifiedName()
+        );
+    }
+
+    @Transactional
+    public VerificationResponse addSenderProvidedRecipient(Authentication authentication, ManualRecipientRequest request) {
+        if (request == null) throw new IllegalArgumentException("recipient details are required");
+        // Recheck with the provider server-side so this fallback is only used when
+        // the provider still cannot resolve the supplied mobile money number.
+        VerificationResponse providerCheck = verify(authentication, new VerificationRequest(
+            request.countryCode(), null, request.currency(), request.payoutMethod(),
+            request.networkCode(), request.phoneNumber()
+        ));
+        if (providerCheck.verified()) return providerCheck;
+
+        var user = currentUser.requireUser(authentication);
+        String countryCode = requireText(request.countryCode(), "countryCode").toUpperCase(Locale.ROOT);
+        Currency currency = requireCurrency(request.currency());
+        RemittanceCountryEntity country = countries.findByCodeIgnoreCaseAndEnabledTrue(countryCode)
+            .orElseThrow(() -> new IllegalArgumentException("Destination country is not enabled"));
+        if (!country.isReceiveEnabled() || !country.getCurrencyCode().equalsIgnoreCase(currency.name())) {
+            throw new IllegalArgumentException("Destination country or currency is not supported");
+        }
+        if (request.payoutMethod() != PayoutMethod.MOBILE_MONEY) {
+            throw new IllegalArgumentException("Only mobile money recipients are currently supported");
+        }
+        String networkCode = requireText(request.networkCode(), "networkCode").toUpperCase(Locale.ROOT);
+        MobileMoneyNetworkEntity network = networks
+            .findByCountryCodeIgnoreCaseAndCodeIgnoreCaseAndEnabledTrue(countryCode, networkCode)
+            .orElseThrow(() -> new IllegalArgumentException("Mobile money network is not enabled for this country"));
+        String name = requireText(request.recipientName(), "recipientName");
+        if (name.length() > 255) throw new IllegalArgumentException("recipientName must be 255 characters or fewer");
+        String normalized = phoneNumbers.normalize(country.getDialCode(), request.phoneNumber());
+        Instant now = Instant.now();
+        RemittanceRecipientEntity recipient = RemittanceRecipientEntity.senderProvided(
+            java.util.UUID.randomUUID(), user.getId(), countryCode, request.payoutMethod(), network.getId(),
+            request.phoneNumber(), normalized, name, now
+        );
+        recipients.save(recipient);
+        return new VerificationResponse(
+            false, recipient.getId(), countryCode, currency, request.payoutMethod(), network.getCode(),
+            normalized, null, null, null, "Name provided by sender; not verified by the provider.", user.getId(), name
         );
     }
 
@@ -160,6 +198,11 @@ public class RemittanceRecipientVerificationService {
         PayoutMethod payoutMethod, String networkCode, String phoneNumber
     ) {}
 
+    public record ManualRecipientRequest(
+        String countryCode, Currency currency, PayoutMethod payoutMethod,
+        String networkCode, String phoneNumber, String recipientName
+    ) {}
+
     public record VerificationResponse(
         boolean verified,
         java.util.UUID recipientId,
@@ -172,6 +215,7 @@ public class RemittanceRecipientVerificationService {
         PayoutProviderType verificationProvider,
         String providerRecipientReference,
         String failureReason,
-        java.util.UUID userId
+        java.util.UUID userId,
+        String recipientName
     ) {}
 }

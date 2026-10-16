@@ -17,6 +17,11 @@ class PhoneNumberNormalizerTest {
     }
 
     @Test
+    void normalizesFlutterwaveLongGhanaSandboxNumber() {
+        assertEquals("+23354709929220", normalizer.normalize("+233", "054709929220"));
+    }
+
+    @Test
     void rejectsGhanaNumberWithTooManySubscriberDigits() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,

@@ -399,6 +399,10 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
         RemittancePayoutService service = new RemittancePayoutService(
             remittances,
             recipients,
+            Mockito.mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository.class),
+            Mockito.mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository.class),
+            Mockito.mock(com.rackpay.api.user.adapters.out.persistence.UserJpaRepository.class),
+            new PhoneNumberNormalizer(),
             networks,
             attempts,
             registry,
@@ -489,6 +493,10 @@ class RemittancePayoutLedgerPostgresIntegrationTest {
         RemittancePayoutService service = new RemittancePayoutService(
             remittances,
             recipients,
+            Mockito.mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository.class),
+            Mockito.mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository.class),
+            Mockito.mock(com.rackpay.api.user.adapters.out.persistence.UserJpaRepository.class),
+            new PhoneNumberNormalizer(),
             networks,
             attempts,
             registry,

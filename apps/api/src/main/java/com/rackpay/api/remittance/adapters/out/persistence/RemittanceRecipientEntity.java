@@ -78,6 +78,28 @@ public class RemittanceRecipientEntity {
         this.updatedAt = now;
     }
 
+    public static RemittanceRecipientEntity senderProvided(
+        UUID id, UUID userId, String countryCode, PayoutMethod payoutMethod,
+        UUID mobileMoneyNetworkId, String phoneNumber, String normalizedPhoneNumber,
+        String recipientName, Instant now
+    ) {
+        RemittanceRecipientEntity recipient = new RemittanceRecipientEntity();
+        recipient.id = id;
+        recipient.userId = userId;
+        recipient.countryCode = countryCode;
+        recipient.payoutMethod = payoutMethod;
+        recipient.mobileMoneyNetworkId = mobileMoneyNetworkId;
+        recipient.phoneNumber = phoneNumber;
+        recipient.normalizedPhoneNumber = normalizedPhoneNumber;
+        recipient.verifiedName = recipientName;
+        recipient.verificationProvider = "SENDER";
+        recipient.verifiedAt = null;
+        recipient.active = true;
+        recipient.createdAt = now;
+        recipient.updatedAt = now;
+        return recipient;
+    }
+
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getCountryCode() { return countryCode; }

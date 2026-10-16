@@ -1,10 +1,12 @@
-import { ArrowLeftRight, CreditCard, LogOut, ShieldCheck, UserCog, WalletCards } from "lucide-react";
+import { ArrowLeftRight, CreditCard, LogOut, Moon, ShieldCheck, Sun, UserCog, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../../shared/auth/authStore";
 import { logout } from "../../../shared/auth/keycloak";
+import { useTheme, type Theme } from "../../../shared/theme/ThemeProvider";
 
 export function SettingsPage() {
   const user = useAuthStore((state) => state.user);
+  const { theme, setTheme } = useTheme();
   return (
     <section>
       <div className="page-heading">
@@ -12,6 +14,18 @@ export function SettingsPage() {
           <p className="eyebrow">RACKPAY WORKSPACE</p>
           <h1>Settings</h1>
           <p className="page-description">Account information, security and platform tools.</p>
+        </div>
+      </div>
+      <div className="theme-settings-card">
+        <div className="settings-icon"><Sun size={19}/></div>
+        <div className="theme-settings-copy"><strong>Appearance</strong><p>Choose the theme used across RackPay.</p></div>
+        <div className="theme-options" role="group" aria-label="Choose appearance theme">
+          {(["light", "dark"] as Theme[]).map((option) => (
+            <button key={option} type="button" className={`theme-option ${theme === option ? "selected" : ""}`} aria-pressed={theme === option} onClick={() => setTheme(option)}>
+              {option === "light" ? <Sun size={15}/> : <Moon size={15}/>}
+              <span>{option === "light" ? "Light" : "Dark"}</span>
+            </button>
+          ))}
         </div>
       </div>
       <div className="settings-list">

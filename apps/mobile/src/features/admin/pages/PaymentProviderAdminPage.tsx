@@ -109,6 +109,7 @@ export function PaymentProviderAdminPage() {
       ) : null}
 
       <Link to="/admin/admins/new" className="inline-flex items-center rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800">Create administrator</Link>
+      <Link to="/admin/remittance" className="ml-2 inline-flex items-center rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800">Remittance coverage</Link>
 
       <div className="space-y-3">
         {providers.map((provider) => (

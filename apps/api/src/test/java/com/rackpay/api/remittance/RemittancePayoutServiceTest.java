@@ -65,6 +65,10 @@ class RemittancePayoutServiceTest {
         service = new RemittancePayoutService(
             remittances,
             recipients,
+            mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository.class),
+            mock(com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository.class),
+            mock(com.rackpay.api.user.adapters.out.persistence.UserJpaRepository.class),
+            new PhoneNumberNormalizer(),
             networks,
             attempts,
             providers,
@@ -115,6 +119,8 @@ class RemittancePayoutServiceTest {
 
         when(flutterwave.type()).thenReturn(PayoutProviderType.FLUTTERWAVE);
         when(paystack.type()).thenReturn(PayoutProviderType.PAYSTACK);
+        when(flutterwave.supportsPayout(any())).thenReturn(true);
+        when(paystack.supportsPayout(any())).thenReturn(true);
         when(providers.require(PayoutProviderType.FLUTTERWAVE)).thenReturn(flutterwave);
         when(providers.require(PayoutProviderType.PAYSTACK)).thenReturn(paystack);
 
@@ -135,8 +141,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void failedFlutterwavePayoutFailsOverToPaystackAndCompletes() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);
@@ -162,8 +166,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void concurrentPayoutExecutionAllowsOnlyOneProviderCall() throws Exception {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         AtomicBoolean claimActive = new AtomicBoolean(false);
         CountDownLatch providerStarted = new CountDownLatch(1);
         CountDownLatch releaseProvider = new CountDownLatch(1);
@@ -213,8 +215,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void stalePayoutExecutionCannotOverwriteNewerExecution() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("fw-stale-transfer", "SUCCESSFUL"));
         when(remittance.ownsPayoutExecutionClaim(any())).thenReturn(false);
@@ -231,8 +231,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void providerTimeoutReturnsRetryRequiredWithoutFailover() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenThrow(new RuntimeException("provider timeout"));
 
@@ -242,6 +240,39 @@ class RemittancePayoutServiceTest {
         assertEquals("PAYOUT_RETRY_REQUIRED", response.providerStatus());
 
         verify(flutterwave).createPayout(any());
+        verify(paystack, never()).createPayout(any());
+        verify(providers, never()).nextEligible(any(), any(), any());
+    }
+
+    @Test
+    void existingCreatedAttemptWithNoReconciliationMatchIsNotSubmittedAgain() {
+        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, response.status());
+        assertEquals("PAYOUT_RETRY_REQUIRED", response.providerStatus());
+
+        verify(flutterwave).findPayoutByReference("rp-existing");
+        verify(flutterwave, never()).createPayout(any());
+        verify(paystack, never()).createPayout(any());
+        verify(providers, never()).nextEligible(any(), any(), any());
+    }
+
+    @Test
+    void unknownAttemptWithNoReconciliationMatchIsNotSubmittedAgain() {
+        RemittancePayoutAttemptEntity existing = attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing");
+        existing.record(null, RemittancePayoutAttemptEntity.Status.UNKNOWN, "provider timeout",
+            Instant.parse("2026-09-28T08:05:00Z"));
+        history.add(existing);
+
+        RemittancePayoutService.PayoutResponse response = service.execute(remittanceId);
+
+        assertEquals(RemittanceEntity.Status.PAYOUT_PENDING, response.status());
+        assertEquals("PAYOUT_RETRY_REQUIRED", response.providerStatus());
+
+        verify(flutterwave).findPayoutByReference("rp-existing");
+        verify(flutterwave, never()).createPayout(any());
         verify(paystack, never()).createPayout(any());
         verify(providers, never()).nextEligible(any(), any(), any());
     }
@@ -269,8 +300,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void pendingFlutterwavePayoutDoesNotCallPaystack() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(flutterwave.createPayout(any()))
             .thenReturn(new PayoutProvider.PayoutResult("fw-transfer-1", "PENDING"));
 
@@ -287,8 +316,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void bothProvidersFailCreditWalletBackExactlyOnce() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);
@@ -321,8 +348,6 @@ class RemittancePayoutServiceTest {
 
     @Test
     void payoutRecoveryFailureLeavesRemittanceInRecoveryRequired() {
-        history.add(attempt(PayoutProviderType.FLUTTERWAVE, 1, "rp-existing"));
-
         when(providers.nextEligible(
             eq(PayoutProviderType.FLUTTERWAVE), any(), any()
         )).thenReturn(paystack);

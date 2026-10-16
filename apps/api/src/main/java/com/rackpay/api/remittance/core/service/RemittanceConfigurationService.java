@@ -4,6 +4,8 @@ import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkEnt
 import com.rackpay.api.remittance.adapters.out.persistence.MobileMoneyNetworkJpaRepository;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryEntity;
 import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCountryJpaRepository;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorEntity;
+import com.rackpay.api.remittance.adapters.out.persistence.RemittanceCorridorJpaRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -14,21 +16,28 @@ import java.util.Locale;
 public class RemittanceConfigurationService {
     private final RemittanceCountryJpaRepository countries;
     private final MobileMoneyNetworkJpaRepository networks;
+    private final RemittanceCorridorJpaRepository corridors;
 
     public RemittanceConfigurationService(
         RemittanceCountryJpaRepository countries,
-        MobileMoneyNetworkJpaRepository networks
+        MobileMoneyNetworkJpaRepository networks,
+        RemittanceCorridorJpaRepository corridors
     ) {
         this.countries = countries;
         this.networks = networks;
+        this.corridors = corridors;
     }
 
     public List<CountryResponse> countries(Direction direction) {
+        List<RemittanceCorridorEntity> activeRoutes = corridors.findAllByEnabledTrue();
         return countries.findAll().stream()
             .filter(RemittanceCountryEntity::isEnabled)
             .filter(country -> direction == Direction.SEND
                 ? country.isSendEnabled()
                 : country.isReceiveEnabled())
+            .filter(country -> activeRoutes.stream().anyMatch(route -> direction == Direction.SEND
+                ? route.getSourceCountryCode().equalsIgnoreCase(country.getCode())
+                : route.getDestinationCountryCode().equalsIgnoreCase(country.getCode())))
             .sorted(Comparator.comparing(RemittanceCountryEntity::getName))
             .map(country -> new CountryResponse(
                 country.getCode(),
@@ -50,6 +59,11 @@ public class RemittanceConfigurationService {
 
         if (!country.isReceiveEnabled()) {
             throw new IllegalArgumentException("Destination country does not accept remittances");
+        }
+
+        if (corridors.findAllByEnabledTrue().stream().noneMatch(route ->
+            route.getDestinationCountryCode().equalsIgnoreCase(normalized))) {
+            throw new IllegalArgumentException("Destination country has no enabled remittance route");
         }
 
         return networks.findAll().stream()
